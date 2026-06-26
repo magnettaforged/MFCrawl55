@@ -1,0 +1,5996 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Dungeon Test</title>
+
+  <style>
+    :root {
+      --app-width: 390px;
+      --game-body-height: 680px;
+
+      --accent: #d6a84f;
+      --text-main: #ffffff;
+
+      --button-bg: rgba(0,0,0,0.58);
+      --button-border: 1px solid rgba(214,168,79,0.85);
+    }
+
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      background: #050505;
+      color: var(--text-main);
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding-top: 8px;
+      overflow-x: hidden;
+    }
+
+    .pageShell {
+      width: min(var(--app-width), 96vw);
+      margin: 0 auto;
+    }
+
+    .gameBody {
+      position: relative;
+      width: 100%;
+      height: var(--game-body-height);
+      overflow: hidden;
+      border-radius: 16px;
+      background: #000;
+    }
+
+    .dungeonStage {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      background: #000;
+    }
+
+    .roomLayer {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: fill;
+      pointer-events: none;
+    }
+
+    .layer-room { z-index: 1; }
+
+    .layer-monster {
+      z-index: 5;
+      object-fit: fill;
+      transform: none;
+      transform-origin: center center;
+      display: none;
+    }
+
+    .layer-border { z-index: 20; display: none; }
+
+    .moveZone {
+      position: absolute;
+      border: none;
+      background: transparent;
+      padding: 0;
+      cursor: pointer;
+      z-index: 30;
+    }
+
+    .moveForward { top: 0; left: 24%; width: 52%; height: 32%; }
+
+    .moveLeft { top: 28%; left: 0; width: 28%; height: 44%; }
+
+    .moveRight { top: 28%; right: 0; width: 28%; height: 44%; }
+
+    .moveBack { left: 24%; bottom: 0; width: 52%; height: 28%; }
+
+    .messageBox {
+      position: absolute;
+      left: 38px;
+      right: 38px;
+      bottom: 118px;
+      z-index: 65;
+      min-height: 38px;
+      padding: 8px 10px;
+      border: 1px solid rgba(214,168,79,0.5);
+      border-radius: 10px;
+      background: rgba(0,0,0,0.55);
+      color: #fff;
+      font-size: 13px;
+      line-height: 1.3;
+      text-align: center;
+      text-shadow: 0 0 4px #000;
+      pointer-events: none;
+    }
+
+    .hud {
+      position: absolute;
+      left: 24px;
+      right: 24px;
+      bottom: 30px;
+      z-index: 60;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      pointer-events: none;
+    }
+
+    .statBlock,
+    .actionBlock,
+    .combatBlock {
+      pointer-events: auto;
+      color: #fff;
+      text-shadow: 0 0 4px #000;
+      font-size: 14px;
+      line-height: 1.35;
+    }
+
+    .statBlock {
+      display: grid;
+      gap: 6px;
+      align-content: end;
+      text-align: left;
+    }
+
+    .statLine {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .bar {
+      height: 7px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.18);
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.18);
+      box-shadow: 0 0 4px rgba(0,0,0,0.7);
+    }
+
+    .barFill {
+      height: 100%;
+      width: 100%;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.92);
+    }
+
+    #hpBar {
+      background: linear-gradient(90deg, rgba(150,18,18,0.96), rgba(245,70,52,0.96));
+    }
+
+    #mpBar {
+      background: linear-gradient(90deg, rgba(30,76,170,0.96), rgba(85,164,255,0.96));
+    }
+
+    .actionBlock {
+      display: grid;
+      gap: 8px;
+      align-content: end;
+      justify-items: center;
+    }
+
+    .combatBlock {
+      display: none;
+    }
+
+    .combatMainButtons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      align-self: end;
+    }
+
+    .combatBeltColumn {
+      display: grid;
+      grid-template-rows: repeat(4, 34px) 24px;
+      gap: 5px;
+      align-self: end;
+    }
+
+    .combatRunButton {
+      min-height: 24px;
+      padding: 2px 4px;
+      font-size: 11px;
+      border-radius: 6px;
+    }
+
+    .beltButton {
+      position: relative;
+      min-height: 34px;
+      width: 42px;
+      padding: 2px;
+      font-size: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .beltButton.empty {
+      opacity: 0.18;
+      border-color: rgba(214,168,79,0.12);
+      background: rgba(0,0,0,0.12);
+    }
+
+    .beltItemIcon {
+      width: 28px;
+      height: 28px;
+      object-fit: contain;
+      filter: drop-shadow(0 0 4px rgba(0,0,0,0.9));
+      pointer-events: none;
+    }
+
+    .beltQtyBadge {
+      position: absolute;
+      right: 2px;
+      bottom: 1px;
+      min-width: 14px;
+      padding: 0 3px;
+      border-radius: 999px;
+      background: rgba(0,0,0,0.76);
+      color: #fff;
+      font-size: 9px;
+      line-height: 13px;
+      text-align: center;
+      border: 1px solid rgba(255,255,255,0.25);
+      pointer-events: none;
+    }
+
+    .uiButton {
+      width: 100%;
+      min-height: 32px;
+      padding: 6px 8px;
+      border: var(--button-border);
+      border-radius: 8px;
+      background: var(--button-bg);
+      color: var(--accent);
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: inset 0 0 8px rgba(0,0,0,0.65);
+    }
+
+    .uiButton:active { transform: scale(0.98); }
+
+    .debugLine {
+      position: absolute;
+      top: 12px;
+      left: 28px;
+      right: 28px;
+      z-index: 61;
+      padding: 5px 8px;
+      border-radius: 8px;
+      background: rgba(0,0,0,0.5);
+      color: rgba(255,255,255,0.75);
+      font-size: 11px;
+      text-align: center;
+      pointer-events: none;
+    }
+
+
+    /* Patch: remove room/debug/facing UI from normal play. */
+    .debugLine,
+    .facingBadge {
+      display: none !important;
+    }
+
+    .overlay {
+      position: absolute;
+      inset: 6px;
+      z-index: 90;
+      display: none;
+      padding: 8px;
+      border: 2px solid var(--accent);
+      border-radius: 12px;
+      background: rgba(0,0,0,0.92);
+      box-shadow: 0 0 20px rgba(0,0,0,0.8);
+      color: #fff;
+    }
+
+    .overlay.show { display: block; }
+
+    .overlayTitle {
+      color: var(--accent);
+      font-weight: bold;
+      font-size: 18px;
+      text-align: center;
+      margin-bottom: 6px;
+      padding: 0 36px;
+      line-height: 26px;
+      min-height: 26px;
+    }
+
+    .tabs {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+
+    .tabContent {
+      height: 520px;
+      overflow-x: hidden;
+      overflow-y: auto;
+      padding: 5px;
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 10px;
+      background: rgba(255,255,255,0.04);
+      font-size: 13px;
+      line-height: 1.35;
+      white-space: normal;
+    }
+
+    .menuHeader {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 8px;
+      color: rgba(255,255,255,0.82);
+      font-size: 12px;
+    }
+
+    .sotnRow {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 86px 1fr;
+      gap: 8px;
+      align-items: center;
+      min-height: 34px;
+      margin: 0 0 5px 0;
+      padding: 7px 8px;
+      border: 1px solid rgba(214,168,79,0.35);
+      border-radius: 7px;
+      background: rgba(0,0,0,0.34);
+      color: #fff;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .sotnRow:active { transform: scale(0.99); }
+
+    .sotnSlot {
+      color: var(--accent);
+      font-weight: bold;
+      font-size: 12px;
+    }
+
+    .sotnValue {
+      color: #fff;
+      font-size: 12px;
+      line-height: 1.25;
+    }
+
+    .itemRow {
+      width: 100%;
+      display: block;
+      min-height: 42px;
+      margin: 0 0 6px 0;
+      padding: 8px;
+      border: 1px solid rgba(214,168,79,0.42);
+      border-radius: 7px;
+      background: rgba(0,0,0,0.36);
+      color: #fff;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .itemRow.equipped {
+      border-color: #fff;
+      background: rgba(214,168,79,0.20);
+    }
+
+    .itemRow.locked {
+      opacity: 0.45;
+      border-color: rgba(255,255,255,0.18);
+    }
+
+    .itemNameLine {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      color: var(--accent);
+      font-weight: bold;
+      font-size: 13px;
+      margin-bottom: 3px;
+    }
+
+    .itemDescLine {
+      color: rgba(255,255,255,0.82);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .smallNote {
+      color: rgba(255,255,255,0.72);
+      font-size: 12px;
+      margin: 6px 0;
+    }
+
+
+    .pagedList {
+      display: grid;
+      gap: 3px;
+    }
+
+    .twoColList {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      column-gap: 5px;
+      row-gap: 3px;
+    }
+
+    .oneColList {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 4px;
+    }
+
+    .oneColList .compactRow {
+      grid-template-columns: 42px 1fr 34px;
+      min-height: 44px;
+    }
+
+    .oneColList .compactIcon {
+      width: 40px;
+      height: 40px;
+    }
+
+    .compactRow {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 38px 1fr 30px;
+      gap: 5px;
+      align-items: center;
+      min-height: 40px;
+      margin: 0 0 3px 0;
+      padding: 3px 5px;
+      border: 1px solid rgba(214,168,79,0.35);
+      border-radius: 4px;
+      background: rgba(0,0,0,0.28);
+      color: #fff;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .compactRow.locked {
+      opacity: 0.45;
+      border-color: rgba(255,255,255,0.18);
+    }
+
+    .compactRow.equipped {
+      border-color: #fff;
+      background: rgba(214,168,79,0.20);
+    }
+
+    .compactIcon {
+      width: 36px;
+      height: 36px;
+      object-fit: contain;
+      filter: drop-shadow(0 0 3px rgba(0,0,0,0.85));
+    }
+
+    .compactIcon.empty {
+      opacity: 0.28;
+    }
+
+    .compactName {
+      color: #fff;
+      font-weight: normal;
+      font-size: 12px;
+      line-height: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      letter-spacing: 0.2px;
+    }
+
+    .compactSub {
+      display: block;
+      color: rgba(255,255,255,0.68);
+      font-size: 10.5px;
+      line-height: 1.15;
+      margin-top: 2px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .compactQty {
+      color: #fff;
+      font-weight: normal;
+      font-size: 12px;
+      min-width: 18px;
+      text-align: right;
+    }
+
+    .pageControls {
+      display: grid;
+      grid-template-columns: 58px auto 58px;
+      justify-content: center;
+      gap: 5px;
+      align-items: center;
+      margin: 5px 0 0;
+    }
+
+    .pageText {
+      color: rgba(255,255,255,0.78);
+      font-size: 12px;
+      text-align: center;
+      min-width: 70px;
+    }
+
+
+    .statusPageTabs {
+      display: none;
+    }
+
+    .statusCard {
+      position: relative;
+      height: 100%;
+      min-height: 100%;
+      margin-bottom: 0;
+      max-width: 100%;
+      overflow: hidden;
+      background-image: var(--status-pose, none);
+      background-size: auto 100%;
+      background-position: left bottom;
+      background-repeat: no-repeat;
+    }
+
+    .statusPoseBox,
+    .statusPose {
+      display: none;
+    }
+
+    .statusPoseFallback {
+      color: rgba(255,255,255,0.55);
+      font-weight: bold;
+      font-size: 18px;
+      text-align: center;
+    }
+
+    .statusInfoBox {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 38%;
+      max-width: 156px;
+      border: 1px solid rgba(214,168,79,0.35);
+      border-radius: 7px;
+      background: rgba(0,0,0,0.42);
+      padding: 7px;
+      min-width: 0;
+      overflow: hidden;
+      backdrop-filter: blur(1px);
+    }
+
+    .statusName {
+      color: var(--accent);
+      font-size: 16px;
+      font-weight: bold;
+      margin-bottom: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .statusLevel {
+      color: rgba(255,255,255,0.86);
+      font-size: 12px;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+
+    .statusStatGrid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 5px;
+      font-size: 12px;
+      line-height: 1.1;
+    }
+
+    .statusStat {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      padding-bottom: 3px;
+      align-items: center;
+    }
+
+    .statusLabel {
+      color: rgba(255,255,255,0.66);
+      font-weight: bold;
+    }
+
+    .statusValue {
+      color: #fff;
+      text-align: right;
+      min-width: 34px;
+    }
+
+    .statusCycleRow {
+      display: grid;
+      grid-template-columns: 28px 1fr 28px;
+      gap: 4px;
+      align-items: center;
+      margin-top: 10px;
+    }
+
+    .statusCycleButton {
+      min-height: 25px;
+      padding: 2px 0;
+      border: 1px solid rgba(214,168,79,0.55);
+      border-radius: 5px;
+      background: rgba(0,0,0,0.32);
+      color: var(--accent);
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .statusCycleLabel {
+      color: var(--accent);
+      text-align: center;
+      font-size: 12px;
+      font-weight: bold;
+    }
+
+
+    .itemCategoryCycle {
+      display: grid;
+      grid-template-columns: 32px 1fr 32px;
+      gap: 5px;
+      align-items: center;
+      margin: 6px 0 8px;
+    }
+
+    .itemCategoryLabel {
+      color: var(--accent);
+      text-align: center;
+      font-size: 13px;
+      font-weight: bold;
+    }
+
+    .statusEquipList {
+      display: grid;
+      gap: 3px;
+    }
+
+    .statusEquipRow {
+      display: grid;
+      grid-template-columns: 72px 1fr;
+      gap: 6px;
+      align-items: center;
+      min-height: 25px;
+      padding: 3px 6px;
+      border: 1px solid rgba(214,168,79,0.25);
+      border-radius: 4px;
+      background: rgba(0,0,0,0.22);
+      font-size: 12px;
+    }
+
+    .statusGridPage {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5px;
+    }
+
+    .statusMetric {
+      min-height: 35px;
+      padding: 6px;
+      border: 1px solid rgba(214,168,79,0.28);
+      border-radius: 5px;
+      background: rgba(0,0,0,0.24);
+    }
+
+    .statusMetricName {
+      color: rgba(255,255,255,0.66);
+      font-size: 11px;
+      font-weight: bold;
+      margin-bottom: 3px;
+    }
+
+    .statusMetricValue {
+      color: #fff;
+      font-size: 13px;
+    }
+
+
+    .equipGrid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 7px;
+      margin-bottom: 8px;
+    }
+
+    .equipGridButton {
+      position: relative;
+      min-height: 74px;
+      padding: 5px 4px;
+      border: 1px solid rgba(214,168,79,0.38);
+      border-radius: 7px;
+      background: rgba(0,0,0,0.30);
+      color: #fff;
+      text-align: center;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      gap: 2px;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .equipGridButton.wideLeft,
+    .equipGridButton.wideRight {
+      min-height: 165px;
+    }
+
+    .equipGridButton.wideLeft { grid-column: 1 / span 2; }
+    .equipGridButton.wideRight { grid-column: 3 / span 2; }
+
+    .equipGridButton.wideLeft .equipGridIcon,
+    .equipGridButton.wideLeft .equipGridIcon.empty {
+      width: 116px;
+      height: 116px;
+    }
+
+    .equipGridButton.wideRight .equipGridIcon,
+    .equipGridButton.wideRight .equipGridIcon.empty {
+      width: 154px;
+      height: 154px;
+    }
+
+    .equipGridLabel {
+      position: relative;
+      z-index: 2;
+      width: 100%;
+      color: var(--accent);
+      font-size: 10.5px;
+      font-weight: bold;
+      line-height: 1;
+      white-space: nowrap;
+      text-shadow: 0 0 4px #000, 0 0 6px #000;
+    }
+
+    .equipGridName {
+      position: relative;
+      z-index: 2;
+      width: 100%;
+      color: rgba(255,255,255,0.92);
+      font-size: 10.5px;
+      font-weight: bold;
+      line-height: 1.05;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-shadow: 0 0 4px #000, 0 0 7px #000;
+    }
+
+    .equipGridIcon {
+      position: absolute;
+      z-index: 1;
+      left: 50%;
+      top: 50%;
+      width: 46px;
+      height: 46px;
+      object-fit: contain;
+      opacity: 0.92;
+      transform: translate(-50%, -50%);
+      filter: drop-shadow(0 0 4px rgba(0,0,0,0.95));
+      pointer-events: none;
+    }
+
+    .equipGridIcon.empty {
+      position: absolute;
+      z-index: 1;
+      left: 50%;
+      top: 50%;
+      width: 40px;
+      height: 40px;
+      border: 1px solid rgba(255,255,255,0.13);
+      border-radius: 5px;
+      opacity: 0.18;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+    }
+
+    .equipCompactList {
+      display: grid;
+      gap: 4px;
+    }
+
+    .equipSlotRow {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 72px 1fr;
+      gap: 6px;
+      align-items: center;
+      min-height: 30px;
+      padding: 4px 6px;
+      border: 1px solid rgba(214,168,79,0.38);
+      border-radius: 5px;
+      background: rgba(0,0,0,0.30);
+      color: #fff;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .equipSlotLabel {
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: bold;
+    }
+
+    .equipSlotValue {
+      color: #fff;
+      font-size: 12px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .closeButton {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 34px;
+      min-height: 28px;
+      padding: 2px 0;
+      z-index: 100;
+      font-size: 16px;
+      line-height: 1;
+    }
+
+    body.encounterMode .layer-monster { display: block; }
+    body.encounterMode .actionBlock { display: none; }
+    body.encounterMode .combatBlock { display: contents; }
+
+    body.encounterMode .hud {
+      grid-template-columns: 1fr 46px;
+      grid-template-rows: auto auto auto;
+      column-gap: 8px;
+      row-gap: 0;
+      align-items: end;
+      bottom: 22px;
+      left: 18px;
+      right: 18px;
+    }
+
+    body.encounterMode .statBlock {
+      grid-column: 1;
+      grid-row: 1;
+      gap: 3px;
+      padding: 5px 8px 2px;
+      border: 1px solid rgba(213,170,62,0.42);
+      border-bottom: none;
+      border-radius: 10px 10px 0 0;
+      background: rgba(0,0,0,0.28);
+      box-shadow: 0 0 10px rgba(0,0,0,0.35);
+    }
+
+    body.encounterMode .statLine {
+      grid-template-columns: 34px 1fr;
+      gap: 7px;
+      font-size: 12px;
+      color: #fff;
+      text-shadow: 0 0 4px #000;
+    }
+
+    body.encounterMode .attackMeterWrap {
+      grid-column: 1;
+      grid-row: 2;
+      align-self: end;
+      padding: 2px 8px 5px;
+      border: 1px solid rgba(213,170,62,0.42);
+      border-top: none;
+      border-radius: 0 0 10px 10px;
+      background: rgba(0,0,0,0.28);
+      grid-template-columns: 34px 1fr;
+    }
+
+    body.encounterMode .combatMainButtons {
+      grid-column: 1;
+      grid-row: 3;
+      margin-top: 5px;
+    }
+
+    body.encounterMode .combatBeltColumn {
+      grid-column: 2;
+      grid-row: 1 / 4;
+      align-self: start;
+      justify-items: end;
+      transform: translateY(-70px);
+    }
+
+    body.encounterMode .moveZone,
+    body.encounterMode .helpButton,
+    body.encounterMode .exitMarker,
+    body.encounterMode .facingBadge {
+      display: none;
+      pointer-events: none;
+    }
+
+    body.encounterMode .messageBox {
+      display: none;
+    }
+
+    body.encounterMode .messageBox.combatNotice {
+      display: block;
+      bottom: 152px;
+      left: 42px;
+      right: 42px;
+      min-height: 30px;
+      padding: 6px 8px;
+      font-size: 12px;
+      opacity: 0.92;
+    }
+  
+    .helpButton {
+      position: absolute;
+      top: 12px;
+      right: 28px;
+      z-index: 62;
+      width: 58px;
+      min-height: 26px;
+      padding: 3px 6px;
+      border: 1px solid rgba(214,168,79,0.75);
+      border-radius: 7px;
+      background: rgba(0,0,0,0.55);
+      color: var(--accent);
+      font-weight: bold;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .controlHelp {
+      position: absolute;
+      inset: 6px;
+      z-index: 85;
+      display: none;
+      pointer-events: none;
+      border-radius: 12px;
+      background: rgba(0,0,0,0.25);
+      color: #fff;
+      text-shadow: 0 0 4px #000;
+      font-weight: bold;
+      font-size: 13px;
+    }
+
+    .controlHelp.show {
+      display: block;
+    }
+
+    .helpLabel {
+      position: absolute;
+      padding: 5px 8px;
+      border: 1px solid rgba(214,168,79,0.75);
+      border-radius: 8px;
+      background: rgba(0,0,0,0.62);
+      color: var(--accent);
+      text-align: center;
+      min-width: 88px;
+    }
+
+    .helpForward { top: 74px; left: 50%; transform: translateX(-50%); }
+    .helpLeft { top: 46%; left: 18px; transform: translateY(-50%); }
+    .helpRight { top: 46%; right: 18px; transform: translateY(-50%); }
+    .helpBack { bottom: 116px; left: 50%; transform: translateX(-50%); }
+    .helpAction { bottom: 70px; right: 24px; }
+    .helpInventory { bottom: 32px; right: 24px; }
+
+    body.menuOpen .moveZone,
+    body.menuOpen .helpButton {
+      pointer-events: none;
+    }
+
+    body.menuOpen .messageBox,
+    body.menuOpen .hud,
+    body.menuOpen .debugLine,
+    body.menuOpen .facingBadge,
+    body.menuOpen .exitMarker {
+      opacity: 0.15;
+    }
+
+    .tabs {
+      margin-bottom: 6px;
+    }
+
+    .statusCard {
+      height: 100%;
+      min-height: 100%;
+    }
+
+    .statusEquipRow {
+      min-height: 27px;
+    }
+
+    .equipSlotRow {
+      min-height: 28px;
+      padding: 3px 6px;
+    }
+
+  
+    .facingBadge {
+      position: absolute;
+      top: 12px;
+      left: 28px;
+      z-index: 62;
+      min-width: 58px;
+      min-height: 26px;
+      padding: 4px 7px;
+      border: 1px solid rgba(214,168,79,0.75);
+      border-radius: 7px;
+      background: rgba(0,0,0,0.55);
+      color: var(--accent);
+      font-weight: bold;
+      font-size: 12px;
+      text-align: center;
+      pointer-events: none;
+    }
+
+    .exitMarker {
+      position: absolute;
+      z-index: 63;
+      display: none;
+      padding: 4px 7px;
+      border: 1px solid rgba(214,168,79,0.65);
+      border-radius: 999px;
+      background: rgba(0,0,0,0.46);
+      color: var(--accent);
+      font-weight: bold;
+      font-size: 11px;
+      text-align: center;
+      pointer-events: none;
+      text-shadow: 0 0 4px #000;
+    }
+
+
+    .topHudBadge {
+      position: absolute;
+      top: 12px;
+      z-index: 64;
+      min-width: 72px;
+      min-height: 26px;
+      padding: 4px 8px;
+      border: 1px solid rgba(214,168,79,0.72);
+      border-radius: 8px;
+      background: rgba(0,0,0,0.52);
+      color: var(--accent);
+      font-weight: bold;
+      font-size: 12px;
+      line-height: 16px;
+      text-align: center;
+      text-shadow: 0 0 4px #000;
+      pointer-events: none;
+    }
+
+    .floorIndicator {
+      left: 28px;
+    }
+
+    .shrineCompass {
+      left: 50%;
+      transform: translateX(-50%);
+    }
+
+    body.encounterMode .floorIndicator,
+    body.encounterMode .shrineCompass {
+      display: none;
+    }
+
+    .mapIndicator {
+      position: absolute;
+      left: 50%;
+      bottom: 4px;
+      z-index: 64;
+      transform: translateX(-50%);
+      max-width: calc(100% - 28px);
+      padding: 2px 7px;
+      border: 1px solid rgba(214,168,79,0.42);
+      border-radius: 999px;
+      background: rgba(0,0,0,0.46);
+      color: rgba(255,255,255,0.72);
+      font-weight: bold;
+      font-size: 10px;
+      line-height: 14px;
+      text-align: center;
+      text-shadow: 0 0 4px #000;
+      pointer-events: none;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    body.encounterMode .mapIndicator {
+      display: none;
+    }
+
+    .exitMarker.show { display: block; }
+    .exitForward { top: 88px; left: 50%; transform: translateX(-50%); }
+    .exitLeft { top: 50%; left: 24px; transform: translateY(-50%); }
+    .exitRight { top: 50%; right: 24px; transform: translateY(-50%); }
+    .exitBack { bottom: 134px; left: 50%; transform: translateX(-50%); }
+
+    .slotSummaryBox {
+      display: grid;
+      gap: 5px;
+      margin-bottom: 8px;
+    }
+
+    .slotCurrentName {
+      min-height: 38px;
+      padding: 8px;
+      border: 1px solid rgba(214,168,79,0.35);
+      border-radius: 7px;
+      background: rgba(0,0,0,0.28);
+      color: var(--accent);
+      font-weight: bold;
+      font-size: 15px;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .statPairGrid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5px;
+    }
+
+    .singleStatRow {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      min-height: 28px;
+      padding: 4px 6px;
+      border: 1px solid rgba(214,168,79,0.28);
+      border-radius: 5px;
+      background: rgba(0,0,0,0.24);
+      font-size: 12px;
+    }
+
+    .singleStatName {
+      color: rgba(255,255,255,0.68);
+      font-weight: bold;
+    }
+
+    .singleStatValue {
+      color: #fff;
+      text-align: right;
+    }
+
+    .tinyTopClose {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+    }
+
+  
+    .shopHero {
+      height: 150px;
+      margin-bottom: 8px;
+      border: 1px solid rgba(214,168,79,0.45);
+      border-radius: 9px;
+      background: rgba(0,0,0,0.35);
+      overflow: hidden;
+      display: grid;
+      grid-template-columns: 38% 62%;
+      gap: 0;
+    }
+
+    .shopHeroImage {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center;
+      border-right: 1px solid rgba(214,168,79,0.35);
+    }
+
+    .shopHeroText {
+      padding: 9px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-width: 0;
+    }
+
+    .shopName {
+      color: var(--accent);
+      font-weight: bold;
+      font-size: 17px;
+      margin-bottom: 6px;
+      line-height: 1.15;
+    }
+
+    .shopQuote {
+      color: rgba(255,255,255,0.82);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .shopMenuList {
+      display: grid;
+      gap: 5px;
+    }
+
+    .shopRow {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 40px 1fr auto;
+      gap: 8px;
+      align-items: center;
+      min-height: 42px;
+      padding: 4px 7px;
+      border: 1px solid rgba(214,168,79,0.38);
+      border-radius: 6px;
+      background: rgba(0,0,0,0.30);
+      color: #fff;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .shopRowText {
+      min-width: 0;
+    }
+
+    .shopRowName {
+      color: var(--accent);
+      font-weight: bold;
+      font-size: 13px;
+      line-height: 1.1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .shopRowSub {
+      color: rgba(255,255,255,0.72);
+      font-size: 11px;
+      line-height: 1.15;
+      margin-top: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .shopRowValue {
+      color: #fff;
+      font-size: 12px;
+      font-weight: bold;
+      white-space: nowrap;
+      text-align: right;
+    }
+
+    .shopIcon {
+      width: 36px;
+      height: 36px;
+      object-fit: contain;
+      filter: drop-shadow(0 0 4px rgba(0,0,0,0.9));
+    }
+
+    .shopIcon.empty {
+      opacity: 0.25;
+    }
+
+    .shopBackRow {
+      margin-top: 4px;
+    }
+
+
+    .shopSectionHeader {
+      margin: 8px 0 4px;
+      padding: 5px 8px;
+      border-bottom: 1px solid rgba(214,168,79,0.42);
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      background: rgba(0,0,0,0.22);
+      border-radius: 5px 5px 0 0;
+    }
+
+
+    .shopGearPager {
+      display: grid;
+      grid-template-columns: 38px 1fr 38px;
+      gap: 6px;
+      align-items: stretch;
+      margin-bottom: 5px;
+    }
+
+    .shopGearArrow {
+      min-height: 50px;
+      padding: 0;
+      font-size: 22px;
+      line-height: 1;
+    }
+
+    .shopGearPager .shopRow {
+      margin: 0;
+    }
+
+    .shopGearCounter {
+      color: rgba(255,255,255,0.72);
+      font-size: 11px;
+      text-align: center;
+      margin: 2px 0 6px;
+    }
+
+    .shopPageControls {
+      display: grid;
+      grid-template-columns: 58px auto 58px;
+      justify-content: center;
+      gap: 5px;
+      align-items: center;
+      margin: 3px 0 0;
+    }
+
+    .shopPageText {
+      color: rgba(255,255,255,0.78);
+      font-size: 12px;
+      text-align: center;
+      min-width: 76px;
+    }
+
+    .shopPagedList {
+      display: grid;
+      gap: 4px;
+      min-height: 184px;
+      align-content: start;
+    }
+
+  
+    .equipIconRow {
+      grid-template-columns: 42px 70px 1fr;
+      min-height: 44px;
+    }
+
+    .equipItemRow {
+      grid-template-columns: 42px 1fr auto;
+      min-height: 44px;
+    }
+
+    .equipIcon {
+      width: 36px;
+      height: 36px;
+      object-fit: contain;
+      filter: drop-shadow(0 0 3px rgba(0,0,0,0.85));
+    }
+
+    .equipIcon.empty {
+      opacity: 0.25;
+    }
+
+    .equipDetailCard {
+      display: grid;
+      grid-template-columns: 64px 1fr;
+      gap: 9px;
+      align-items: center;
+      min-height: 82px;
+      margin-bottom: 7px;
+      padding: 8px;
+      border: 1px solid rgba(214,168,79,0.35);
+      border-radius: 8px;
+      background: rgba(0,0,0,0.28);
+    }
+
+    .equipDetailIcon {
+      width: 60px;
+      height: 60px;
+      object-fit: contain;
+      filter: drop-shadow(0 0 4px rgba(0,0,0,0.9));
+    }
+
+    .equipDetailIcon.empty {
+      display: block;
+      width: 60px;
+      height: 60px;
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 6px;
+      opacity: 0.25;
+    }
+
+    .equipDetailName {
+      color: var(--accent);
+      font-weight: bold;
+      font-size: 15px;
+      margin-bottom: 4px;
+      line-height: 1.15;
+    }
+
+    .equipDetailLine {
+      color: rgba(255,255,255,0.82);
+      font-size: 12px;
+      line-height: 1.3;
+    }
+
+    .equipDetailActions {
+      display: grid;
+      gap: 5px;
+    }
+
+  
+    .backGap {
+      margin-top: 7px;
+    }
+
+  
+    .layer-effect {
+      z-index: 12;
+      object-fit: contain;
+      display: none;
+      opacity: 0;
+      transform: translateY(16px) scale(0.92);
+      pointer-events: none;
+      mix-blend-mode: screen;
+      filter: drop-shadow(0 0 8px rgba(255,255,255,0.65));
+    }
+
+    .layer-effect.show {
+      display: block;
+      animation: effectFlash 340ms ease-out forwards;
+    }
+
+    @keyframes effectFlash {
+      0% {
+        opacity: 0;
+        transform: translateY(16px) scale(0.70) rotate(-3deg);
+      }
+      18% {
+        opacity: 1;
+        transform: translateY(16px) scale(0.96) rotate(1deg);
+      }
+      100% {
+        opacity: 0;
+        transform: translateY(16px) scale(1.12) rotate(4deg);
+      }
+    }
+
+    body.monsterHit .layer-monster {
+      animation: monsterHitJolt 260ms ease-out;
+      filter: drop-shadow(0 0 10px rgba(255,0,0,0.65)) saturate(1.45);
+    }
+
+    body.monsterAttack .layer-monster {
+      animation: monsterLunge 260ms ease-out;
+    }
+
+    body.playerHit .dungeonStage {
+      animation: playerHitShake 220ms ease-out;
+    }
+
+    @keyframes monsterHitJolt {
+      0% { transform: translateX(0) scale(1) rotate(0deg); }
+      30% { transform: translateX(-5px) scale(1.015) rotate(-0.8deg); }
+      65% { transform: translateX(4px) scale(0.995) rotate(0.8deg); }
+      100% { transform: translateX(0) scale(1) rotate(0deg); }
+    }
+
+    @keyframes monsterLunge {
+      0% { transform: scale(1); }
+      45% { transform: scale(1.045); }
+      100% { transform: scale(1); }
+    }
+
+    @keyframes playerHitShake {
+      0% { transform: translateX(0); }
+      25% { transform: translateX(-4px); }
+      50% { transform: translateX(4px); }
+      75% { transform: translateX(-2px); }
+      100% { transform: translateX(0); }
+    }
+
+    .damageNumber {
+      position: absolute;
+      z-index: 70;
+      left: 50%;
+      top: 40%;
+      transform: translate(-50%, -50%);
+      display: none;
+      color: #fff;
+      font-weight: bold;
+      font-size: 22px;
+      text-shadow: 0 0 5px #000, 0 0 9px #000;
+      pointer-events: none;
+    }
+
+    .damageNumber.show {
+      display: block;
+      animation: damageFloat 650ms ease-out forwards;
+    }
+
+    @keyframes damageFloat {
+      0% { opacity: 0; transform: translate(-50%, -35%) scale(0.8); }
+      20% { opacity: 1; transform: translate(-50%, -50%) scale(1.12); }
+      100% { opacity: 0; transform: translate(-50%, -92%) scale(1); }
+    }
+
+  
+    body.roomMoving .layer-room {
+      animation: roomStepTransition 320ms ease-out;
+    }
+
+    @keyframes roomStepTransition {
+      0% {
+        transform: scale(1);
+        filter: brightness(1);
+      }
+      42% {
+        transform: scale(1.08);
+        filter: brightness(0.62);
+      }
+      100% {
+        transform: scale(1);
+        filter: brightness(1);
+      }
+    }
+
+  
+    body.encounterMode .layer-monster {
+      animation: monsterIdleBob 1600ms ease-in-out infinite;
+      transform-origin: center bottom;
+    }
+
+    @keyframes monsterIdleBob {
+      0% { transform: translateY(0) scale(1); }
+      50% { transform: translateY(-3px) scale(1.006); }
+      100% { transform: translateY(0) scale(1); }
+    }
+
+    body.monsterHit .layer-monster {
+      animation: monsterHitJolt 260ms ease-out !important;
+    }
+
+    body.monsterAttack .layer-monster {
+      animation: monsterLunge 260ms ease-out !important;
+    }
+
+  
+    .layer-chest {
+      z-index: 8;
+      object-fit: fill;
+      display: none;
+      pointer-events: none;
+      transform-origin: center center;
+    }
+
+    .layer-chest.show {
+      display: block;
+    }
+
+    body.chestOpened .layer-chest {
+      animation: chestOpenPulse 420ms ease-out;
+    }
+
+    @keyframes chestOpenPulse {
+      0% { opacity: 0.75; transform: scale(0.98); filter: brightness(1); }
+      35% { opacity: 1; transform: scale(1.015); filter: brightness(1.35); }
+      100% { opacity: 1; transform: scale(1); filter: brightness(1); }
+    }
+
+  
+    .monsterHud {
+      position: absolute;
+      z-index: 60;
+      left: 36px;
+      right: 36px;
+      top: 42px;
+      display: none;
+      padding: 7px 9px;
+      border: 1px solid rgba(213, 170, 62, 0.62);
+      border-radius: 10px;
+      background: rgba(0,0,0,0.48);
+      box-shadow: 0 0 12px rgba(0,0,0,0.55);
+      pointer-events: none;
+    }
+
+    body.encounterMode .monsterHud {
+      display: block;
+    }
+
+    .monsterHudTop {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      color: #f3dfaa;
+      font-size: 12px;
+      font-weight: 700;
+      text-shadow: 0 0 4px #000;
+    }
+
+    .monsterHudSub {
+      margin-top: 2px;
+      color: rgba(255,255,255,0.82);
+      font-size: 10px;
+      text-align: right;
+    }
+
+    .miniBar {
+      height: 7px;
+      margin-top: 5px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: rgba(255,255,255,0.18);
+      border: 1px solid rgba(255,255,255,0.18);
+    }
+
+    .miniBarFill {
+      height: 100%;
+      width: 0%;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.92);
+    }
+
+    .enemyHpFill {
+      background: linear-gradient(90deg, rgba(170,20,20,0.95), rgba(245,74,52,0.95));
+    }
+
+    .attackMeterWrap {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: 54px 1fr;
+      align-items: center;
+      gap: 7px;
+      color: #fff;
+      font-size: 11px;
+      text-shadow: 0 0 4px #000;
+      padding: 0 2px 2px;
+    }
+
+    .attackReadyText {
+      color: #f5d068;
+      font-weight: 700;
+      text-align: right;
+    }
+
+    .uiButton.notReady {
+      opacity: 0.55;
+      filter: grayscale(0.35);
+    }
+
+  
+    .enemyAttackMiniBar {
+      height: 5px;
+      margin-top: 5px;
+      opacity: 0.88;
+    }
+
+    .enemyAttackFill {
+      background: linear-gradient(90deg, rgba(213,170,62,0.85), rgba(255,235,140,0.95));
+    }
+
+  </style>
+</head>
+
+<body>
+  <div class="pageShell">
+    <div class="gameBody" id="gameBody">
+      <div class="dungeonStage" id="dungeonStage">
+
+        <img class="roomLayer layer-room" id="roomLayer" src="assets/rooms/room1.png" alt="">
+        <img class="roomLayer layer-chest" id="chestLayer" src="" alt="">
+        <img class="roomLayer layer-monster" id="monsterLayer" src="assets/monsters/skeleton1.png" alt="">
+        <div class="monsterHud" id="monsterHud">
+          <div class="monsterHudTop">
+            <span id="monsterNameText">Monster</span>
+            <span id="monsterLevelText">Lv. 1</span>
+          </div>
+          <div class="miniBar"><div class="miniBarFill enemyHpFill" id="monsterHpBar"></div></div>
+          <div class="monsterHudSub" id="monsterHpText">HP 0 / 0</div>
+          <div class="miniBar enemyAttackMiniBar"><div class="miniBarFill enemyAttackFill" id="monsterAttackMeter"></div></div>
+          <div class="monsterHudSub" id="monsterAttackText">Attack 0%</div>
+        </div>
+        <img class="roomLayer layer-effect" id="effectLayer" src="" alt="">
+        <div class="damageNumber" id="damageNumber"></div>
+        <img class="roomLayer layer-border" id="borderLayer" src="assets/ui/dungeon_border_01.png" alt="">
+
+
+        <div class="controlHelp" id="controlHelp">
+          <div class="helpLabel helpForward">Forward</div>
+          <div class="helpLabel helpLeft">Left Path</div>
+          <div class="helpLabel helpRight">Right Path</div>
+          <div class="helpLabel helpBack">Back</div>
+          <div class="helpLabel helpAction">Action</div>
+          <div class="helpLabel helpInventory">Inventory</div>
+        </div>
+
+        
+
+        <div class="topHudBadge floorIndicator" id="floorIndicator">Floor 1</div>
+        <div class="topHudBadge shrineCompass" id="shrineCompass">Shrine ·</div>
+        <div class="mapIndicator" id="mapIndicator">Map: -</div>
+
+        <div class="exitMarker exitForward" id="exitForward">Exit</div>
+        <div class="exitMarker exitLeft" id="exitLeft">Exit</div>
+        <div class="exitMarker exitRight" id="exitRight">Exit</div>
+        <div class="exitMarker exitBack" id="exitBack">Back</div>
+
+        <button class="moveZone moveForward" onclick="moveForward()" aria-label="Move forward"></button>
+        <button class="moveZone moveLeft" onclick="turnLeft()" aria-label="Turn left"></button>
+        <button class="moveZone moveRight" onclick="turnRight()" aria-label="Turn right"></button>
+        <button class="moveZone moveBack" onclick="moveBack()" aria-label="Move back"></button>
+
+        <div class="debugLine" id="debugLine"></div>
+        <div class="facingBadge" id="facingBadge">E</div>
+        <button class="helpButton" id="helpButton" onclick="showControlHelp()">Help</button>
+        <div class="messageBox" id="messageBox">Tutorial map loaded.</div>
+
+        <div class="hud">
+          <div class="statBlock">
+            <div class="statLine">
+              <span>HP</span>
+              <div class="bar"><div class="barFill" id="hpBar"></div></div>
+            </div>
+            <div class="statLine">
+              <span>MP</span>
+              <div class="bar"><div class="barFill" id="mpBar"></div></div>
+            </div>
+          </div>
+
+          <div class="actionBlock" id="roamActions">
+            <button class="uiButton" onclick="doAction()">Action</button>
+            <button class="uiButton" onclick="openInventory()">Inventory</button>
+          </div>
+
+          <div class="combatBlock" id="combatActions">
+            <div class="attackMeterWrap">
+              <span class="attackReadyText" id="attackReadyText">Ready</span>
+              <div class="miniBar"><div class="miniBarFill" id="playerAttackMeter"></div></div>
+            </div>
+            <div class="combatMainButtons">
+              <button class="uiButton" id="attackButton" onclick="playerAttack()">Attack</button>
+              <button class="uiButton" onclick="playerDefend()">Defend</button>
+            </div>
+            <div class="combatBeltColumn" id="combatBeltRow">
+              <button class="uiButton beltButton empty" onclick="useBeltSlot('belt1')" aria-label="P1"></button>
+              <button class="uiButton beltButton empty" onclick="useBeltSlot('belt2')" aria-label="P2"></button>
+              <button class="uiButton beltButton empty" onclick="useBeltSlot('belt3')" aria-label="P3"></button>
+              <button class="uiButton beltButton empty" onclick="useBeltSlot('belt4')" aria-label="P4"></button>
+              <button class="uiButton combatRunButton" onclick="runAway()">Run</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="overlay" id="inventoryOverlay">
+          <div class="overlayTitle" id="inventoryTitle">Inventory</div>
+
+          <div class="tabs" id="inventoryTabs">
+            <button class="uiButton" onclick="showInventoryTab('status')">Status</button>
+            <button class="uiButton" onclick="showInventoryTab('items')">Items</button>
+            <button class="uiButton" onclick="showInventoryTab('equip')">Equip</button>
+          </div>
+
+          <div class="tabContent" id="inventoryContent"></div>
+
+          <button class="uiButton closeButton" onclick="closeInventory()">×</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Map data file. -->
+  <script src="maps.js"></script>
+
+  <!-- Monster data files. -->
+  <script src="monster.js"></script>
+  <script src="monloc.js"></script>
+  <script src="drops.js"></script>
+  <script src="monsterLoader.js"></script>
+
+  <!-- Equipment data files. -->
+  <script src="weapons.js"></script>
+  <script src="armor.js"></script>
+  <script src="cloaks.js"></script>
+  <script src="necklace.js"></script>
+  <script src="rings.js"></script>
+  <script src="equipmentLoader.js"></script>
+
+  <!-- Item data files. -->
+  <script src="consumables.js"></script>
+  <script src="keyitems.js"></script>
+  <script src="itemLoader.js"></script>
+
+  <!-- Rune data files. -->
+  <script src="runes.js"></script>
+  <script src="runeLoader.js"></script>
+
+  <script>
+    // =========================
+    // MAP / FLOOR STATE
+    // =========================
+
+    const FLOOR_THEMES = ["c", "b", "f"]; // c = castle, b = beach, f = forest
+
+    let currentFloor = 1;
+    let currentMapId = "";
+    let currentMap = null;
+    let currentFloorTheme = "c";
+    let testMap = [];
+
+    let playerX = 1;
+    let playerY = 1;
+    let playerDir = 2;
+    let moveHistory = []; // movement breadcrumb/debug only; view is grid-fixed south
+
+    const dirNames = ["N", "E", "S", "W"];
+    const openedChests = new Set();
+    const clearedMonsters = new Set();
+
+    function dungeonRandomChoice(list) {
+      return list[Math.floor(Math.random() * list.length)];
+    }
+
+    function getMonsterFloorLevel(floor) {
+      return Math.max(1, Math.floor(Number(floor) || 1));
+    }
+
+    function getCurrentMonsterPoolId() {
+      // Monster selection now uses actual floor level, not 5-floor difficulty bands.
+      // Example: c1, b7, f12. monsterLoader.js handles startFloor filtering.
+      return `${currentFloorTheme}${getMonsterFloorLevel(currentFloor)}`;
+    }
+
+    function findEntrancePosition(grid) {
+      for (let y = 0; y < grid.length; y++) {
+        const x = grid[y].indexOf("E");
+        if (x !== -1) return { x, y };
+      }
+
+      return { x: 1, y: 1 };
+    }
+
+
+    function findShrinePosition(grid = testMap) {
+      for (let y = 0; y < grid.length; y++) {
+        const x = grid[y].indexOf("S");
+        if (x !== -1) return { x, y };
+      }
+
+      return null;
+    }
+
+    function getWorldDirectionToShrine() {
+      const shrine = findShrinePosition(testMap);
+      if (!shrine) return null;
+
+      const dx = shrine.x - playerX;
+      const dy = shrine.y - playerY;
+
+      if (dx === 0 && dy === 0) return "HERE";
+
+      if (Math.abs(dx) > Math.abs(dy)) {
+        return dx > 0 ? "E" : "W";
+      }
+
+      return dy > 0 ? "S" : "N";
+    }
+
+    function getRelativeShrineArrow() {
+      const worldDir = getWorldDirectionToShrine();
+      if (!worldDir) return "·";
+      if (worldDir === "HERE") return "◆";
+
+      // Fixed-view crawler: player view always faces south/down the grid.
+      if (worldDir === "S") return "↑";
+      if (worldDir === "E") return "→";
+      if (worldDir === "N") return "↓";
+      if (worldDir === "W") return "←";
+      return "·";
+    }
+
+    function updateTopHud() {
+      const floorEl = document.getElementById("floorIndicator");
+      if (floorEl) floorEl.textContent = `Floor ${currentFloor}`;
+
+      const shrineEl = document.getElementById("shrineCompass");
+      if (shrineEl) shrineEl.textContent = `Shrine ${getRelativeShrineArrow()}`;
+
+      const mapEl = document.getElementById("mapIndicator");
+      if (mapEl) {
+        const mapName = currentMap && currentMap.name ? currentMap.name : currentMapId || "fallback";
+        mapEl.textContent = `Map: ${mapName}`;
+      }
+    }
+
+    function startNewFloor() {
+      // Starting or reloading a floor is a safe rest point.
+      player.hp = player.maxHp;
+      player.mp = player.maxMp;
+
+      if (typeof MAPS === "undefined") {
+        console.warn("MAPS is missing. Check maps.js load order.");
+        testMap = [
+          "##########",
+          "#E#######",
+          "#S#######",
+          "##########"
+        ];
+        currentMapId = "fallback";
+      } else {
+        const mapIds = Object.keys(MAPS);
+        currentMapId = dungeonRandomChoice(mapIds);
+        currentMap = MAPS[currentMapId];
+        testMap = currentMap.grid;
+      }
+
+      currentFloorTheme = dungeonRandomChoice(FLOOR_THEMES);
+
+      const start = findEntrancePosition(testMap);
+      playerX = start.x;
+      playerY = start.y;
+      playerDir = 2;
+      moveHistory = [];
+      openedChests.clear();
+      clearedMonsters.clear();
+
+      updateRoomView();
+      updateTopHud();
+      updateBars();
+
+      const themeName = currentFloorTheme === "c" ? "Castle" : currentFloorTheme === "b" ? "Beach" : "Forest";
+      setMessage(`${themeName} floor ${currentFloor} loaded.`);
+    }
+
+    // =========================
+    // BASIC STATE
+    // =========================
+
+    let gameMode = "roaming";
+    let currentEnemy = null;
+    let currentEnemyTileKey = null;
+    let inventoryMode = "main";
+    let activeEquipSlot = null;
+
+    const player = {
+      character: "maya",
+      name: "Maya",
+      level: 1,
+      exp: 0,
+
+      str: 8,
+      dex: 7,
+      magic: 3,
+      vitality: 8,
+      speed: 6,
+
+      hp: 100,
+      maxHp: 100,
+      mp: 30,
+      maxMp: 30,
+      gold: 0,
+
+      statusEffects: {
+        poison: false
+      },
+
+      inventory: {
+        consumables: {
+          potion: 3,
+          mana_potion: 1
+        },
+
+        equipment: {
+          rusty_sword: { owned: true, level: 0, pending: 0, socketsUnlocked: 1, sockets: [{ runeId: "kenaz", level: 0 }] },
+          iron_sword: { owned: true, level: 0, pending: 0, socketsUnlocked: 1, sockets: [] },
+          maya_cloth: { owned: true, level: 0, pending: 0, socketsUnlocked: 1, sockets: [{ runeId: "algiz", level: 0 }] },
+          torn_cloak: { owned: true, level: 0, pending: 0 },
+          traveler_cloak: { owned: true, level: 0, pending: 0 },
+          copper_necklace: { owned: true, level: 0, pending: 0 },
+          copper_ring: { owned: true, level: 0, pending: 0 },
+          iron_ring: { owned: true, level: 0, pending: 0 }
+        },
+
+        keyitems: {
+          generic_key: true
+        },
+
+        runes: {
+          fehu: { 0: 1, 1: 0, 2: 0, 3: 0 },
+          uruz: { 0: 1, 1: 0, 2: 0, 3: 0 },
+          kenaz: { 0: 2, 1: 0, 2: 0, 3: 0 },
+          algiz: { 0: 1, 1: 0, 2: 0, 3: 0 },
+          sowilo: { 0: 1, 1: 0, 2: 0, 3: 0 }
+        },
+
+        gems: {},
+        fragments: {}
+      },
+
+      equipment: {
+        weapon: "rusty_sword",
+        armor: "maya_cloth",
+        necklace: null,
+        ring1: "copper_ring",
+        ring2: null,
+        ring3: null,
+        ring4: null,
+        belt1: "potion",
+        belt2: "mana_potion",
+        belt3: null,
+        belt4: null
+      }
+    };
+
+
+
+    // =========================
+    // LOCAL SAVE
+    // =========================
+
+    const LOCAL_SAVE_KEY = "dungeonCrawlerLocalSave_v1";
+    let saveReady = false;
+    let saveTimer = null;
+
+    function deepMergeMutable(target, source) {
+      if (!source || typeof source !== "object") return target;
+
+      Object.keys(source).forEach(key => {
+        const value = source[key];
+
+        if (Array.isArray(value)) {
+          target[key] = value.slice();
+          return;
+        }
+
+        if (value && typeof value === "object") {
+          if (!target[key] || typeof target[key] !== "object" || Array.isArray(target[key])) {
+            target[key] = {};
+          }
+          deepMergeMutable(target[key], value);
+          return;
+        }
+
+        target[key] = value;
+      });
+
+      return target;
+    }
+
+    function getLocalSavePayload() {
+      return {
+        version: 1,
+        savedAt: Date.now(),
+        currentFloor,
+        currentMapId,
+        currentFloorTheme,
+        playerX,
+        playerY,
+        playerDir,
+        moveHistory: Array.isArray(moveHistory) ? moveHistory.slice() : [],
+        openedChests: Array.from(openedChests || []),
+        clearedMonsters: Array.from(clearedMonsters || []),
+        player: JSON.parse(JSON.stringify(player))
+      };
+    }
+
+    function saveGameState(immediate = false) {
+      if (!saveReady) return;
+
+      const write = () => {
+        try {
+          window.localStorage.setItem(LOCAL_SAVE_KEY, JSON.stringify(getLocalSavePayload()));
+        } catch (err) {
+          console.warn("Local save failed:", err);
+        }
+      };
+
+      if (immediate) {
+        if (saveTimer) {
+          clearTimeout(saveTimer);
+          saveTimer = null;
+        }
+        write();
+        return;
+      }
+
+      if (saveTimer) clearTimeout(saveTimer);
+      saveTimer = window.setTimeout(() => {
+        saveTimer = null;
+        write();
+      }, 250);
+    }
+
+    function loadGameState() {
+      try {
+        const raw = window.localStorage.getItem(LOCAL_SAVE_KEY);
+        if (!raw) return false;
+
+        const save = JSON.parse(raw);
+        if (!save || typeof save !== "object") return false;
+
+        if (save.player && typeof save.player === "object") {
+          deepMergeMutable(player, save.player);
+        }
+
+        currentFloor = Math.max(1, Math.floor(Number(save.currentFloor) || 1));
+
+        // Deliberately do NOT restore the active map, position, opened chests,
+        // cleared monster rooms, movement history, or floor theme.
+        // On every page load, the character keeps progression/inventory/floor,
+        // but starts a freshly generated floor at the entrance.
+        currentMapId = "";
+        currentMap = null;
+        testMap = [];
+        currentFloorTheme = "c";
+        playerX = 1;
+        playerY = 1;
+        playerDir = 2;
+        moveHistory = [];
+        openedChests.clear();
+        clearedMonsters.clear();
+
+        return true;
+      } catch (err) {
+        console.warn("Local save load failed:", err);
+        return false;
+      }
+    }
+
+    function clearLocalSave() {
+      try {
+        window.localStorage.removeItem(LOCAL_SAVE_KEY);
+      } catch (err) {
+        console.warn("Local save clear failed:", err);
+      }
+    }
+
+    window.addEventListener("beforeunload", () => saveGameState(true));
+
+    // =========================
+    // INVENTORY SHAPE / EQUIPMENT HELPERS
+    // =========================
+
+    function ensureFullInventoryShape() {
+      if (typeof ensureInventoryShape === "function") {
+        ensureInventoryShape(player);
+      }
+
+      if (!player.inventory.equipment) {
+        player.inventory.equipment = {};
+      }
+
+      if (typeof ensureRuneInventory === "function") {
+        ensureRuneInventory(player);
+      }
+
+      if (!player.inventory.gems) {
+        player.inventory.gems = {};
+      }
+
+      if (!player.inventory.fragments) {
+        player.inventory.fragments = {};
+      }
+    }
+
+    function getOwnedEquipmentRecord(itemId) {
+      ensureFullInventoryShape();
+      return player.inventory.equipment[itemId] || null;
+    }
+
+
+    function normalizeEquipmentSockets(itemId) {
+      const item = getEquipItem(itemId);
+      const record = getOwnedEquipmentRecord(itemId);
+
+      if (!item || !record) return;
+
+      if (!Array.isArray(record.sockets)) {
+        record.sockets = [];
+      }
+
+      const maxSockets = item.maxSockets || 0;
+
+      if (record.socketsUnlocked === undefined) {
+        record.socketsUnlocked = Math.min(maxSockets, maxSockets > 0 ? 1 : 0);
+      }
+
+      record.socketsUnlocked = Math.max(0, Math.min(maxSockets, Number(record.socketsUnlocked) || 0));
+
+      while (record.sockets.length < record.socketsUnlocked) {
+        record.sockets.push(null);
+      }
+
+      if (record.sockets.length > record.socketsUnlocked) {
+        record.sockets.length = record.socketsUnlocked;
+      }
+    }
+
+    function getOrCreateEquipmentRecord(itemId) {
+      ensureFullInventoryShape();
+
+      if (!player.inventory.equipment[itemId]) {
+        player.inventory.equipment[itemId] = {
+          owned: true,
+          level: 0,
+          pending: 0,
+          socketsUnlocked: 0,
+          sockets: []
+        };
+      }
+
+      normalizeEquipmentSockets(itemId);
+      return player.inventory.equipment[itemId];
+    }
+
+    function getSocketSummary(itemId) {
+      const item = getEquipItem(itemId);
+      const record = getOwnedEquipmentRecord(itemId);
+
+      if (!item || !record || (item.slot !== "weapon" && item.slot !== "armor")) return "";
+
+      normalizeEquipmentSockets(itemId);
+
+      const filled = record.sockets.filter(socket => socket && socket.runeId).length;
+      const total = record.socketsUnlocked || 0;
+      const max = item.maxSockets || 0;
+
+      return `Runes ${filled}/${total} · Max ${max}`;
+    }
+
+    function getEquippedRuneRecords() {
+      const records = [];
+
+      ["weapon", "armor"].forEach(slot => {
+        const itemId = player.equipment[slot];
+        const record = getOwnedEquipmentRecord(itemId);
+        if (record) records.push(record);
+      });
+
+      return records;
+    }
+
+    function getRuneBonusTotals() {
+      if (typeof getRuneBonusTotalsFromRecords !== "function") {
+        return {
+          goldFindPct: 0,
+          attackPct: 0,
+          piercePct: 0,
+          magicPct: 0,
+          speedPct: 0,
+          fireWeaponPct: 0,
+          lifeStealPct: 0,
+          shockWeaponPct: 0,
+          slowChancePct: 0,
+          lightBonusPct: 0,
+          defensePct: 0,
+          undeadBonusPct: 0
+        };
+      }
+
+      return getRuneBonusTotalsFromRecords(player, getEquippedRuneRecords());
+    }
+
+    function ownsEquipment(itemId) {
+      const record = getOwnedEquipmentRecord(itemId);
+      return !!(record && record.owned);
+    }
+
+    function getEquipmentLevel(itemId) {
+      const record = getOwnedEquipmentRecord(itemId);
+      return record ? (record.level || 0) : 0;
+    }
+
+    function getEquipmentPending(itemId) {
+      const record = getOwnedEquipmentRecord(itemId);
+      return record ? (record.pending || 0) : 0;
+    }
+
+    function getEquipItem(itemId) {
+      if (!itemId || typeof getEquipmentById !== "function") return null;
+      return getEquipmentById(itemId);
+    }
+
+    function getEquipName(itemId) {
+      if (!itemId) return "None";
+
+      const level = getEquipmentLevel(itemId);
+
+      if (typeof getEquipmentDisplayName === "function") {
+        return getEquipmentDisplayName(itemId, level);
+      }
+
+      const item = getEquipItem(itemId);
+      return item ? item.itemName : itemId;
+    }
+
+    function getEquipStats(itemId) {
+      const item = getEquipItem(itemId);
+      if (!item) {
+        return {
+          hp: 0,
+          mp: 0,
+          atk: 0,
+          mag: 0,
+          def: 0,
+          mdef: 0,
+          speed: 0
+        };
+      }
+
+      const level = getEquipmentLevel(itemId);
+
+      if (typeof getUpgradedEquipmentStats === "function") {
+        return getUpgradedEquipmentStats(item, level);
+      }
+
+      return {
+        hp: item.hp || 0,
+        mp: item.mp || 0,
+        atk: item.atk || 0,
+        mag: item.mag || 0,
+        def: item.def || 0,
+        mdef: item.mdef || 0,
+        speed: item.speed || 0
+      };
+    }
+
+    function equipmentStatLine(itemId) {
+      const item = getEquipItem(itemId);
+      if (!item) return "No stats";
+
+      const level = getEquipmentLevel(itemId);
+      const pending = getEquipmentPending(itemId);
+
+      let line = "";
+
+      if (typeof getEquipmentStatLine === "function") {
+        line = getEquipmentStatLine(item, level);
+      } else {
+        const s = getEquipStats(itemId);
+        const parts = [];
+        if (s.atk) parts.push(`Atk ${s.atk}`);
+        if (s.mag) parts.push(`Mag ${s.mag}`);
+        if (s.def) parts.push(`Def ${s.def}`);
+        if (s.mdef) parts.push(`MDef ${s.mdef}`);
+        if (s.hp) parts.push(`HP ${s.hp}`);
+        if (s.mp) parts.push(`MP ${s.mp}`);
+        if (s.speed) parts.push(`Speed ${s.speed}`);
+        line = parts.join(" · ") || "No stats";
+      }
+
+      const socketText = getSocketSummary(itemId);
+      if (socketText) {
+        line += ` · ${socketText}`;
+      }
+
+      if (pending > 0) {
+        line += ` · Pending +${pending}`;
+      }
+
+      return line;
+    }
+
+    function getEquipmentBonusTotals() {
+      const equippedIds = [
+        player.equipment.weapon,
+        player.equipment.armor,
+        player.equipment.necklace,
+        player.equipment.ring1,
+        player.equipment.ring2,
+        player.equipment.ring3,
+        player.equipment.ring4
+      ].filter(Boolean);
+
+      const totals = {
+        hp: 0,
+        mp: 0,
+        atk: 0,
+        mag: 0,
+        def: 0,
+        mdef: 0,
+        speed: 0
+      };
+
+      equippedIds.forEach(itemId => {
+        const stats = getEquipStats(itemId);
+
+        totals.hp += stats.hp || 0;
+        totals.mp += stats.mp || 0;
+        totals.atk += stats.atk || 0;
+        totals.mag += stats.mag || 0;
+        totals.def += stats.def || 0;
+        totals.mdef += stats.mdef || 0;
+        totals.speed += stats.speed || 0;
+      });
+
+      return totals;
+    }
+
+    // =========================
+    // PLAYER EXPERIENCE / LEVELING
+    // =========================
+
+    const PLAYER_BASE_STATS = {
+      str: 8,
+      dex: 7,
+      magic: 3,
+      vitality: 8,
+      speed: 6,
+      maxHp: 100,
+      maxMp: 30
+    };
+
+    // Deterministic level-up pattern. This can later become a per-character table.
+    const PLAYER_LEVEL_GAIN_PATTERN = [
+      { hp: 10, mp: 2, str: 1, dex: 0, magic: 0, vitality: 1, speed: 0 },
+      { hp: 8,  mp: 3, str: 0, dex: 1, magic: 0, vitality: 0, speed: 1 },
+      { hp: 12, mp: 2, str: 1, dex: 0, magic: 0, vitality: 1, speed: 0 },
+      { hp: 8,  mp: 4, str: 0, dex: 1, magic: 1, vitality: 0, speed: 0 },
+      { hp: 14, mp: 2, str: 1, dex: 0, magic: 0, vitality: 1, speed: 1 }
+    ];
+
+    function getLevelGainForLevel(level) {
+      if (level <= 1) {
+        return { hp: 0, mp: 0, str: 0, dex: 0, magic: 0, vitality: 0, speed: 0 };
+      }
+
+      return PLAYER_LEVEL_GAIN_PATTERN[(level - 2) % PLAYER_LEVEL_GAIN_PATTERN.length];
+    }
+
+    function getPlayerLevelBonus(level = player.level) {
+      const bonus = { hp: 0, mp: 0, str: 0, dex: 0, magic: 0, vitality: 0, speed: 0 };
+      const cappedLevel = Math.max(1, Math.floor(Number(level) || 1));
+
+      for (let lvl = 2; lvl <= cappedLevel; lvl++) {
+        const gain = getLevelGainForLevel(lvl);
+        bonus.hp += gain.hp || 0;
+        bonus.mp += gain.mp || 0;
+        bonus.str += gain.str || 0;
+        bonus.dex += gain.dex || 0;
+        bonus.magic += gain.magic || 0;
+        bonus.vitality += gain.vitality || 0;
+        bonus.speed += gain.speed || 0;
+      }
+
+      return bonus;
+    }
+
+    function getExpNeededForLevel(level = player.level) {
+      const lvl = Math.max(1, Math.floor(Number(level) || 1));
+      return Math.floor(50 + (lvl * lvl * 25));
+    }
+
+    function recalcDerivedStats() {
+      const bonuses = getEquipmentBonusTotals();
+      const levelBonus = getPlayerLevelBonus(player.level);
+
+      player.str = PLAYER_BASE_STATS.str + levelBonus.str;
+      player.dex = PLAYER_BASE_STATS.dex + levelBonus.dex;
+      player.magic = PLAYER_BASE_STATS.magic + levelBonus.magic;
+      player.vitality = PLAYER_BASE_STATS.vitality + levelBonus.vitality;
+      player.speed = PLAYER_BASE_STATS.speed + levelBonus.speed + (bonuses.speed || 0);
+
+      player.maxHp = PLAYER_BASE_STATS.maxHp + levelBonus.hp + (bonuses.hp || 0);
+      player.maxMp = PLAYER_BASE_STATS.maxMp + levelBonus.mp + (bonuses.mp || 0);
+
+      player.hp = Math.min(player.maxHp, Math.max(1, player.hp));
+      player.mp = Math.min(player.maxMp, Math.max(0, player.mp));
+    }
+
+    function getMonsterExpReward(monster) {
+      if (!monster) return 0;
+      const value = monster.exp ?? monster.expReward ?? 0;
+      const n = Number(value);
+      return Number.isFinite(n) ? Math.max(0, Math.round(n)) : 0;
+    }
+
+    function gainExp(amount) {
+      const gained = Math.max(0, Math.round(Number(amount) || 0));
+      if (!Number.isFinite(player.exp)) player.exp = 0;
+      player.exp += gained;
+
+      let levelsGained = 0;
+
+      while (player.exp >= getExpNeededForLevel(player.level)) {
+        player.exp -= getExpNeededForLevel(player.level);
+        player.level += 1;
+        levelsGained += 1;
+      }
+
+      if (levelsGained > 0) {
+        recalcDerivedStats();
+        player.hp = player.maxHp;
+        player.mp = player.maxMp;
+        updateBars();
+      }
+
+      return { gained, levelsGained };
+    }
+
+    function canEquip(itemId) {
+      const item = getEquipItem(itemId);
+      if (!item) return false;
+
+      if (typeof canCharacterEquipItem === "function") {
+        return canCharacterEquipItem(player, item);
+      }
+
+      return true;
+    }
+
+    function getEquipmentTierNumber(item) {
+      const tierText = String(item && item.tier ? item.tier : "").toLowerCase();
+      const match = tierText.match(/mt?(\d+)/);
+      if (match) return Number(match[1]);
+
+      const req = Number(item && item.reqLevel ? item.reqLevel : 1);
+      if (req >= 9) return 4;
+      if (req >= 5) return 3;
+      if (req >= 3) return 2;
+      return 1;
+    }
+
+    function getEquipmentFragmentId(item) {
+      const tier = getEquipmentTierNumber(item);
+      const kind = item && item.slot === "weapon" ? "weapon" : "armor";
+      return `t${tier}_${kind}_fragment`;
+    }
+
+    function getFragmentDisplayName(fragmentId) {
+      const match = String(fragmentId || "").match(/^t(\d+)_(armor|weapon)_fragment$/);
+      if (!match) return fragmentId || "Fragment";
+      const kind = match[2] === "weapon" ? "Weapon" : "Armor";
+      return `T${match[1]} ${kind} Fragment`;
+    }
+
+    function addFragment(fragmentId, amount = 1) {
+      ensureFullInventoryShape();
+      player.inventory.fragments[fragmentId] = (player.inventory.fragments[fragmentId] || 0) + amount;
+    }
+
+    function getFragmentInventoryList() {
+      ensureFullInventoryShape();
+      return Object.entries(player.inventory.fragments || {})
+        .filter(([, quantity]) => quantity > 0)
+        .map(([fragmentId, quantity]) => ({
+          fragmentId,
+          quantity,
+          itemName: getFragmentDisplayName(fragmentId),
+          description: "Used for same-tier equipment upgrades."
+        }));
+    }
+
+    function addEquipmentToInventory(itemId) {
+      const item = getEquipItem(itemId);
+
+      if (!item) {
+        return false;
+      }
+
+      ensureFullInventoryShape();
+
+      if (!player.inventory.equipment[itemId] || !player.inventory.equipment[itemId].owned) {
+        player.inventory.equipment[itemId] = {
+          owned: true,
+          level: 0,
+          pending: 0,
+          socketsUnlocked: Math.min(item.maxSockets || 0, item.maxSockets > 0 ? 1 : 0),
+          sockets: []
+        };
+
+        normalizeEquipmentSockets(itemId);
+
+        return {
+          ok: true,
+          message: `Found ${getEquipName(itemId)}.`
+        };
+      }
+
+      return {
+        ok: false,
+        duplicate: true,
+        message: `Already own ${getEquipName(itemId)}.`
+      };
+    }
+
+    function addLootItem(itemId) {
+      if (getEquipItem(itemId)) {
+        return addEquipmentToInventory(itemId);
+      }
+
+      if (typeof getConsumable === "function" && getConsumable(itemId)) {
+        addConsumable(player, itemId, 1);
+        return {
+          ok: true,
+          message: `Found ${getItemDisplayName(itemId)}.`
+        };
+      }
+
+      if (typeof getKeyItem === "function" && getKeyItem(itemId)) {
+        addKeyItem(player, itemId);
+        return {
+          ok: true,
+          message: `Found ${getItemDisplayName(itemId)}.`
+        };
+      }
+
+      if (typeof getRuneById === "function" && getRuneById(itemId)) {
+        addRune(player, itemId, 0, 1);
+        return {
+          ok: true,
+          message: `Found ${getRuneDisplayName(itemId, 0)}.`
+        };
+      }
+
+      return {
+        ok: false,
+        message: `Unknown item: ${itemId}`
+      };
+    }
+
+    function applyPendingEquipmentUpgrades() {
+      ensureFullInventoryShape();
+
+      const messages = [];
+
+      Object.entries(player.inventory.equipment).forEach(([itemId, record]) => {
+        if (!record || !record.owned) return;
+
+        const pending = record.pending || 0;
+
+        if (pending <= 0) return;
+
+        record.level = (record.level || 0) + pending;
+        record.pending = 0;
+
+        messages.push(`${getEquipName(itemId)} upgraded to +${record.level}.`);
+      });
+
+      recalcDerivedStats();
+      updateBars();
+
+      return messages;
+    }
+
+    // =========================
+    // DISPLAY HELPERS
+    // =========================
+
+
+
+    function setMenuOpen(isOpen) {
+      const overlay = document.getElementById("inventoryOverlay");
+      if (overlay) overlay.classList.toggle("show", !!isOpen);
+      document.body.classList.toggle("menuOpen", !!isOpen);
+    }
+
+    function menuIsOpen() {
+      return document.getElementById("inventoryOverlay").classList.contains("show");
+    }
+
+    let helpTimer = null;
+
+    function showControlHelp() {
+      const help = document.getElementById("controlHelp");
+      if (!help) return;
+
+      updateFacingAndExits();
+      help.classList.add("show");
+
+      if (helpTimer) clearTimeout(helpTimer);
+
+      helpTimer = setTimeout(() => {
+        help.classList.remove("show");
+      }, 3000);
+    }
+
+    let encounterNoticeTimer = null;
+
+    let messageClearTimer = null;
+
+    function setMessage(text, duration = 2600) {
+      const box = document.getElementById("messageBox");
+      if (!box) return;
+
+      if (messageClearTimer) clearTimeout(messageClearTimer);
+      box.classList.remove("combatNotice");
+      box.textContent = text;
+      box.style.visibility = text ? "visible" : "hidden";
+
+      if (duration && duration > 0) {
+        messageClearTimer = setTimeout(() => {
+          box.textContent = "";
+          box.style.visibility = "hidden";
+          messageClearTimer = null;
+        }, duration);
+      }
+
+      saveGameState(false);
+    }
+
+    function showEncounterNotice(text) {
+      const box = document.getElementById("messageBox");
+      if (!box) return;
+
+      if (encounterNoticeTimer) clearTimeout(encounterNoticeTimer);
+      if (messageClearTimer) clearTimeout(messageClearTimer);
+
+      box.style.visibility = "visible";
+      box.textContent = text;
+      box.classList.add("combatNotice");
+
+      encounterNoticeTimer = setTimeout(() => {
+        box.classList.remove("combatNotice");
+        box.textContent = "";
+        box.style.visibility = "hidden";
+        encounterNoticeTimer = null;
+      }, 1600);
+    }
+
+
+    function playRoomTransition() {
+      document.body.classList.remove("roomMoving");
+      void document.body.offsetWidth;
+      document.body.classList.add("roomMoving");
+
+      window.setTimeout(() => {
+        document.body.classList.remove("roomMoving");
+      }, 340);
+    }
+
+
+    function setRoomImage(roomName) {
+      const img = document.getElementById("roomLayer");
+      img.onerror = () => {
+        img.onerror = null;
+        img.src = "assets/rooms/openroomc1.png";
+        setMessage(`Missing room image: ${roomName}.png`);
+      };
+      img.src = `assets/rooms/${roomName}.png`;
+    }
+
+    function updateBars() {
+      document.getElementById("hpBar").style.width = `${Math.max(0, player.hp / player.maxHp * 100)}%`;
+      document.getElementById("mpBar").style.width = `${Math.max(0, player.mp / player.maxMp * 100)}%`;
+      if (gameMode === "encounter") updateCombatMetersUI();
+      if (typeof updateCombatBeltSlots === "function") updateCombatBeltSlots();
+    }
+
+    function setMode(mode) {
+      gameMode = mode;
+      document.body.classList.toggle("encounterMode", mode === "encounter");
+      if (mode !== "encounter") {
+        const box = document.getElementById("messageBox");
+        if (box) box.classList.remove("combatNotice");
+      }
+    }
+
+    function tileKey(x, y) {
+      return `${x},${y}`;
+    }
+
+
+    function updateFacingAndExits() {
+      const badge = document.getElementById("facingBadge");
+      if (badge) badge.textContent = "Facing S";
+
+      const front = getRelativeTile(0);
+      const left = getRelativeTile(-1);
+      const right = getRelativeTile(1);
+      const back = getRelativeTile(2);
+
+      const currentTile = getTile(playerX, playerY);
+      const chestDeadEnd = currentTile === "C";
+
+      const show = (id, shouldShow, label) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.textContent = label;
+        el.classList.toggle("show", !!shouldShow);
+      };
+
+      // Exit markers report the actual movement truth.
+      show("exitForward", !chestDeadEnd && canMoveTo(front.x, front.y), "Forward");
+      show("exitLeft", !chestDeadEnd && canMoveTo(left.x, left.y), "Left Path");
+      show("exitRight", !chestDeadEnd && canMoveTo(right.x, right.y), "Right Path");
+      show("exitBack", canMoveTo(back.x, back.y), "Back");
+    }
+
+    function updateDebug() {
+      const currentTile = getTile(playerX, playerY);
+      const front = getRelativeTile(0);
+      const left = getRelativeTile(-1);
+      const right = getRelativeTile(1);
+      const back = getRelativeTile(2);
+
+      const f = canMoveTo(front.x, front.y) ? "open" : "wall";
+      const l = canMoveTo(left.x, left.y) ? "open" : "wall";
+      const r = canMoveTo(right.x, right.y) ? "open" : "wall";
+      const b = canMoveTo(back.x, back.y) ? "open" : "wall";
+
+      document.getElementById("debugLine").textContent =
+        `Img:${lastRoomImageName} X:${playerX} Y:${playerY} Face:S Tile:${currentTile} F:${f} L:${l} R:${r} B:${b} Hist:${moveHistory.length}`;
+    }
+
+    function getTile(x, y) {
+      if (y < 0 || y >= testMap.length) return "#";
+      if (x < 0 || x >= testMap[y].length) return "#";
+      return testMap[y][x];
+    }
+
+    function canMoveTo(x, y) {
+      return getTile(x, y) !== "#";
+    }
+
+    function isOpenTile(tile) {
+      return tile !== "#";
+    }
+
+    function getDirOffset(dir) {
+      if (dir === 0) return { dx: 0, dy: -1 };
+      if (dir === 1) return { dx: 1, dy: 0 };
+      if (dir === 2) return { dx: 0, dy: 1 };
+      return { dx: -1, dy: 0 };
+    }
+
+    function getRelativeTile(relativeDir) {
+      // Grid-fixed crawler view. The player is always visually facing south/down.
+      //  0 = forward/south, -1 = left/west, 1 = right/east, 2 = back/north.
+      let dx = 0;
+      let dy = 0;
+
+      if (relativeDir === 0) dy = 1;
+      else if (relativeDir === -1) dx = -1;
+      else if (relativeDir === 1) dx = 1;
+      else if (relativeDir === 2) dy = -1;
+
+      return {
+        x: playerX + dx,
+        y: playerY + dy,
+        tile: getTile(playerX + dx, playerY + dy)
+      };
+    }
+
+    function getForwardTile() {
+      return getRelativeTile(0);
+    }
+
+    function getBackwardTile() {
+      return getRelativeTile(2);
+    }
+
+    // =========================
+    // ROOM VIEW
+    // =========================
+
+
+    function getRoomImageNameForType(roomType) {
+      return `${roomType}${currentFloorTheme}1`;
+    }
+
+    function getRoomImageName() {
+      const currentTile = getTile(playerX, playerY);
+
+      // Entrance always uses the floor entrance image, regardless of side connections.
+      if (currentTile === "E") return getRoomImageNameForType("openroom");
+
+      // Special rooms only display their special image when the player is standing in that room.
+      if (currentTile === "C") return getRoomImageNameForType("chestroom");
+      if (currentTile === "B") return getRoomImageNameForType("door");
+      if (currentTile === "S") return getRoomImageNameForType("shrine");
+
+      const front = getRelativeTile(0);
+      const left = getRelativeTile(-1);
+      const right = getRelativeTile(1);
+
+      const frontOpen = canMoveTo(front.x, front.y);
+      const leftOpen = canMoveTo(left.x, left.y);
+      const rightOpen = canMoveTo(right.x, right.y);
+
+      if (frontOpen && leftOpen && rightOpen) return getRoomImageNameForType("room3way");
+      if (frontOpen && leftOpen && !rightOpen) return getRoomImageNameForType("roomfl");
+      if (frontOpen && !leftOpen && rightOpen) return getRoomImageNameForType("roomfr");
+      if (frontOpen && !leftOpen && !rightOpen) return getRoomImageNameForType("openroom");
+      if (!frontOpen && leftOpen && rightOpen) return getRoomImageNameForType("roomlr");
+      if (!frontOpen && leftOpen && !rightOpen) return getRoomImageNameForType("roomleft");
+      if (!frontOpen && !leftOpen && rightOpen) return getRoomImageNameForType("roomright");
+
+      return getRoomImageNameForType("openroom");
+    }
+
+    let lastRoomImageName = "openroomc1";
+
+
+    function getChestStateAt(x, y) {
+      const tile = getTile(x, y);
+      const key = tileKey(x, y);
+
+      if (tile !== "C") {
+        return {
+          hasChest: false,
+          opened: false,
+          mimic: false,
+          image: ""
+        };
+      }
+
+      const isOpened = openedChests.has(key);
+
+      return {
+        hasChest: true,
+        opened: isOpened,
+        mimic: false,
+        image: isOpened ? "chestopen1.png" : "chestclosed1.png"
+      };
+    }
+
+    function updateChestLayer() {
+      const layer = document.getElementById("chestLayer");
+      if (!layer) return;
+
+      const state = getChestStateAt(playerX, playerY);
+
+      if (!state.hasChest) {
+        layer.classList.remove("show");
+        layer.removeAttribute("src");
+        return;
+      }
+
+      layer.src = `assets/chest/${state.image}`;
+      layer.classList.add("show");
+    }
+
+    function playChestOpened() {
+      document.body.classList.remove("chestOpened");
+      void document.body.offsetWidth;
+      document.body.classList.add("chestOpened");
+
+      window.setTimeout(() => {
+        document.body.classList.remove("chestOpened");
+      }, 440);
+    }
+
+
+    function updateRoomView() {
+      lastRoomImageName = getRoomImageName();
+      setRoomImage(lastRoomImageName);
+      updateChestLayer();
+      updateFacingAndExits();
+      updateTopHud();
+      updateDebug();
+    }
+
+
+    function enterTile(tile) {
+      const key = tileKey(playerX, playerY);
+      updateRoomView();
+
+      if (tile === "E") {
+        setMessage("Entrance.");
+        return;
+      }
+
+      if (tile === "R") {
+        setMessage("Moved to room.");
+        return;
+      }
+
+      if (tile === "M") {
+        if (clearedMonsters.has(key)) {
+          setMessage("The monster room is clear.");
+          return;
+        }
+
+        setMessage("You enter a monster room.");
+        startEncounter(getCurrentMonsterPoolId(), key, "M");
+        return;
+      }
+
+      if (tile === "C") {
+        if (openedChests.has(key)) {
+          setMessage("The chest is empty.");
+          return;
+        }
+
+        setMessage("You found a chest.");
+        return;
+      }
+
+      if (tile === "T") {
+        player.hp = Math.max(1, player.hp - 10);
+        updateBars();
+        setMessage("A trap hits you for 10 damage.");
+        return;
+      }
+
+      if (tile === "B") {
+        if (clearedMonsters.has(key)) {
+          setMessage("The boss room is clear.");
+          return;
+        }
+
+        setMessage("A boss blocks the room.");
+        startEncounter(getCurrentMonsterPoolId(), key, "B");
+        return;
+      }
+
+      if (tile === "S") {
+        setMessage("You found a shrine.");
+        return;
+      }
+
+      setMessage("Moved.");
+    }
+
+    // =========================
+    // MOVEMENT
+    // =========================
+
+    function isChestDeadEnd() {
+      return false;
+    }
+
+
+    function saveCurrentPosition() {
+      moveHistory.push({
+        x: playerX,
+        y: playerY,
+        dir: playerDir
+      });
+    }
+
+    function moveToRelative(relativeDir, newFacingDir, moveLabel) {
+      if (menuIsOpen()) return;
+      if (gameMode === "encounter") return;
+
+      const currentTile = getTile(playerX, playerY);
+      if (currentTile === "C" && relativeDir !== 2) {
+        updateRoomView();
+        setMessage("The chest room is a dead end.");
+        return;
+      }
+
+      const next = getRelativeTile(relativeDir);
+
+      if (!canMoveTo(next.x, next.y)) {
+        updateRoomView();
+        setMessage(`No ${moveLabel} path.`);
+        return;
+      }
+
+      saveCurrentPosition();
+      playRoomTransition();
+
+      playerDir = 2;
+      playerX = next.x;
+      playerY = next.y;
+
+      enterTile(getTile(playerX, playerY));
+    }
+
+    function moveForward() {
+      moveToRelative(0, 2, "forward");
+    }
+
+
+    function moveBack() {
+      moveToRelative(2, 2, "back");
+    }
+
+
+    function turnLeft() {
+      moveToRelative(-1, 2, "left");
+    }
+
+
+    function turnRight() {
+      moveToRelative(1, 2, "right");
+    }
+
+
+
+    function setOverlayTitle(title) {
+      document.getElementById("inventoryTitle").textContent = title;
+    }
+
+    function hideInventoryTabs() {
+      document.getElementById("inventoryTabs").style.display = "none";
+    }
+
+    function showInventoryTabs() {
+      document.getElementById("inventoryTabs").style.display = "grid";
+    }
+
+    function shopIconHtml(image, folder = "items") {
+      if (!image) return `<span class="shopIcon empty"></span>`;
+      return `<img class="shopIcon" src="assets/${folder}/${image}" alt="">`;
+    }
+
+    function shrineHeroHtml(mode = "shrine") {
+      if (mode === "merchant") {
+        return `
+          <div class="shopHero">
+            <img class="shopHeroImage" src="assets/npc/ollie_shop1.png" alt="" onerror="this.style.display='none';">
+            <div class="shopHeroText">
+              <div class="shopName">Ollie's One-Hop Shop</div>
+              <div class="shopQuote">"One hop in. One shop done."</div>
+            </div>
+          </div>
+        `;
+      }
+
+      return `
+        <div class="shopHero">
+          <img class="shopHeroImage" src="assets/rooms/${getRoomImageNameForType("shrine")}.png" alt="" onerror="this.style.display='none';">
+          <div class="shopHeroText">
+            <div class="shopName">Shrine</div>
+            <div class="shopQuote">A quiet place to rest, repair, and trade before returning to the floor.</div>
+          </div>
+        </div>
+      `;
+    }
+
+    function restAtShrine() {
+      player.hp = player.maxHp;
+      player.mp = player.maxMp;
+      updateBars();
+    }
+
+    function openShrineMenu() {
+      const help = document.getElementById("controlHelp");
+      if (help) help.classList.remove("show");
+
+      restAtShrine();
+      setMenuOpen(true);
+      gameMode = "shrine";
+      renderShrineHome();
+      setMessage("The shrine restores your Health and Mana.");
+    }
+
+    function closeShrineMenu() {
+      gameMode = "roaming";
+      setMenuOpen(false);
+      updateRoomView();
+      setMessage("You leave the shrine.");
+    }
+
+    function getShrineFloorOptionsHtml() {
+      const downTwoTarget = Math.max(1, currentFloor - 2);
+      const downOneTarget = Math.max(1, currentFloor - 1);
+      const upOneTarget = currentFloor + 1;
+      const upTwoTarget = currentFloor + 2;
+
+      return `
+        <button class="shopRow" onclick="shrineChangeFloor(2)">
+          ${shopIconHtml("", "items")}
+          <div class="shopRowText">
+            <div class="shopRowName">Advance 2 Floors</div>
+            <div class="shopRowSub">Move from Floor ${currentFloor} to Floor ${upTwoTarget}</div>
+          </div>
+          <div class="shopRowValue">+2</div>
+        </button>
+
+        <button class="shopRow" onclick="shrineChangeFloor(1)">
+          ${shopIconHtml("", "items")}
+          <div class="shopRowText">
+            <div class="shopRowName">Advance 1 Floor</div>
+            <div class="shopRowSub">Move from Floor ${currentFloor} to Floor ${upOneTarget}</div>
+          </div>
+          <div class="shopRowValue">+1</div>
+        </button>
+
+        <button class="shopRow" onclick="shrineChangeFloor(-1)">
+          ${shopIconHtml("", "items")}
+          <div class="shopRowText">
+            <div class="shopRowName">Return 1 Floor</div>
+            <div class="shopRowSub">Move from Floor ${currentFloor} to Floor ${downOneTarget}</div>
+          </div>
+          <div class="shopRowValue">-1</div>
+        </button>
+
+        <button class="shopRow" onclick="shrineChangeFloor(-2)">
+          ${shopIconHtml("", "items")}
+          <div class="shopRowText">
+            <div class="shopRowName">Return 2 Floors</div>
+            <div class="shopRowSub">Move from Floor ${currentFloor} to Floor ${downTwoTarget}</div>
+          </div>
+          <div class="shopRowValue">-2</div>
+        </button>
+      `;
+    }
+
+    function shrineChangeFloor(delta) {
+      const oldFloor = currentFloor;
+      currentFloor = Math.max(1, currentFloor + delta);
+
+      setMenuOpen(false);
+      gameMode = "roaming";
+      startNewFloor();
+
+      if (currentFloor === oldFloor) {
+        setMessage("You are already at the lowest floor.");
+      } else {
+        setMessage(`Moved from Floor ${oldFloor} to Floor ${currentFloor}.`);
+      }
+    }
+
+    function renderShrineHome() {
+      setOverlayTitle("Shrine");
+      hideInventoryTabs();
+
+      const content = document.getElementById("inventoryContent");
+      content.style.overflowY = "auto";
+
+      content.innerHTML = `
+        ${shrineHeroHtml("shrine")}
+
+        <div class="shopMenuList">
+          <button class="shopRow" onclick="renderOllieShop()">
+            ${shopIconHtml("", "items")}
+            <div class="shopRowText">
+              <div class="shopRowName">Shop</div>
+              <div class="shopRowSub">Buy, sell, combine runes, or add sockets</div>
+            </div>
+            <div class="shopRowValue">Open</div>
+          </button>
+
+          <button class="shopRow" onclick="renderShrineContinue()">
+            ${shopIconHtml("", "items")}
+            <div class="shopRowText">
+              <div class="shopRowName">Continue</div>
+              <div class="shopRowSub">Travel to another floor</div>
+            </div>
+            <div class="shopRowValue">Floors</div>
+          </button>
+
+          <button class="shopRow shopBackRow" onclick="closeShrineMenu()">
+            ${shopIconHtml("", "items")}
+            <div class="shopRowText">
+              <div class="shopRowName">Return</div>
+              <div class="shopRowSub">Return to the dungeon</div>
+            </div>
+            <div class="shopRowValue">Back</div>
+          </button>
+        </div>
+      `;
+    }
+
+    function renderShrineContinue() {
+      setOverlayTitle("Continue");
+      hideInventoryTabs();
+
+      const content = document.getElementById("inventoryContent");
+      content.style.overflowY = "auto";
+
+      content.innerHTML = `
+        ${shrineHeroHtml("shrine")}
+        <div class="menuHeader">
+          <span>Floor Travel</span>
+          <span>Current: Floor ${currentFloor}</span>
+        </div>
+        <div class="shopMenuList">
+          ${getShrineFloorOptionsHtml()}
+
+          <button class="shopRow shopBackRow" onclick="renderShrineHome()">
+            ${shopIconHtml("", "items")}
+            <div class="shopRowText">
+              <div class="shopRowName">Back</div>
+              <div class="shopRowSub">Return to Shrine</div>
+            </div>
+            <div class="shopRowValue">Shrine</div>
+          </button>
+        </div>
+      `;
+    }
+
+    function shrineRest() {
+      player.hp = player.maxHp;
+      player.mp = player.maxMp;
+      updateBars();
+      setMessage("The shrine restores your Health and Mana.");
+      renderShrineHome();
+    }
+
+    function shrineApplyUpgrades() {
+      const upgrades = applyPendingEquipmentUpgrades();
+
+      if (upgrades.length) {
+        setMessage(upgrades.join(" "));
+      } else {
+        setMessage("No pending gear upgrades.");
+      }
+
+      renderShrineHome();
+    }
+
+    function renderOllieShop() {
+      setOverlayTitle("Shop");
+      hideInventoryTabs();
+
+      const content = document.getElementById("inventoryContent");
+      content.style.overflowY = "auto";
+
+      content.innerHTML = `
+        ${shrineHeroHtml("merchant")}
+
+        <div class="shopMenuList">
+          <button class="shopRow" onclick="renderShrineBuy()">
+            ${shopIconHtml("hpot1.png", "items")}
+            <div class="shopRowText">
+              <div class="shopRowName">Buy</div>
+              <div class="shopRowSub">Potions, antidotes, weapons, and armor</div>
+            </div>
+            <div class="shopRowValue">Shop</div>
+          </button>
+
+          <button class="shopRow" onclick="renderShrineSell()">
+            ${shopIconHtml("", "items")}
+            <div class="shopRowText">
+              <div class="shopRowName">Sell</div>
+              <div class="shopRowSub">Sell supplies and unequipped gear</div>
+            </div>
+            <div class="shopRowValue">Gold</div>
+          </button>
+
+          <button class="shopRow" onclick="renderRuneCombine()">
+            ${shopIconHtml("rune1.png", "runes")}
+            <div class="shopRowText">
+              <div class="shopRowName">Combine Runes</div>
+              <div class="shopRowSub">Three matching runes become one higher rune</div>
+            </div>
+            <div class="shopRowValue">3 → 1</div>
+          </button>
+
+          <button class="shopRow" onclick="renderSocketUnlock()">
+            ${shopIconHtml("rune6.png", "runes")}
+            <div class="shopRowText">
+              <div class="shopRowName">Add Sockets</div>
+              <div class="shopRowSub">Open locked weapon and armor rune slots</div>
+            </div>
+            <div class="shopRowValue">Gold</div>
+          </button>
+
+          <button class="shopRow" onclick="renderEquipmentUpgrade()">
+            ${shopIconHtml("", "items")}
+            <div class="shopRowText">
+              <div class="shopRowName">Upgrade Equipment</div>
+              <div class="shopRowSub">Improve owned weapons and armor with gold</div>
+            </div>
+            <div class="shopRowValue">Gold</div>
+          </button>
+
+          <button class="shopRow shopBackRow" onclick="renderShrineHome()">
+            ${shopIconHtml("", "items")}
+            <div class="shopRowText">
+              <div class="shopRowName">Back</div>
+              <div class="shopRowSub">Return to Shrine</div>
+            </div>
+            <div class="shopRowValue">Shrine</div>
+          </button>
+        </div>
+      `;
+    }
+
+    const SHOP_KEY_ITEMS = [
+      { itemId: "generic_key", label: "Generic Key" },
+      { itemId: "boss_key", label: "Boss Key" }
+    ];
+
+    function getAllShopConsumables() {
+      if (typeof GAME_CONSUMABLES !== "undefined") {
+        return Object.values(GAME_CONSUMABLES).filter(Boolean).map(item => ({ itemId: item.itemId }));
+      }
+
+      return [
+        { itemId: "potion" },
+        { itemId: "copper_potion" },
+        { itemId: "silver_potion" },
+        { itemId: "gold_potion" },
+        { itemId: "mana_potion" },
+        { itemId: "copper_mana_potion" },
+        { itemId: "silver_mana_potion" },
+        { itemId: "gold_mana_potion" },
+        { itemId: "antidote" },
+        { itemId: "smoke_bomb" },
+        { itemId: "rejuvenation_potion" }
+      ];
+    }
+
+    let currentShopGearStock = [];
+    let currentShopGearIndex = 0;
+
+    const SHOP_CATEGORIES = ["Consumables", "Equipment", "Keys"];
+    const SHOP_PAGE_SIZE = 4;
+    let shopBuyCategoryIndex = 0;
+    let shopSellCategoryIndex = 0;
+    let shopBuyPages = {};
+    let shopSellPages = {};
+
+    function getShopCategoryCycleHtml(mode, currentIndex) {
+      const label = SHOP_CATEGORIES[currentIndex] || SHOP_CATEGORIES[0];
+      return `
+        <div class="itemCategoryCycle">
+          <button class="statusCycleButton" onclick="cycleShopCategory('${mode}', -1)">‹</button>
+          <div class="itemCategoryLabel">${label}</div>
+          <button class="statusCycleButton" onclick="cycleShopCategory('${mode}', 1)">›</button>
+        </div>
+      `;
+    }
+
+    function cycleShopCategory(mode, delta) {
+      const total = SHOP_CATEGORIES.length;
+
+      if (mode === "buy") {
+        shopBuyCategoryIndex = (shopBuyCategoryIndex + delta + total) % total;
+        renderShrineBuy();
+        return;
+      }
+
+      if (mode === "sell") {
+        shopSellCategoryIndex = (shopSellCategoryIndex + delta + total) % total;
+        renderShrineSell();
+      }
+    }
+
+    function getShopCategoryKey(index) {
+      return SHOP_CATEGORIES[index] || SHOP_CATEGORIES[0];
+    }
+
+    function getShopPageStore(mode) {
+      return mode === "buy" ? shopBuyPages : shopSellPages;
+    }
+
+    function getShopPage(mode, category, itemCount) {
+      const store = getShopPageStore(mode);
+      const maxPage = Math.max(0, Math.ceil(Math.max(0, itemCount) / SHOP_PAGE_SIZE) - 1);
+      const current = Math.max(0, Math.min(Number(store[category] || 0), maxPage));
+      store[category] = current;
+      return current;
+    }
+
+    function setShopPage(mode, delta) {
+      const categoryIndex = mode === "buy" ? shopBuyCategoryIndex : shopSellCategoryIndex;
+      const category = getShopCategoryKey(categoryIndex);
+      const store = getShopPageStore(mode);
+      store[category] = Math.max(0, Number(store[category] || 0) + delta);
+
+      if (mode === "buy") {
+        renderShrineBuy();
+      } else {
+        renderShrineSell();
+      }
+    }
+
+    function getShopPageControlsHtml(mode, category, itemCount) {
+      const maxPage = Math.max(0, Math.ceil(Math.max(0, itemCount) / SHOP_PAGE_SIZE) - 1);
+      const current = getShopPage(mode, category, itemCount);
+      const prevDisabled = current <= 0 ? "disabled" : "";
+      const nextDisabled = current >= maxPage ? "disabled" : "";
+
+      return `
+        <div class="shopPageControls">
+          <button class="uiButton" onclick="setShopPage('${mode}', -1)" ${prevDisabled}>‹</button>
+          <div class="shopPageText">Page ${current + 1} / ${maxPage + 1}</div>
+          <button class="uiButton" onclick="setShopPage('${mode}', 1)" ${nextDisabled}>›</button>
+        </div>
+      `;
+    }
+
+    function getShopPageItems(mode, category, entries) {
+      const list = Array.isArray(entries) ? entries : [];
+      const page = getShopPage(mode, category, list.length);
+      const start = page * SHOP_PAGE_SIZE;
+      return list.slice(start, start + SHOP_PAGE_SIZE);
+    }
+
+    function getItemBaseValue(itemId) {
+      const consumable = typeof getConsumable === "function" ? getConsumable(itemId) : null;
+      if (consumable && Number(consumable.value || consumable.price || consumable.goldValue)) {
+        return Number(consumable.value || consumable.price || consumable.goldValue);
+      }
+
+      const equipment = getEquipItem(itemId);
+      if (equipment && Number(equipment.value)) {
+        return Number(equipment.value);
+      }
+
+      return 10;
+    }
+
+    function getBuyPrice(itemId) {
+      return Math.max(1, Math.round(getItemBaseValue(itemId)));
+    }
+
+    function getSellPrice(itemId) {
+      return Math.max(1, Math.floor(getItemBaseValue(itemId) * 0.5));
+    }
+
+    function getEquipmentShopIconHtml(item) {
+      if (!item) return `<span class="shopIcon empty"></span>`;
+
+      const iconPath = typeof getEquipmentIconPath === "function"
+        ? getEquipmentIconPath(item)
+        : (item.icon || item.image || "");
+
+      if (!iconPath) return `<span class="shopIcon empty"></span>`;
+
+      const finalPath = iconPath.startsWith("assets/") ? iconPath : `assets/${getEquipmentImageFolder(item)}/${iconPath}`;
+      return `<img class="shopIcon" src="${finalPath}" alt="" onerror="this.style.display='none';">`;
+    }
+
+    function getRandomShopGearStock(count = 4) {
+      const allEquipment = typeof getAllEquipment === "function" ? getAllEquipment() : [];
+      const allowedCharacters = ["all", player.character].filter(Boolean);
+
+      const candidates = allEquipment.filter(item => {
+        if (!item || (item.slot !== "weapon" && item.slot !== "armor")) return false;
+        if (item.character && !allowedCharacters.includes(String(item.character).toLowerCase())) return false;
+        return true;
+      });
+
+      const pool = candidates.slice();
+      const picks = [];
+
+      while (pool.length && picks.length < count) {
+        const index = Math.floor(Math.random() * pool.length);
+        picks.push(pool.splice(index, 1)[0]);
+      }
+
+      return picks;
+    }
+
+    function ensureShopGearStock() {
+      if (!Array.isArray(currentShopGearStock) || currentShopGearStock.length < 4) {
+        currentShopGearStock = getRandomShopGearStock(4);
+      }
+      return currentShopGearStock;
+    }
+
+    function resetShopGearStock() {
+      currentShopGearStock = getRandomShopGearStock(4);
+      currentShopGearIndex = 0;
+    }
+
+    function renderShopBuySupplyRow(entry) {
+      const item = typeof getConsumable === "function" ? getConsumable(entry.itemId) : null;
+      if (!item) return "";
+      const name = entry.label || item.itemName;
+      const image = item.image || "";
+      const price = getBuyPrice(entry.itemId);
+
+      return `
+        <button class="shopRow" onclick="buyShopItem('${entry.itemId}', ${price})">
+          ${shopIconHtml(image, "items")}
+          <div class="shopRowText">
+            <div class="shopRowName">${name}</div>
+            <div class="shopRowSub">${item.description || "Consumable"}</div>
+          </div>
+          <div class="shopRowValue">${price}g</div>
+        </button>
+      `;
+    }
+
+    function renderShopBuyKeyRow(entry) {
+      const item = typeof getKeyItem === "function" ? getKeyItem(entry.itemId) : null;
+      if (!item) return "";
+      const price = Math.max(1, Number(item.value || 25) || 25);
+      return `
+        <button class="shopRow" onclick="buyShopKeyItem('${entry.itemId}', ${price})">
+          ${shopIconHtml(item.image || "", "items")}
+          <div class="shopRowText">
+            <div class="shopRowName">${entry.label || item.itemName}</div>
+            <div class="shopRowSub">${item.description || "Key item"}</div>
+          </div>
+          <div class="shopRowValue">${price}g</div>
+        </button>
+      `;
+    }
+
+    function renderShopBuyEquipmentRow(item) {
+      const price = getBuyPrice(item.itemId);
+      const owned = ownsEquipment(item.itemId);
+
+      return `
+        <button class="shopRow" onclick="buyShopEquipment('${item.itemId}', ${price})">
+          ${getEquipmentShopIconHtml(item)}
+          <div class="shopRowText">
+            <div class="shopRowName">${item.itemName}</div>
+            <div class="shopRowSub">${item.slot.toUpperCase()} · Req Lv ${item.reqLevel || 1} · ${owned ? "Owned" : "New"}</div>
+          </div>
+          <div class="shopRowValue">${price}g</div>
+        </button>
+      `;
+    }
+    function renderShopBuyEquipmentSelector(gearStock) {
+      if (!Array.isArray(gearStock) || !gearStock.length) {
+        return `<div class="smallNote">No equipment offers available.</div>`;
+      }
+
+      currentShopGearIndex = Math.max(0, Math.min(currentShopGearIndex, gearStock.length - 1));
+      const item = gearStock[currentShopGearIndex];
+
+      return `
+        <div class="shopGearPager">
+          <button class="uiButton shopGearArrow" onclick="shopGearPrev()" aria-label="Previous shop gear">‹</button>
+          ${renderShopBuyEquipmentRow(item)}
+          <button class="uiButton shopGearArrow" onclick="shopGearNext()" aria-label="Next shop gear">›</button>
+        </div>
+        <div class="shopGearCounter">Offer ${currentShopGearIndex + 1} / ${gearStock.length}</div>
+      `;
+    }
+
+    function renderShopRerollGearRow() {
+      return `
+        <button class="shopRow shopBackRow" onclick="resetShopGearStock(); renderShrineBuy();">
+          ${shopIconHtml("", "items")}
+          <div class="shopRowText">
+            <div class="shopRowName">Reroll Gear</div>
+            <div class="shopRowSub">Refresh the four random weapon/armor offers</div>
+          </div>
+          <div class="shopRowValue">Free</div>
+        </button>
+      `;
+    }
+
+    function renderShopBuyEquipmentEntry(entry) {
+      if (!entry) return "";
+      if (entry.type === "reroll") return renderShopRerollGearRow();
+      return renderShopBuyEquipmentRow(entry);
+    }
+
+    function shopGearPrev() {
+      const stock = ensureShopGearStock();
+      if (!stock.length) return;
+      currentShopGearIndex = (currentShopGearIndex - 1 + stock.length) % stock.length;
+      renderShrineBuy();
+    }
+
+    function shopGearNext() {
+      const stock = ensureShopGearStock();
+      if (!stock.length) return;
+      currentShopGearIndex = (currentShopGearIndex + 1) % stock.length;
+      renderShrineBuy();
+    }
+
+
+    function renderShrineBuy() {
+      setOverlayTitle("Buy");
+      hideInventoryTabs();
+
+      const content = document.getElementById("inventoryContent");
+      content.style.overflowY = "hidden";
+
+      const gearStock = ensureShopGearStock();
+      const consumables = getAllShopConsumables();
+      const category = getShopCategoryKey(shopBuyCategoryIndex);
+
+      let entries = [];
+      let categoryHtml = "";
+
+      if (category === "Consumables") {
+        entries = consumables;
+        const visible = getShopPageItems("buy", category, entries);
+        categoryHtml = visible.length
+          ? visible.map(renderShopBuySupplyRow).join("")
+          : `<div class="smallNote">No consumables available.</div>`;
+      } else if (category === "Equipment") {
+        entries = gearStock.concat([{ type: "reroll" }]);
+        const visible = getShopPageItems("buy", category, entries);
+        categoryHtml = visible.length
+          ? visible.map(renderShopBuyEquipmentEntry).join("")
+          : `<div class="smallNote">No equipment offers available.</div>`;
+      } else if (category === "Keys") {
+        entries = SHOP_KEY_ITEMS;
+        const visible = getShopPageItems("buy", category, entries);
+        categoryHtml = visible.length
+          ? visible.map(renderShopBuyKeyRow).join("")
+          : `<div class="smallNote">No key items available.</div>`;
+      }
+
+      let html = `
+        ${shrineHeroHtml("merchant")}
+        <div class="menuHeader">
+          <span>Buy</span>
+          <span>Gold: ${player.gold}</span>
+        </div>
+        ${getShopCategoryCycleHtml("buy", shopBuyCategoryIndex)}
+        <div class="shopPagedList">
+          ${categoryHtml}
+        </div>
+        ${getShopPageControlsHtml("buy", category, entries.length)}
+        <div class="shopMenuList">
+          <button class="shopRow shopBackRow" onclick="renderOllieShop()">
+            ${shopIconHtml("", "items")}
+            <div class="shopRowText">
+              <div class="shopRowName">Back</div>
+              <div class="shopRowSub">Return to Shop</div>
+            </div>
+            <div class="shopRowValue">Shop</div>
+          </button>
+        </div>
+      `;
+
+      content.innerHTML = html;
+    }
+
+    function buyShopItem(itemId, price) {
+      if (player.gold < price) {
+        setMessage("Not enough gold.");
+        return;
+      }
+
+      if (typeof addConsumable !== "function" || !addConsumable(player, itemId, 1)) {
+        setMessage("That item is not available.");
+        return;
+      }
+
+      player.gold -= price;
+      setMessage(`Bought ${getItemDisplayName(itemId)} for ${price} gold.`);
+      renderShrineBuy();
+    }
+
+    function buyShopKeyItem(itemId, price) {
+      if (player.gold < price) {
+        setMessage("Not enough gold.");
+        return;
+      }
+
+      if (typeof addKeyItem !== "function" || !addKeyItem(player, itemId)) {
+        setMessage("That key is not available.");
+        return;
+      }
+
+      player.gold -= price;
+      setMessage(`Bought ${getItemDisplayName(itemId)} for ${price} gold.`);
+      renderShrineBuy();
+    }
+
+    function buyShopEquipment(itemId, price) {
+      if (player.gold < price) {
+        setMessage("Not enough gold.");
+        return;
+      }
+
+      const item = getEquipItem(itemId);
+      if (!item) {
+        setMessage("That equipment is not available.");
+        return;
+      }
+
+      if (ownsEquipment(itemId)) {
+        setMessage(`You already own ${getEquipName(itemId)}.`);
+        return;
+      }
+
+      player.gold -= price;
+      const result = addEquipmentToInventory(itemId);
+      setMessage(result && result.message ? result.message : `Bought ${getEquipName(itemId)}.`);
+      renderShrineBuy();
+    }
+
+    function getSellableConsumableEntries() {
+      ensureFullInventoryShape();
+      return Object.entries(player.inventory.consumables || {})
+        .filter(([, quantity]) => Number(quantity) > 0)
+        .map(([itemId, quantity]) => ({ itemId, quantity, type: "consumable" }));
+    }
+
+    function isEquipmentCurrentlyEquipped(itemId) {
+      return Object.values(player.equipment || {}).includes(itemId);
+    }
+
+    function getSellableEquipmentEntries() {
+      ensureFullInventoryShape();
+      return Object.entries(player.inventory.equipment || {})
+        .filter(([itemId, record]) => record && record.owned && !isEquipmentCurrentlyEquipped(itemId))
+        .map(([itemId, record]) => ({ itemId, record, type: "equipment" }));
+    }
+
+
+    function getSellableKeyEntries() {
+      ensureFullInventoryShape();
+      return Object.keys(player.inventory.keyitems || {})
+        .filter(itemId => {
+          const item = typeof getKeyItem === "function" ? getKeyItem(itemId) : null;
+          return item && Number(item.value || 0) > 0;
+        })
+        .map(itemId => ({ itemId, type: "keyitem" }));
+    }
+
+    function renderSellConsumableRow(entry) {
+      const item = typeof getConsumable === "function" ? getConsumable(entry.itemId) : null;
+      const name = item ? item.itemName : entry.itemId;
+      const image = item ? item.image : "";
+      const price = getSellPrice(entry.itemId);
+
+      return `
+        <button class="shopRow" onclick="sellShopConsumable('${entry.itemId}', ${price})">
+          ${shopIconHtml(image, "items")}
+          <div class="shopRowText">
+            <div class="shopRowName">${name}</div>
+            <div class="shopRowSub">Owned x${entry.quantity}</div>
+          </div>
+          <div class="shopRowValue">${price}g</div>
+        </button>
+      `;
+    }
+
+    function renderSellEquipmentRow(entry) {
+      const item = getEquipItem(entry.itemId);
+      if (!item) return "";
+
+      const price = getSellPrice(entry.itemId);
+      const level = Number(entry.record.level || 0);
+      const levelText = level > 0 ? ` +${level}` : "";
+
+      return `
+        <button class="shopRow" onclick="sellShopEquipment('${entry.itemId}', ${price})">
+          ${getEquipmentShopIconHtml(item)}
+          <div class="shopRowText">
+            <div class="shopRowName">${item.itemName}${levelText}</div>
+            <div class="shopRowSub">${item.slot.toUpperCase()} · Unequipped</div>
+          </div>
+          <div class="shopRowValue">${price}g</div>
+        </button>
+      `;
+    }
+
+    function renderSellKeyRow(entry) {
+      const item = typeof getKeyItem === "function" ? getKeyItem(entry.itemId) : null;
+      if (!item) return "";
+      const price = Math.max(1, Math.floor(Number(item.value || 0) * 0.5));
+      return `
+        <button class="shopRow" onclick="sellShopKeyItem('${entry.itemId}', ${price})">
+          ${shopIconHtml(item.image || "", "items")}
+          <div class="shopRowText">
+            <div class="shopRowName">${item.itemName}</div>
+            <div class="shopRowSub">${item.description || "Key item"}</div>
+          </div>
+          <div class="shopRowValue">${price}g</div>
+        </button>
+      `;
+    }
+
+    function renderShrineSell() {
+      setOverlayTitle("Sell");
+      hideInventoryTabs();
+
+      const content = document.getElementById("inventoryContent");
+      content.style.overflowY = "hidden";
+
+      const consumables = getSellableConsumableEntries();
+      const equipment = getSellableEquipmentEntries();
+      const keys = getSellableKeyEntries();
+      const category = getShopCategoryKey(shopSellCategoryIndex);
+
+      let entries = [];
+      let categoryHtml = "";
+
+      if (category === "Consumables") {
+        entries = consumables;
+        const visible = getShopPageItems("sell", category, entries);
+        categoryHtml = visible.length
+          ? visible.map(renderSellConsumableRow).join("")
+          : `<div class="smallNote">No consumables to sell.</div>`;
+      } else if (category === "Equipment") {
+        entries = equipment;
+        const visible = getShopPageItems("sell", category, entries);
+        categoryHtml = visible.length
+          ? visible.map(renderSellEquipmentRow).join("")
+          : `<div class="smallNote">No unequipped equipment to sell.</div>`;
+      } else if (category === "Keys") {
+        entries = keys;
+        const visible = getShopPageItems("sell", category, entries);
+        categoryHtml = visible.length
+          ? visible.map(renderSellKeyRow).join("")
+          : `<div class="smallNote">No sellable keys.</div>`;
+      }
+
+      let html = `
+        ${shrineHeroHtml("merchant")}
+        <div class="menuHeader">
+          <span>Sell</span>
+          <span>Gold: ${player.gold}</span>
+        </div>
+        ${getShopCategoryCycleHtml("sell", shopSellCategoryIndex)}
+        <div class="shopPagedList">
+          ${categoryHtml}
+        </div>
+        ${getShopPageControlsHtml("sell", category, entries.length)}
+        <div class="shopMenuList">
+          <button class="shopRow shopBackRow" onclick="renderOllieShop()">
+            ${shopIconHtml("", "items")}
+            <div class="shopRowText">
+              <div class="shopRowName">Back</div>
+              <div class="shopRowSub">Return to Shop</div>
+            </div>
+            <div class="shopRowValue">Shop</div>
+          </button>
+        </div>
+      `;
+
+      content.innerHTML = html;
+    }
+
+    function sellShopConsumable(itemId, price) {
+      ensureFullInventoryShape();
+      const quantity = Number(player.inventory.consumables[itemId] || 0);
+
+      if (quantity <= 0) {
+        setMessage("You do not have that item.");
+        renderShrineSell();
+        return;
+      }
+
+      player.inventory.consumables[itemId] = quantity - 1;
+      if (player.inventory.consumables[itemId] <= 0) delete player.inventory.consumables[itemId];
+
+      player.gold += price;
+      setMessage(`Sold ${getItemDisplayName(itemId)} for ${price} gold.`);
+      renderShrineSell();
+    }
+
+    function sellShopKeyItem(itemId, price) {
+      ensureFullInventoryShape();
+
+      if (!player.inventory.keyitems[itemId]) {
+        setMessage("You do not own that key.");
+        renderShrineSell();
+        return;
+      }
+
+      delete player.inventory.keyitems[itemId];
+      player.gold += price;
+      setMessage(`Sold ${getItemDisplayName(itemId)} for ${price} gold.`);
+      renderShrineSell();
+    }
+
+    function sellShopEquipment(itemId, price) {
+      ensureFullInventoryShape();
+
+      if (isEquipmentCurrentlyEquipped(itemId)) {
+        setMessage("Unequip that item before selling it.");
+        renderShrineSell();
+        return;
+      }
+
+      const record = player.inventory.equipment[itemId];
+      if (!record || !record.owned) {
+        setMessage("You do not own that item.");
+        renderShrineSell();
+        return;
+      }
+
+      delete player.inventory.equipment[itemId];
+      player.gold += price;
+      setMessage(`Sold ${getEquipName(itemId)} for ${price} gold.`);
+      renderShrineSell();
+    }
+
+    function getCombinableRuneEntries() {
+      if (typeof getRuneInventoryList !== "function") return [];
+
+      return getRuneInventoryList(player)
+        .map(normalizeVisibleRuneEntry)
+        .filter(entry => entry.level < 3 && entry.available >= 3);
+    }
+
+    function renderRuneCombine() {
+      setOverlayTitle("Combine Runes");
+      hideInventoryTabs();
+
+      const content = document.getElementById("inventoryContent");
+      content.style.overflowY = "auto";
+      const entries = getCombinableRuneEntries();
+
+      let html = `
+        ${shrineHeroHtml("merchant")}
+        <div class="menuHeader">
+          <span>Rune Combining</span>
+          <span>3 matching → +1</span>
+        </div>
+        <div class="shopMenuList">
+      `;
+
+      if (!entries.length) {
+        html += `
+          <div class="smallNote">No rune stacks are ready to combine.</div>
+        `;
+      } else {
+        html += entries.map(entry => `
+          <button class="shopRow" onclick="combineRune('${entry.runeId}', ${entry.level})">
+            ${shopIconHtml(entry.image, "runes")}
+            <div class="shopRowText">
+              <div class="shopRowName">${entry.displayName}</div>
+              <div class="shopRowSub">${entry.statLine}</div>
+            </div>
+            <div class="shopRowValue">x${entry.quantity}</div>
+          </button>
+        `).join("");
+      }
+
+      html += `
+          <button class="shopRow shopBackRow" onclick="renderOllieShop()">
+            ${shopIconHtml("", "items")}
+            <div class="shopRowText">
+              <div class="shopRowName">Back</div>
+              <div class="shopRowSub">Return to Ollie</div>
+            </div>
+            <div class="shopRowValue">Shop</div>
+          </button>
+        </div>
+      `;
+
+      content.innerHTML = html;
+    }
+
+    function combineRune(runeId, level) {
+      if (level >= 3) {
+        setMessage("That rune is already at maximum level.");
+        return;
+      }
+
+      if (getRuneQuantity(player, runeId, level) < 3) {
+        setMessage("You need three matching runes.");
+        renderRuneCombine();
+        return;
+      }
+
+      removeRune(player, runeId, level, 3);
+      addRune(player, runeId, level + 1, 1);
+
+      setMessage(`Combined into ${getRuneDisplayName(runeId, level + 1)}.`);
+      renderRuneCombine();
+    }
+
+    function getUpgradeableEquipmentEntries() {
+      ensureFullInventoryShape();
+      return Object.entries(player.inventory.equipment || {})
+        .filter(([itemId, record]) => {
+          const item = getEquipItem(itemId);
+          return record && record.owned && item && (item.slot === "weapon" || item.slot === "armor");
+        })
+        .map(([itemId, record]) => {
+          const item = getEquipItem(itemId);
+          const level = Number(record.level || 0);
+          const tier = getEquipmentTierNumber(item);
+          const cost = Math.max(10, Math.round((item.value || 10) * 0.75 + (level + 1) * tier * 25));
+          return { itemId, item, record, level, cost };
+        });
+    }
+
+    function renderEquipmentUpgrade() {
+      setOverlayTitle("Upgrade Equipment");
+      hideInventoryTabs();
+
+      const content = document.getElementById("inventoryContent");
+      content.style.overflowY = "auto";
+      const rows = getUpgradeableEquipmentEntries();
+
+      let html = `
+        ${shrineHeroHtml("merchant")}
+        <div class="menuHeader">
+          <span>Equipment Upgrade</span>
+          <span>Gold: ${player.gold}</span>
+        </div>
+        <div class="oneColList">
+      `;
+
+      if (!rows.length) {
+        html += `<div class="smallNote">No owned weapons or armor to upgrade.</div>`;
+      } else {
+        html += rows.map(row => `
+          <button class="shopRow" onclick="upgradeEquipmentItem('${row.itemId}', ${row.cost})">
+            ${getEquipmentShopIconHtml(row.item)}
+            <div class="shopRowText">
+              <div class="shopRowName">${row.item.itemName} +${row.level}</div>
+              <div class="shopRowSub">${row.item.slot.toUpperCase()} · Upgrade to +${row.level + 1}</div>
+            </div>
+            <div class="shopRowValue">${row.cost}g</div>
+          </button>
+        `).join("");
+      }
+
+      html += `
+        </div>
+        <div class="shopMenuList">
+          <button class="shopRow shopBackRow" onclick="renderOllieShop()">
+            ${shopIconHtml("", "items")}
+            <div class="shopRowText">
+              <div class="shopRowName">Back</div>
+              <div class="shopRowSub">Return to Ollie</div>
+            </div>
+            <div class="shopRowValue">Shop</div>
+          </button>
+        </div>
+      `;
+
+      content.innerHTML = html;
+    }
+
+    function upgradeEquipmentItem(itemId, cost) {
+      const item = getEquipItem(itemId);
+      const record = getOwnedEquipmentRecord(itemId);
+
+      if (!item || !record || !record.owned) {
+        setMessage("You do not own that equipment.");
+        renderEquipmentUpgrade();
+        return;
+      }
+
+      if (player.gold < cost) {
+        setMessage("Not enough gold.");
+        return;
+      }
+
+      player.gold -= cost;
+      record.level = Number(record.level || 0) + 1;
+      record.pending = 0;
+      recalcDerivedStats();
+      updateBars();
+      setMessage(`${item.itemName} upgraded to +${record.level}.`);
+      renderEquipmentUpgrade();
+    }
+
+    function renderSocketUnlock() {
+      setOverlayTitle("Unlock Sockets");
+      hideInventoryTabs();
+
+      const content = document.getElementById("inventoryContent");
+      content.style.overflowY = "auto";
+
+      const rows = ["weapon", "armor"].map(slot => {
+        const itemId = player.equipment[slot];
+        if (!itemId) return null;
+
+        const item = getEquipItem(itemId);
+        const record = getOrCreateEquipmentRecord(itemId);
+        normalizeEquipmentSockets(itemId);
+
+        if (!item || !item.maxSockets) return null;
+
+        const unlocked = record.socketsUnlocked || 0;
+        const max = item.maxSockets || 0;
+        const canUnlock = unlocked < max;
+        const cost = 50 * (unlocked + 1);
+
+        return { slot, itemId, item, record, unlocked, max, canUnlock, cost };
+      }).filter(Boolean);
+
+      let html = `
+        ${shrineHeroHtml("merchant")}
+        <div class="menuHeader">
+          <span>Weapon / Armor Sockets</span>
+          <span>Gold: ${player.gold}</span>
+        </div>
+        <div class="shopMenuList">
+      `;
+
+      if (!rows.length) {
+        html += `<div class="smallNote">No socketable equipment is equipped.</div>`;
+      } else {
+        html += rows.map(row => `
+          <button class="shopRow" ${row.canUnlock ? `onclick="unlockSocket('${row.slot}', ${row.cost})"` : ""}>
+            ${shopIconHtml("rune6.png", "runes")}
+            <div class="shopRowText">
+              <div class="shopRowName">${getEquipName(row.itemId)}</div>
+              <div class="shopRowSub">${row.unlocked}/${row.max} sockets unlocked</div>
+            </div>
+            <div class="shopRowValue">${row.canUnlock ? row.cost + "g" : "Max"}</div>
+          </button>
+        `).join("");
+      }
+
+      html += `
+          <button class="shopRow shopBackRow" onclick="renderOllieShop()">
+            ${shopIconHtml("", "items")}
+            <div class="shopRowText">
+              <div class="shopRowName">Back</div>
+              <div class="shopRowSub">Return to Ollie</div>
+            </div>
+            <div class="shopRowValue">Shop</div>
+          </button>
+        </div>
+      `;
+
+      content.innerHTML = html;
+    }
+
+    function unlockSocket(slot, cost) {
+      const itemId = player.equipment[slot];
+      if (!itemId) return;
+
+      const item = getEquipItem(itemId);
+      const record = getOrCreateEquipmentRecord(itemId);
+
+      normalizeEquipmentSockets(itemId);
+
+      if (!item || !item.maxSockets) {
+        setMessage("This item cannot hold runes.");
+        return;
+      }
+
+      if ((record.socketsUnlocked || 0) >= item.maxSockets) {
+        setMessage("All sockets are already unlocked.");
+        renderSocketUnlock();
+        return;
+      }
+
+      if (player.gold < cost) {
+        setMessage("Not enough gold.");
+        return;
+      }
+
+      player.gold -= cost;
+      record.socketsUnlocked += 1;
+      normalizeEquipmentSockets(itemId);
+
+      setMessage(`Unlocked a socket on ${getEquipName(itemId)}.`);
+      renderSocketUnlock();
+    }
+
+    function randomFromList(list) {
+      if (!Array.isArray(list) || !list.length) return null;
+      return list[Math.floor(Math.random() * list.length)];
+    }
+
+    function getChestConsumablePool() {
+      const ids = ["potion", "copper_potion", "mana_potion", "copper_mana_potion", "antidote"];
+      if (currentFloor >= 4) ids.push("silver_potion", "silver_mana_potion", "smoke_bomb");
+      if (currentFloor >= 8) ids.push("gold_potion", "gold_mana_potion", "rejuvenation_potion");
+      return ids.filter(id => typeof getConsumable === "function" && getConsumable(id));
+    }
+
+    function getChestEquipmentPool() {
+      const allEquipment = typeof getAllEquipment === "function" ? getAllEquipment() : [];
+      const allowedCharacters = ["all", player.character].filter(Boolean);
+      return allEquipment.filter(item => {
+        if (!item || (item.slot !== "weapon" && item.slot !== "armor")) return false;
+        if (item.character && !allowedCharacters.includes(String(item.character).toLowerCase())) return false;
+        return Number(item.reqLevel || 1) <= currentFloor + 2;
+      });
+    }
+
+    function openCurrentChestLoot() {
+      const messages = [];
+      const goldAmount = Math.max(5, Math.round(8 + Math.random() * 12 + currentFloor * (3 + Math.random() * 3)));
+      player.gold += goldAmount;
+      messages.push(`${goldAmount} gold`);
+
+      const consumableId = randomFromList(getChestConsumablePool());
+      if (consumableId && typeof addConsumable === "function") {
+        addConsumable(player, consumableId, 1);
+        messages.push(getItemDisplayName(consumableId));
+      }
+
+      if (Math.random() < 0.20) {
+        const keyId = Math.random() < 0.82 ? "generic_key" : "boss_key";
+        if (typeof addKeyItem === "function" && getKeyItem(keyId)) {
+          addKeyItem(player, keyId);
+          messages.push(getItemDisplayName(keyId));
+        }
+      }
+
+      if (Math.random() < 0.30) {
+        const item = randomFromList(getChestEquipmentPool());
+        if (item) {
+          const result = addEquipmentToInventory(item.itemId);
+          if (result && result.ok) messages.push(item.itemName);
+          else {
+            const bonusGold = Math.max(1, getSellPrice(item.itemId));
+            player.gold += bonusGold;
+            messages.push(`${bonusGold} bonus gold`);
+          }
+        }
+      }
+
+      if (typeof getRuneInventoryList === "function" && typeof addRune === "function" && Math.random() < 0.25) {
+        const runeIds = ["fehu", "uruz", "thurisaz", "ansuz", "raidho", "kenaz", "gebo", "hagalaz", "isa", "eihwaz", "algiz", "sowilo"]
+          .filter(id => typeof getRuneById === "function" && getRuneById(id));
+        const runeId = randomFromList(runeIds);
+        if (runeId) {
+          addRune(player, runeId, 0, 1);
+          messages.push(getRuneDisplayName(runeId, 0));
+        }
+      }
+
+      return messages;
+    }
+
+    function doAction() {
+      if (menuIsOpen()) return;
+      if (gameMode === "encounter") return;
+
+      const currentTile = getTile(playerX, playerY);
+      const key = tileKey(playerX, playerY);
+
+      if (currentTile === "C") {
+        if (openedChests.has(key)) {
+          setMessage("The chest is already empty.");
+          return;
+        }
+
+        openedChests.add(key);
+
+        const lootMessages = openCurrentChestLoot();
+
+        updateRoomView();
+        playChestOpened();
+        setMessage(`You opened the chest. Found ${lootMessages.join(", ")}.`);
+        return;
+      }
+      if (currentTile === "S") {
+        openShrineMenu();
+        return;
+      }
+
+      const front = getRelativeTile(0);
+
+      if (front.tile === "#") {
+        setMessage("You inspect the wall.");
+        return;
+      }
+
+      setMessage("You inspect the room.");
+    }
+
+    // =========================
+    // ENCOUNTER TEST
+    // =========================
+
+
+    const COMBAT_TICK_MS = 250;
+    let combatTimer = null;
+    let playerAttackMeter = 100;
+    let enemyAttackMeter = 0;
+
+    function clampNumber(value, min, max) {
+      return Math.max(min, Math.min(max, value));
+    }
+
+    function getPlayerSpeedValue() {
+      const bonuses = typeof getEquipmentBonusTotals === "function" ? getEquipmentBonusTotals() : {};
+      const base = Number(player.speed || player.spd || 0);
+      const bonus = Number(bonuses.speed || bonuses.spd || 0);
+      return Math.max(0, base + bonus);
+    }
+
+    function getMonsterSpeedValue(monster) {
+      if (!monster) return 0;
+      const value = monster.speed ?? monster.spd ?? monster.SPD ?? monster.Speed ?? 0;
+      const n = Number(value);
+      return Number.isFinite(n) ? Math.max(0, n) : 0;
+    }
+
+    function getMonsterLevelValue(monster) {
+      if (!monster) return 1;
+      const value = monster.level ?? monster.lv ?? monster.monLevel ?? monster.Level ?? 1;
+      const n = Number(value);
+      return Number.isFinite(n) ? Math.max(1, Math.floor(n)) : 1;
+    }
+
+    function getMonsterMaxHpValue(monster) {
+      if (!monster) return 1;
+      const value = monster.maxHp ?? monster.hp ?? monster.HP ?? monster.life ?? 1;
+      const n = Number(value);
+      return Number.isFinite(n) ? Math.max(1, Math.floor(n)) : 1;
+    }
+
+    function getMonsterCurrentHpValue(monster) {
+      if (!monster) return 0;
+      const value = monster.currentHp ?? monster.hp ?? monster.HP ?? monster.life ?? 1;
+      const n = Number(value);
+      return Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 0;
+    }
+
+    function attackIntervalFromSpeed(speed) {
+      const interval = 2000 / (1 + Math.max(0, Number(speed) || 0) / 50);
+      return clampNumber(interval, 500, 2500);
+    }
+
+    function meterGainForSpeed(speed) {
+      return (COMBAT_TICK_MS / attackIntervalFromSpeed(speed)) * 100;
+    }
+
+    function updateMonsterHud() {
+      const hudName = document.getElementById("monsterNameText");
+      const hudLevel = document.getElementById("monsterLevelText");
+      const hpBar = document.getElementById("monsterHpBar");
+      const hpText = document.getElementById("monsterHpText");
+
+      if (!currentEnemy) {
+        if (hudName) hudName.textContent = "Monster";
+        if (hudLevel) hudLevel.textContent = "Lv. 1";
+        if (hpBar) hpBar.style.width = "0%";
+        if (hpText) hpText.textContent = "HP 0 / 0";
+        return;
+      }
+
+      const currentHp = getMonsterCurrentHpValue(currentEnemy);
+      const maxHp = getMonsterMaxHpValue(currentEnemy);
+      const level = getMonsterLevelValue(currentEnemy);
+      const speed = getMonsterSpeedValue(currentEnemy);
+
+      if (hudName) hudName.textContent = currentEnemy.monName || currentEnemy.name || "Monster";
+      if (hudLevel) hudLevel.textContent = `Lv. ${level}`;
+      if (hpBar) hpBar.style.width = `${clampNumber(currentHp / maxHp * 100, 0, 100)}%`;
+      if (hpText) hpText.textContent = `HP ${currentHp} / ${maxHp} · SPD ${speed}`;
+    }
+
+    function updateCombatMetersUI() {
+      const meter = document.getElementById("playerAttackMeter");
+      const readyText = document.getElementById("attackReadyText");
+      const attackButton = document.getElementById("attackButton");
+      const enemyMeter = document.getElementById("monsterAttackMeter");
+      const enemyAttackText = document.getElementById("monsterAttackText");
+
+      const ready = playerAttackMeter >= 100;
+      const enemyReadyPct = clampNumber(enemyAttackMeter, 0, 100);
+
+      if (meter) meter.style.width = `${clampNumber(playerAttackMeter, 0, 100)}%`;
+      if (readyText) readyText.textContent = ready ? "Ready" : "Wait";
+      if (attackButton) {
+        attackButton.classList.toggle("notReady", !ready);
+        attackButton.textContent = ready ? "Attack" : "Wait";
+      }
+
+      if (enemyMeter) enemyMeter.style.width = `${enemyReadyPct}%`;
+      if (enemyAttackText) enemyAttackText.textContent = `Attack ${Math.floor(enemyReadyPct)}%`;
+
+      updateMonsterHud();
+    }
+
+    function stopCombatTimer() {
+      if (combatTimer) {
+        clearInterval(combatTimer);
+        combatTimer = null;
+      }
+      playerAttackMeter = 100;
+      enemyAttackMeter = 0;
+      updateCombatMetersUI();
+    }
+
+    function startCombatTimer() {
+      stopCombatTimer();
+      playerAttackMeter = 100;
+      enemyAttackMeter = 0;
+      updateCombatMetersUI();
+
+      combatTimer = window.setInterval(() => {
+        if (gameMode !== "encounter" || !currentEnemy) {
+          stopCombatTimer();
+          return;
+        }
+
+        playerAttackMeter = Math.min(100, playerAttackMeter + meterGainForSpeed(getPlayerSpeedValue()));
+        enemyAttackMeter += meterGainForSpeed(getMonsterSpeedValue(currentEnemy));
+
+        if (enemyAttackMeter >= 100) {
+          enemyAttackMeter -= 100;
+          enemyAttack("");
+        }
+
+        updateCombatMetersUI();
+      }, COMBAT_TICK_MS);
+    }
+
+
+    function startEncounter(poolId, encounterKey, tileType = "M") {
+      if (typeof getRandomMonsterFromPool !== "function") {
+        setMessage("Monster loader not found. Check script load order.");
+        return;
+      }
+
+      const rolledMonster = getRandomMonsterFromPool(poolId, tileType);
+
+      if (!rolledMonster) {
+        setMessage(`No monster found for ${poolId}.`);
+        return;
+      }
+
+      currentEnemy = { ...rolledMonster };
+      currentEnemyTileKey = encounterKey || null;
+
+      currentEnemy.maxHp = getMonsterMaxHpValue(currentEnemy);
+      currentEnemy.currentHp = getMonsterCurrentHpValue(currentEnemy);
+      if (currentEnemy.currentHp <= 0 || currentEnemy.currentHp > currentEnemy.maxHp) {
+        currentEnemy.currentHp = currentEnemy.maxHp;
+      }
+
+      const monsterImg = document.getElementById("monsterLayer");
+      monsterImg.src = `assets/monsters/${currentEnemy.image}`;
+
+      setMode("encounter");
+      updateMonsterHud();
+      startCombatTimer();
+      showEncounterNotice(`${currentEnemy.monName} Lv ${currentEnemy.level || 1} appeared.`);
+    }
+
+    function getBaseAttackValue() {
+      const bonuses = getEquipmentBonusTotals();
+      return Math.max(1, 4 + Math.floor(player.str || 0) + (bonuses.atk || 0));
+    }
+
+    function getPlayerAttackValue() {
+      const runeBonuses = getRuneBonusTotals();
+      return Math.floor(getBaseAttackValue() * (1 + runeBonuses.attackPct / 100));
+    }
+
+    function getPlayerDefenseValue() {
+      const bonuses = getEquipmentBonusTotals();
+      const runeBonuses = getRuneBonusTotals();
+      const base = Math.floor((player.vitality || 0) / 4) + (bonuses.def || 0);
+      return Math.floor(base * (1 + runeBonuses.defensePct / 100));
+    }
+
+    function getMonsterType(monster) {
+      return (monster.monsterType || monster.MonsterType || monster.type || "normal").toLowerCase();
+    }
+
+    function getMonsterResistance(monster, key) {
+      if (monster[key] === undefined) return 0;
+      const n = Number(monster[key]);
+      return Number.isFinite(n) ? n : 0;
+    }
+
+    function applyResistance(amount, resistancePct) {
+      return Math.max(0, Math.floor(amount * (1 - resistancePct / 100)));
+    }
+
+    function calculateAttackDamage(monster) {
+      const runeBonuses = getRuneBonusTotals();
+      const weaponAttack = getBaseAttackValue();
+      const attack = getPlayerAttackValue();
+
+      const enemyDefense = monster.defense || monster.MonDef || 0;
+      const effectiveDefense = Math.floor(enemyDefense * (1 - runeBonuses.piercePct / 100));
+      const physical = Math.max(1, attack - effectiveDefense);
+
+      const fireBase = Math.floor(weaponAttack * runeBonuses.fireWeaponPct / 100);
+      const shockBase = Math.floor(weaponAttack * runeBonuses.shockWeaponPct / 100);
+
+      const fire = applyResistance(fireBase, getMonsterResistance(monster, "fireRes"));
+      const shock = applyResistance(shockBase, getMonsterResistance(monster, "shockRes"));
+
+      const monsterType = getMonsterType(monster);
+      const typeBonusBase =
+        (monsterType === "undead" ? runeBonuses.undeadBonusPct : 0) +
+        (monsterType === "light" ? runeBonuses.lightBonusPct : 0);
+
+      const typeBonus = Math.floor(weaponAttack * typeBonusBase / 100);
+      const total = physical + fire + shock + typeBonus;
+
+      return {
+        physical,
+        fire,
+        shock,
+        typeBonus,
+        total,
+        lifeSteal: Math.floor(total * runeBonuses.lifeStealPct / 100)
+      };
+    }
+
+
+    const COMBAT_EFFECTS = {
+      physical: ["slashwhite1.png", "slashwhite2.png"],
+      fire: ["impactfire1.png", "impactfire2.png"],
+      holy: ["impactgold1.png", "impactgold2.png"],
+      ice: ["slashice1.png", "slashice2.png"]
+    };
+
+    function pickRandom(list) {
+      if (!Array.isArray(list) || !list.length) return "";
+      return list[Math.floor(Math.random() * list.length)];
+    }
+
+    function getAttackEffectType(damage) {
+      if (damage && damage.fire > 0) return "fire";
+      if (damage && damage.typeBonus > 0) return "holy";
+      if (damage && damage.shock > 0) return "ice";
+      return "physical";
+    }
+
+    function playCombatEffect(effectType = "physical", damageText = "") {
+      const layer = document.getElementById("effectLayer");
+      if (!layer) return;
+
+      const effectFile = pickRandom(COMBAT_EFFECTS[effectType]) || pickRandom(COMBAT_EFFECTS.physical);
+      layer.classList.remove("show");
+      void layer.offsetWidth;
+      layer.src = `assets/effects/${effectFile}`;
+      layer.classList.add("show");
+
+      window.setTimeout(() => {
+        layer.classList.remove("show");
+      }, 360);
+
+      if (damageText) {
+        showDamageNumber(damageText);
+      }
+    }
+
+    function showDamageNumber(text) {
+      const el = document.getElementById("damageNumber");
+      if (!el) return;
+
+      el.textContent = text;
+      el.classList.remove("show");
+      void el.offsetWidth;
+      el.classList.add("show");
+
+      window.setTimeout(() => {
+        el.classList.remove("show");
+      }, 680);
+    }
+
+    function playMonsterHit() {
+      document.body.classList.remove("monsterHit");
+      void document.body.offsetWidth;
+      document.body.classList.add("monsterHit");
+
+      window.setTimeout(() => {
+        document.body.classList.remove("monsterHit");
+      }, 280);
+    }
+
+    function playMonsterAttack() {
+      document.body.classList.remove("monsterAttack");
+      void document.body.offsetWidth;
+      document.body.classList.add("monsterAttack");
+
+      window.setTimeout(() => {
+        document.body.classList.remove("monsterAttack");
+      }, 280);
+    }
+
+    function playPlayerHit() {
+      document.body.classList.remove("playerHit");
+      void document.body.offsetWidth;
+      document.body.classList.add("playerHit");
+
+      window.setTimeout(() => {
+        document.body.classList.remove("playerHit");
+      }, 240);
+    }
+
+    function playerAttack() {
+      if (!currentEnemy) return;
+
+      if (playerAttackMeter < 100) {
+        updateCombatMetersUI();
+        return;
+      }
+
+      playerAttackMeter = 0;
+
+      const damage = calculateAttackDamage(currentEnemy);
+      currentEnemy.currentHp -= damage.total;
+
+      playCombatEffect(getAttackEffectType(damage), String(damage.total));
+      playMonsterHit();
+
+      if (damage.lifeSteal > 0) {
+        player.hp = Math.min(player.maxHp, player.hp + damage.lifeSteal);
+        updateBars();
+      }
+
+      updateMonsterHud();
+      updateCombatMetersUI();
+
+      if (currentEnemy.currentHp <= 0) {
+        defeatEnemy();
+        return;
+      }
+
+      // Hit feedback is handled by the damage number/effect layer during encounters.
+    }
+
+    function playerDefend() {
+      if (!currentEnemy) return;
+      playerAttackMeter = Math.min(100, playerAttackMeter + 35);
+      updateCombatMetersUI();
+    }
+
+    function runAway() {
+      stopCombatTimer();
+      stopCombatTimer();
+      currentEnemy = null;
+      currentEnemyTileKey = null;
+      setMode("roaming");
+      updateRoomView();
+      setMessage("You ran away.");
+    }
+
+    function handlePlayerDeath() {
+      stopCombatTimer();
+      setMode("roaming");
+      currentEnemy = null;
+      currentEnemyTileKey = null;
+      currentEnemyDefeatedThisTurn = false;
+
+      ensureFullInventoryShape();
+
+      const goldBefore = Math.max(0, Math.floor(Number(player.gold) || 0));
+      const goldPenalty = Math.floor(goldBefore * 0.25);
+      player.gold = Math.max(0, goldBefore - goldPenalty);
+
+      if (!player.inventory.consumables) player.inventory.consumables = {};
+      player.inventory.consumables.potion = Number(player.inventory.consumables.potion || 0) + 10;
+
+      player.hp = player.maxHp;
+      player.mp = player.maxMp;
+
+      startNewFloor();
+      updateBars();
+      updateHud();
+      saveGameState();
+
+      setMessage(`You were defeated. Lost ${goldPenalty} gold and received 10 Potions.`);
+    }
+
+    function enemyAttack(prefix) {
+      if (!currentEnemy) return;
+
+      playMonsterAttack();
+
+      const damage = Math.max(1, currentEnemy.attack - getPlayerDefenseValue());
+      player.hp -= damage;
+      playPlayerHit();
+      updateBars();
+
+      if (player.hp <= 0) {
+        handlePlayerDeath();
+        return;
+      }
+
+      showDamageNumber(`-${damage}`);
+    }
+
+    function defeatEnemy() {
+      const defeatedId = currentEnemy.monId;
+      const defeatedName = currentEnemy.monName;
+      const exp = getMonsterExpReward(currentEnemy);
+      const expResult = gainExp(exp);
+
+      if (currentEnemyTileKey) {
+        clearedMonsters.add(currentEnemyTileKey);
+      }
+
+      let drops = [];
+      if (typeof rollMonsterDrops === "function") {
+        drops = rollMonsterDrops(defeatedId);
+      }
+
+      const foundMessages = [];
+
+      drops.forEach(drop => {
+        if (drop.type === "gold") {
+          player.gold += drop.amount;
+          foundMessages.push(`${drop.amount} gold`);
+        } else {
+          const result = addLootItem(drop.id);
+          foundMessages.push(result && result.message ? result.message : drop.name);
+        }
+      });
+
+      const dropText = foundMessages.length ? foundMessages.join(", ") : "nothing";
+      const levelText = expResult.levelsGained > 0
+        ? ` Level up! Now level ${player.level}.`
+        : "";
+
+      stopCombatTimer();
+      currentEnemy = null;
+      currentEnemyTileKey = null;
+      setMode("roaming");
+      updateRoomView();
+      updateBars();
+      setMessage(`${defeatedName} defeated. Gained ${exp} EXP.${levelText} Found ${dropText}.`);
+    }
+
+    // =========================
+    // INVENTORY UI
+    // =========================
+
+    function openInventory() {
+      const help = document.getElementById("controlHelp");
+      if (help) help.classList.remove("show");
+
+      setMenuOpen(true);
+      showInventoryTab(gameMode === "encounter" ? "items" : "status");
+    }
+
+    function closeInventory() {
+      if (gameMode === "shrine") gameMode = "roaming";
+      setMenuOpen(false);
+    }
+
+    function showInventoryTab(tab) {
+      showInventoryTabs();
+      document.body.classList.add("menuOpen");
+      inventoryMode = tab;
+      activeEquipSlot = null;
+
+      document.getElementById("inventoryTitle").textContent = "Inventory";
+      document.getElementById("inventoryTabs").style.display = "grid";
+
+      if (tab === "status") renderStatusTab();
+      if (tab === "items") renderItemsTab();
+      if (tab === "equip") renderEquipOverview();
+    }
+
+
+    let statusPage = "core";
+    let equipmentPage = {
+      weapon: 0,
+      armor: 0,
+      necklace: 0,
+      ring1: 0,
+      ring2: 0,
+      ring3: 0,
+      ring4: 0,
+      belt1: 0,
+      belt2: 0,
+      belt3: 0,
+      belt4: 0
+    };
+
+    const STATUS_PAGES = ["core", "combat", "damage", "resist"];
+    const STATUS_PAGE_LABELS = {
+      core: "Core",
+      combat: "Combat",
+      damage: "Damage",
+      resist: "Resist"
+    };
+
+    const EQUIPMENT_PAGE_SIZE = 8;
+
+    const INVENTORY_PAGE_SIZE = 8;
+
+    let inventoryPage = {
+      consumables: 0,
+      runes: 0,
+      weapons: 0,
+      armor: 0,
+      fragments: 0,
+      keyitems: 0
+    };
+
+    const ITEM_CATEGORIES = ["consumables", "runes", "weapons", "armor", "fragments", "keyitems"];
+    const ITEM_CATEGORY_LABELS = {
+      consumables: "Consumables",
+      runes: "Runes",
+      weapons: "Weapons",
+      armor: "Armor",
+      fragments: "Fragments",
+      keyitems: "Key Items"
+    };
+
+    let activeItemCategory = "consumables";
+
+    function getInventoryPage(category, totalItems) {
+      const maxPage = Math.max(0, Math.ceil(totalItems / INVENTORY_PAGE_SIZE) - 1);
+      inventoryPage[category] = Math.max(0, Math.min(inventoryPage[category] || 0, maxPage));
+      return inventoryPage[category];
+    }
+
+    function setInventoryPage(category, direction) {
+      inventoryPage[category] = (inventoryPage[category] || 0) + direction;
+      renderItemsTab();
+    }
+
+    function renderPager(category, totalItems) {
+      const maxPage = Math.max(0, Math.ceil(totalItems / INVENTORY_PAGE_SIZE) - 1);
+      const current = getInventoryPage(category, totalItems);
+
+      if (maxPage <= 0) return "";
+
+      return `
+        <div class="pageControls">
+          <button class="uiButton" onclick="setInventoryPage('${category}', -1)" ${current <= 0 ? "disabled" : ""}>Prev</button>
+          <div class="pageText">${current + 1} / ${maxPage + 1}</div>
+          <button class="uiButton" onclick="setInventoryPage('${category}', 1)" ${current >= maxPage ? "disabled" : ""}>Next</button>
+        </div>
+      `;
+    }
+
+    function sliceInventoryPage(category, list) {
+      const page = getInventoryPage(category, list.length);
+      const start = page * INVENTORY_PAGE_SIZE;
+      return list.slice(start, start + INVENTORY_PAGE_SIZE);
+    }
+
+    function setStatusPage(page) {
+      statusPage = STATUS_PAGES.includes(page) ? page : "core";
+      renderStatusTab();
+    }
+
+    function cycleStatusPage(direction) {
+      const currentIndex = STATUS_PAGES.indexOf(statusPage);
+      const safeIndex = currentIndex >= 0 ? currentIndex : 0;
+      const nextIndex = (safeIndex + direction + STATUS_PAGES.length) % STATUS_PAGES.length;
+      statusPage = STATUS_PAGES[nextIndex];
+      renderStatusTab();
+    }
+
+    function renderStatusCycle() {
+      return `
+        <div class="statusCycleRow">
+          <button class="statusCycleButton" onclick="cycleStatusPage(-1)">&lt;</button>
+          <div class="statusCycleLabel">${STATUS_PAGE_LABELS[statusPage] || "Core"}</div>
+          <button class="statusCycleButton" onclick="cycleStatusPage(1)">&gt;</button>
+        </div>
+      `;
+    }
+
+    function getCharacterStatusImage() {
+      const equippedArmor = getEquipItem(player.equipment.armor);
+
+      if (equippedArmor && typeof getEquipmentStatusImagePath === "function") {
+        const armorStatusImage = getEquipmentStatusImagePath(equippedArmor);
+        if (armorStatusImage) return armorStatusImage;
+      }
+
+      const id = (player.character || "maya").toLowerCase();
+      return `assets/characters/${id}_status.png`;
+    }
+
+    function statusTabButton(page, label) {
+      return `<button class="uiButton" onclick="setStatusPage('${page}')">${label}</button>`;
+    }
+
+    function equipmentSlots() {
+      return [
+        ["weapon", "Weapon", player.equipment.weapon],
+        ["armor", "Armor", player.equipment.armor],
+        ["ring1", "Ring 1", player.equipment.ring1],
+        ["ring2", "Ring 2", player.equipment.ring2],
+        ["ring3", "Ring 3", player.equipment.ring3],
+        ["ring4", "Ring 4", player.equipment.ring4],
+        ["belt1", "P1", player.equipment.belt1],
+        ["belt2", "P2", player.equipment.belt2],
+        ["belt3", "P3", player.equipment.belt3],
+        ["belt4", "P4", player.equipment.belt4]
+      ];
+    }
+
+    function getSlotPage(slot, totalItems) {
+      const maxPage = Math.max(0, Math.ceil(totalItems / EQUIPMENT_PAGE_SIZE) - 1);
+      equipmentPage[slot] = Math.max(0, Math.min(equipmentPage[slot] || 0, maxPage));
+      return equipmentPage[slot];
+    }
+
+    function setEquipmentPage(slot, direction) {
+      equipmentPage[slot] = (equipmentPage[slot] || 0) + direction;
+      renderEquipSlot(slot);
+    }
+
+    function renderEquipmentPager(slot, totalItems) {
+      const maxPage = Math.max(0, Math.ceil(totalItems / EQUIPMENT_PAGE_SIZE) - 1);
+      const current = getSlotPage(slot, totalItems);
+
+      if (maxPage <= 0) return "";
+
+      return `
+        <div class="pageControls">
+          <button class="uiButton" onclick="setEquipmentPage('${slot}', -1)" ${current <= 0 ? "disabled" : ""}>Prev</button>
+          <div class="pageText">${current + 1} / ${maxPage + 1}</div>
+          <button class="uiButton" onclick="setEquipmentPage('${slot}', 1)" ${current >= maxPage ? "disabled" : ""}>Next</button>
+        </div>
+      `;
+    }
+
+    function getPrimaryItemValue(itemId) {
+      const item = getEquipItem(itemId);
+      if (!item) return "";
+      const stats = getEquipStats(itemId);
+
+      if (item.slot === "weapon") {
+        const parts = [];
+        if (stats.atk) parts.push(`Atk ${stats.atk}`);
+        if (stats.mag) parts.push(`Mag ${stats.mag}`);
+        if (item.maxSockets) parts.push(`${item.maxSockets}S`);
+        return parts.join(" · ");
+      }
+
+      if (item.slot === "armor") {
+        const parts = [];
+        if (stats.def) parts.push(`Def ${stats.def}`);
+        if (stats.mdef) parts.push(`MDef ${stats.mdef}`);
+        if (item.maxSockets) parts.push(`${item.maxSockets}S`);
+        return parts.join(" · ");
+      }
+
+      const parts = [];
+      if (stats.atk) parts.push(`Atk ${stats.atk}`);
+      if (stats.def) parts.push(`Def ${stats.def}`);
+      if (stats.mag) parts.push(`Mag ${stats.mag}`);
+      if (stats.mdef) parts.push(`MDef ${stats.mdef}`);
+      if (stats.hp) parts.push(`HP ${stats.hp}`);
+      if (stats.mp) parts.push(`MP ${stats.mp}`);
+      if (stats.speed) parts.push(`Spd ${stats.speed}`);
+      return parts.slice(0, 2).join(" · ");
+    }
+
+    function renderStatusRows(rows) {
+      return rows.map(([name, value]) => `
+        <div class="statusStat">
+          <span class="statusLabel">${name}</span>
+          <span class="statusValue">${value}</span>
+        </div>
+      `).join("");
+    }
+
+    function getStatusRows() {
+      const bonuses = getEquipmentBonusTotals();
+      const runeBonuses = getRuneBonusTotals();
+
+      if (statusPage === "combat") {
+        return [
+          ["HP", `${player.hp} / ${player.maxHp}`],
+          ["MP", `${player.mp} / ${player.maxMp}`],
+          ["ATK", getPlayerAttackValue()],
+          ["DEF", getPlayerDefenseValue()],
+          ["MAG", `${bonuses.mag} / ${runeBonuses.magicPct}%`],
+          ["SPD", `${bonuses.speed} / ${runeBonuses.speedPct}%`],
+          ["PIERCE", `${runeBonuses.piercePct}%`],
+          ["LIFE", `${runeBonuses.lifeStealPct}%`]
+        ];
+      }
+
+      if (statusPage === "damage") {
+        return [
+          ["FIRE", `${runeBonuses.fireWeaponPct}%`],
+          ["SHOCK", `${runeBonuses.shockWeaponPct}%`],
+          ["ICE", "0%"],
+          ["POISON", "0%"],
+          ["DARK", "0%"],
+          ["HOLY", `${runeBonuses.lightBonusPct}%`],
+          ["TIME", `${runeBonuses.slowChancePct}%`]
+        ];
+      }
+
+      if (statusPage === "resist") {
+        return [
+          ["FIRE", "0%"],
+          ["SHOCK", "0%"],
+          ["ICE", "0%"],
+          ["POISON", "0%"],
+          ["DARK", "0%"],
+          ["HOLY", "0%"],
+          ["TIME", "0%"]
+        ];
+      }
+
+      return [
+        ["STR", player.str],
+        ["DEX", player.dex],
+        ["MAG", player.magic],
+        ["VIT", player.vitality],
+        ["SPD", player.speed],
+        ["EXP", `${player.exp || 0}/${getExpNeededForLevel(player.level)}`],
+        ["GOLD", player.gold]
+      ];
+    }
+
+    function renderStatusTab() {
+      const content = document.getElementById("inventoryContent");
+      const rows = getStatusRows();
+      const statusImage = getCharacterStatusImage();
+
+      content.innerHTML = `
+        <div class="statusCard" style="--status-pose: url('${statusImage}');" aria-label="${player.name} armor preview">
+          <div class="statusInfoBox">
+            <div class="statusName">${player.name}</div>
+            <div class="statusLevel">Level ${player.level} · EXP ${player.exp || 0}/${getExpNeededForLevel(player.level)}</div>
+            <div class="statusStatGrid">
+              ${renderStatusRows(rows)}
+            </div>
+            ${renderStatusCycle()}
+          </div>
+        </div>
+      `;
+    }
+
+    function compactIconHtml(image, folder) {
+      if (!image) return `<span class="compactIcon empty"></span>`;
+      return `<img class="compactIcon" src="assets/${folder}/${image}" alt="">`;
+    }
+
+
+
+    function getShortRuneStatLine(entryOrRuneId, level = 0) {
+      const runeId = typeof entryOrRuneId === "string"
+        ? entryOrRuneId
+        : (entryOrRuneId?.runeId || entryOrRuneId?.itemId || "");
+
+      const lvl = Number(typeof entryOrRuneId === "object" ? (entryOrRuneId.level ?? level ?? 0) : (level ?? 0)) || 0;
+      const step = lvl + 1;
+
+      const shortLines = {
+        fehu: `+${10 * step}% Gold`,
+        uruz: `+${10 * step}% Attack`,
+        thurisaz: `-${10 * step}% Enemy Def`,
+        ansuz: `+${10 * step}% Magic`,
+        raidho: `+${10 * step}% Speed`,
+        kenaz: `+${10 * step}% Fire Attack`,
+        gebo: `${5 * step}% Life Steal`,
+        hagalaz: `+${10 * step}% Shock Attack`,
+        isa: `${10 * step}% Slow Chance`,
+        eihwaz: `+${10 * step}% Dark Attack`,
+        algiz: `+${10 * step}% Defense`,
+        sowilo: `+${10 * step}% Holy Attack`
+      };
+
+      return shortLines[runeId] || (typeof entryOrRuneId === "object" ? (entryOrRuneId.statLine || "Passive") : "Passive");
+    }
+
+    function cycleItemCategory(direction) {
+      const currentIndex = ITEM_CATEGORIES.indexOf(activeItemCategory);
+      const safeIndex = currentIndex >= 0 ? currentIndex : 0;
+      const nextIndex = (safeIndex + direction + ITEM_CATEGORIES.length) % ITEM_CATEGORIES.length;
+      activeItemCategory = ITEM_CATEGORIES[nextIndex];
+      renderItemsTab();
+    }
+
+    function renderItemCategoryCycle() {
+      return `
+        <div class="itemCategoryCycle">
+          <button class="statusCycleButton" onclick="cycleItemCategory(-1)">&lt;</button>
+          <div class="itemCategoryLabel">${ITEM_CATEGORY_LABELS[activeItemCategory] || "Items"}</div>
+          <button class="statusCycleButton" onclick="cycleItemCategory(1)">&gt;</button>
+        </div>
+      `;
+    }
+
+    function getEquippedEquipmentIds() {
+      return Object.entries(player.equipment || {})
+        .filter(([slot, itemId]) => itemId && !isBeltSlot(slot))
+        .map(([, itemId]) => itemId);
+    }
+
+    function isEquipmentEquippedInOtherSlot(itemId, currentSlot = null) {
+      return Object.entries(player.equipment || {}).some(([slot, equippedId]) => {
+        if (slot === currentSlot || isBeltSlot(slot)) return false;
+        return equippedId === itemId;
+      });
+    }
+
+    function getAvailableEquipmentInventoryList(slot) {
+      if (typeof getEquipmentBySlot !== "function") return [];
+      const equippedIds = new Set(getEquippedEquipmentIds());
+
+      return getEquipmentBySlot(slot)
+        .filter(item => ownsEquipment(item.itemId))
+        .filter(item => !equippedIds.has(item.itemId))
+        .map(item => ({
+          itemId: item.itemId,
+          itemName: item.itemName,
+          image: item.image,
+          slot: item.slot,
+          tier: item.tier,
+          rarity: item.rarity,
+          description: equipmentStatLine(item.itemId)
+        }));
+    }
+
+    function normalizeVisibleRuneEntry(entry) {
+      const available = typeof entry.available === "number"
+        ? entry.available
+        : (typeof getAvailableRuneQuantity === "function"
+          ? getAvailableRuneQuantity(player, entry.runeId, entry.level || 0)
+          : entry.quantity);
+
+      return {
+        ...entry,
+        quantity: Math.max(0, Number(available) || 0),
+        available: Math.max(0, Number(available) || 0)
+      };
+    }
+
+    function getVisibleRuneInventoryList() {
+      if (typeof getRuneInventoryList !== "function") return [];
+      return getRuneInventoryList(player)
+        .map(normalizeVisibleRuneEntry)
+        .filter(entry => entry.quantity > 0);
+    }
+
+    function renderItemsTab() {
+      const content = document.getElementById("inventoryContent");
+      document.getElementById("inventoryTitle").textContent = "Items";
+      document.getElementById("inventoryTabs").style.display = "grid";
+      ensureFullInventoryShape();
+
+      const category = ITEM_CATEGORIES.includes(activeItemCategory) ? activeItemCategory : "consumables";
+      activeItemCategory = category;
+
+      const lists = {
+        consumables: typeof getConsumableInventoryList === "function" ? getConsumableInventoryList(player) : [],
+        runes: getVisibleRuneInventoryList(),
+        weapons: getAvailableEquipmentInventoryList("weapon"),
+        armor: getAvailableEquipmentInventoryList("armor"),
+        fragments: getFragmentInventoryList(),
+        keyitems: typeof getKeyItemInventoryList === "function" ? getKeyItemInventoryList(player) : []
+      };
+
+      const list = lists[category] || [];
+      const visible = sliceInventoryPage(category, list);
+
+      let html = `
+        <div class="menuHeader">
+          <span>Gold: ${player.gold}</span>
+          <span>${list.length} shown</span>
+        </div>
+        ${renderItemCategoryCycle()}
+      `;
+
+      if (category === "consumables") {
+        html += `<div class="twoColList">`;
+        if (!list.length) {
+          html += `<div class="smallNote">No consumables.</div>`;
+        } else {
+          html += visible.map(item => `
+            <button class="compactRow" onclick="useInventoryConsumable('${item.itemId}')" title="${item.description || ""}">
+              ${compactIconHtml(item.image, "items")}
+              <div>
+                <div class="compactName">${item.itemName}</div>
+                <div class="compactSub">${item.description || "Consumable"}</div>
+              </div>
+              <div class="compactQty">${item.quantity}</div>
+            </button>
+          `).join("");
+        }
+        html += `</div>`;
+      }
+
+      if (category === "runes") {
+        html += `<div class="twoColList">`;
+        if (!list.length) {
+          html += `<div class="smallNote">No available runes.</div>`;
+        } else {
+          html += visible.map(entry => `
+            <div class="compactRow" title="${entry.statLine || ""}">
+              ${compactIconHtml(entry.image, "runes")}
+              <div>
+                <div class="compactName">${entry.displayName}</div>
+                <div class="compactSub">${getShortRuneStatLine(entry)}</div>
+              </div>
+              <div class="compactQty">${entry.quantity}</div>
+            </div>
+          `).join("");
+        }
+        html += `</div>`;
+      }
+
+      if (category === "weapons" || category === "armor") {
+        html += `<div class="twoColList">`;
+        if (!list.length) {
+          html += `<div class="smallNote">No unequipped ${ITEM_CATEGORY_LABELS[category].toLowerCase()}.</div>`;
+        } else {
+          html += visible.map(item => `
+            <div class="compactRow" title="${item.description || ""}">
+              ${equipIconHtml(item.itemId).replace(/class="equipIcon/g, 'class="compactIcon')}
+              <div>
+                <div class="compactName">${item.itemName}</div>
+                <div class="compactSub">${getPrimaryItemValue(item.itemId) || item.rarity || "Equipment"}</div>
+              </div>
+              <div class="compactQty"></div>
+            </div>
+          `).join("");
+        }
+        html += `</div>`;
+      }
+
+      if (category === "fragments") {
+        html += `<div class="twoColList">`;
+        if (!list.length) {
+          html += `<div class="smallNote">No fragments.</div>`;
+        } else {
+          html += visible.map(fragment => `
+            <div class="compactRow" title="${fragment.description}">
+              <span class="compactIcon empty"></span>
+              <div>
+                <div class="compactName">${fragment.itemName}</div>
+                <div class="compactSub">Upgrade material</div>
+              </div>
+              <div class="compactQty">${fragment.quantity}</div>
+            </div>
+          `).join("");
+        }
+        html += `</div>`;
+      }
+
+      if (category === "keyitems") {
+        html += `<div class="twoColList">`;
+        if (!list.length) {
+          html += `<div class="smallNote">No key items.</div>`;
+        } else {
+          html += visible.map(item => `
+            <div class="compactRow" title="${item.description || ""}">
+              ${compactIconHtml(item.image, "items")}
+              <div>
+                <div class="compactName">${item.itemName}</div>
+                <div class="compactSub">${item.description || "Key item"}</div>
+              </div>
+              <div class="compactQty"></div>
+            </div>
+          `).join("");
+        }
+        html += `</div>`;
+      }
+
+      html += renderPager(category, list.length);
+      content.innerHTML = html;
+    }
+
+    function useInventoryConsumable(itemId) {
+      if (typeof useConsumable !== "function") {
+        setMessage("Item loader not found.");
+        return;
+      }
+
+      const result = useConsumable(itemId, player, gameMode);
+
+      if (result.escape && gameMode === "encounter") {
+        runAway();
+      }
+
+      updateBars();
+      updateCombatBeltSlots();
+      if (gameMode !== "encounter") setMessage(result.message);
+
+      if (document.getElementById("inventoryOverlay").classList.contains("show")) {
+        renderItemsTab();
+      }
+    }
+
+    // =========================
+    // SOTN-STYLE EQUIPMENT UI
+    // =========================
+
+
+    function getEquipmentImageFolder(item) {
+      if (!item) return "items";
+      if (item.slot === "weapon") return "weapons";
+      if (item.slot === "armor") return "armor";
+      if (item.slot === "ring" || item.slot === "necklace") return "jewelry";
+      if (item.slot === "cloak") return "cloaks";
+      return "items";
+    }
+
+    function equipIconHtml(itemId) {
+      const item = getEquipItem(itemId);
+      if (!item) return `<span class="equipIcon empty"></span>`;
+
+      const iconPath = typeof getEquipmentIconPath === "function"
+        ? getEquipmentIconPath(item)
+        : (item.image ? `assets/${getEquipmentImageFolder(item)}/${item.image}` : "");
+
+      if (!iconPath) return `<span class="equipIcon empty"></span>`;
+      return `<img class="equipIcon" src="${iconPath}" alt="" onerror="this.style.display='none'; this.insertAdjacentHTML('afterend','<span class=&quot;equipIcon empty&quot;></span>');">`;
+    }
+
+
+    function equipDetailIconHtml(itemId) {
+      const item = getEquipItem(itemId);
+      if (!item) return `<span class="equipDetailIcon empty"></span>`;
+
+      const iconPath = typeof getEquipmentIconPath === "function"
+        ? getEquipmentIconPath(item)
+        : (item.image ? `assets/${getEquipmentImageFolder(item)}/${item.image}` : "");
+
+      if (!iconPath) return `<span class="equipDetailIcon empty"></span>`;
+      return `<img class="equipDetailIcon" src="${iconPath}" alt="" onerror="this.style.display='none'; this.insertAdjacentHTML('afterend','<span class=&quot;equipDetailIcon empty&quot;></span>');">`;
+    }
+
+
+    function isBeltSlot(slot) {
+      return ["belt1", "belt2", "belt3", "belt4"].includes(slot);
+    }
+
+    function getBeltNumber(slot) {
+      return Number(String(slot).replace("belt", "")) || 1;
+    }
+
+    function getConsumableName(itemId) {
+      if (!itemId || typeof getConsumable !== "function") return "None";
+      const item = getConsumable(itemId);
+      return item ? item.itemName : itemId;
+    }
+
+    function getConsumableQuantityForSlot(slot) {
+      const itemId = player.equipment[slot];
+      if (!itemId || typeof getConsumableQuantity !== "function") return 0;
+      return getConsumableQuantity(player, itemId);
+    }
+
+    function consumableIconHtml(itemId, className = "equipIcon") {
+      if (!itemId || typeof getConsumable !== "function") return `<span class="${className} empty"></span>`;
+      const item = getConsumable(itemId);
+      if (!item || !item.image) return `<span class="${className} empty"></span>`;
+      return `<img class="${className}" src="assets/items/${item.image}" alt="" onerror="this.style.display='none'; this.insertAdjacentHTML('afterend','<span class=&quot;${className} empty&quot;></span>');">`;
+    }
+
+    function equipGridIconHtml(slot, itemId) {
+      if (isBeltSlot(slot)) {
+        if (!itemId || getConsumableQuantityForSlot(slot) <= 0) return `<span class="equipGridIcon empty"></span>`;
+        const item = getConsumable(itemId);
+        if (!item || !item.image) return `<span class="equipGridIcon empty"></span>`;
+        return `<img class="equipGridIcon" src="assets/items/${item.image}" alt="">`;
+      }
+
+      const item = getEquipItem(itemId);
+      if (!item) return `<span class="equipGridIcon empty"></span>`;
+      const iconPath = typeof getEquipmentIconPath === "function"
+        ? getEquipmentIconPath(item)
+        : (item.image ? `assets/${getEquipmentImageFolder(item)}/${item.image}` : "");
+      if (!iconPath) return `<span class="equipGridIcon empty"></span>`;
+      return `<img class="equipGridIcon" src="${iconPath}" alt="">`;
+    }
+
+    function getSlotDisplayName(slot, itemId) {
+      if (isBeltSlot(slot)) {
+        const qty = getConsumableQuantityForSlot(slot);
+        return itemId && qty > 0 ? getConsumableName(itemId) : "Empty";
+      }
+      return getEquipName(itemId);
+    }
+
+    function getEquipmentDetailMeta(item) {
+      if (!item) return "No item equipped.";
+      const parts = [];
+      if (item.rarity) parts.push(item.rarity.toUpperCase());
+      if (item.tier) parts.push(String(item.tier).toUpperCase());
+      if (item.reqLevel) parts.push(`Req Lv ${item.reqLevel}`);
+      if (item.reqStr) parts.push(`Req Str ${item.reqStr}`);
+      if (item.maxSockets) parts.push(`${item.maxSockets} socket${item.maxSockets === 1 ? "" : "s"}`);
+      return parts.join(" · ") || "Equipped item.";
+    }
+
+    function renderEquipOverview() {
+      const content = document.getElementById("inventoryContent");
+      document.getElementById("inventoryTitle").textContent = "Equipment";
+      document.getElementById("inventoryTabs").style.display = "grid";
+
+      const gridSlots = [
+        ["weapon", "Weapon", player.equipment.weapon, "wideLeft"],
+        ["armor", "Armor", player.equipment.armor, "wideRight"],
+        ["ring1", "Ring 1", player.equipment.ring1, ""],
+        ["ring2", "Ring 2", player.equipment.ring2, ""],
+        ["ring3", "Ring 3", player.equipment.ring3, ""],
+        ["ring4", "Ring 4", player.equipment.ring4, ""],
+        ["belt1", "P1", player.equipment.belt1, ""],
+        ["belt2", "P2", player.equipment.belt2, ""],
+        ["belt3", "P3", player.equipment.belt3, ""],
+        ["belt4", "P4", player.equipment.belt4, ""]
+      ];
+
+      let html = `
+        <div class="menuHeader">
+          <span>${player.name} · Lv ${player.level}</span>
+          <span>Gold: ${player.gold}</span>
+        </div>
+        <div class="equipGrid">
+      `;
+
+      html += gridSlots.map(([slot, label, itemId, extraClass]) => `
+        <button class="equipGridButton ${extraClass} ${slot}Slot" onclick="renderEquipSlot('${slot}')">
+          <div class="equipGridLabel">${label}</div>
+          ${equipGridIconHtml(slot, itemId)}
+          <div class="equipGridName">${getSlotDisplayName(slot, itemId)}</div>
+        </button>
+      `).join("");
+
+      html += `
+        </div>
+        <div class="smallNote">Atk ${getPlayerAttackValue()} · Def ${getPlayerDefenseValue()} · HP ${player.hp}/${player.maxHp} · MP ${player.mp}/${player.maxMp}</div>
+      `;
+
+      content.innerHTML = html;
+    }
+
+    function getSlotSource(slot) {
+      if (["ring1", "ring2", "ring3", "ring4"].includes(slot)) return "ring";
+      if (isBeltSlot(slot)) return "consumable";
+      return slot;
+    }
+
+    function getSlotLabel(slot) {
+      const labels = {
+        weapon: "Weapon",
+        armor: "Armor",
+        necklace: "Necklace",
+        ring1: "Ring 1",
+        ring2: "Ring 2",
+        ring3: "Ring 3",
+        ring4: "Ring 4",
+        belt1: "P1",
+        belt2: "P2",
+        belt3: "P3",
+        belt4: "P4"
+      };
+
+      return labels[slot] || slot;
+    }
+
+    function getOwnedItemsForSlot(slot) {
+      const sourceSlot = getSlotSource(slot);
+
+      if (sourceSlot === "consumable") {
+        return typeof getConsumableInventoryList === "function"
+          ? getConsumableInventoryList(player).filter(item => item.quantity > 0)
+          : [];
+      }
+
+      if (typeof getEquipmentBySlot !== "function") return [];
+
+      return getEquipmentBySlot(sourceSlot)
+        .filter(item => ownsEquipment(item.itemId))
+        .filter(item => !isEquipmentEquippedInOtherSlot(item.itemId, slot));
+    }
+
+    function renderEquipSlot(slot) {
+      const content = document.getElementById("inventoryContent");
+      const label = getSlotLabel(slot);
+      const equippedId = player.equipment[slot];
+
+      document.getElementById("inventoryTitle").textContent = label;
+      document.getElementById("inventoryTabs").style.display = "none";
+
+      if (isBeltSlot(slot)) {
+        const item = equippedId && typeof getConsumable === "function" ? getConsumable(equippedId) : null;
+        const qty = getConsumableQuantityForSlot(slot);
+        const desc = item ? (item.description || `${item.itemName} x${qty}`) : "No consumable assigned.";
+
+        content.innerHTML = `
+          <div class="equipDetailCard">
+            ${consumableIconHtml(equippedId, "equipDetailIcon")}
+            <div>
+              <div class="equipDetailName">${item && qty > 0 ? item.itemName : "Empty"}</div>
+              <div class="equipDetailLine">Belt Slot ${getBeltNumber(slot)}</div>
+              <div class="equipDetailLine">${desc}${item ? ` · Qty ${qty}` : ""}</div>
+            </div>
+          </div>
+          <div class="equipDetailActions">
+            <button class="equipSlotRow" onclick="renderChangeEquipSlot('${slot}')">
+              <span class="equipSlotLabel">Change</span>
+              <span class="equipSlotValue">${label}</span>
+            </button>
+            <button class="equipSlotRow" onclick="renderEquipOverview()">
+              <span class="equipSlotLabel">Close</span>
+              <span class="equipSlotValue">Equipment</span>
+            </button>
+          </div>
+        `;
+        return;
+      }
+
+      const item = getEquipItem(equippedId);
+
+      let html = `
+        <div class="equipDetailCard">
+          ${equipDetailIconHtml(equippedId)}
+          <div>
+            <div class="equipDetailName">${getEquipName(equippedId)}</div>
+            <div class="equipDetailLine">${getEquipmentDetailMeta(item)}</div>
+            <div class="equipDetailLine">${equippedId ? equipmentStatLine(equippedId) : "No stats"}</div>
+          </div>
+        </div>
+
+        <div class="equipDetailActions">
+          <button class="equipSlotRow" onclick="renderChangeEquipSlot('${slot}')">
+            <span class="equipSlotLabel">Change</span>
+            <span class="equipSlotValue">${label}</span>
+          </button>
+      `;
+
+      if ((slot === "weapon" || slot === "armor") && equippedId) {
+        html += `
+          <button class="equipSlotRow" onclick="renderRuneSlots('${slot}')">
+            <span class="equipSlotLabel">Runes</span>
+            <span class="equipSlotValue">${getSocketSummary(equippedId).replace("Runes ", "")}</span>
+          </button>
+        `;
+      }
+
+      html += `
+          <button class="equipSlotRow" onclick="renderEquipOverview()">
+            <span class="equipSlotLabel">Close</span>
+            <span class="equipSlotValue">Equipment</span>
+          </button>
+        </div>
+      `;
+
+      content.innerHTML = html;
+    }
+
+    function renderChangeEquipSlot(slot) {
+      const content = document.getElementById("inventoryContent");
+      const label = getSlotLabel(slot);
+      const equippedId = player.equipment[slot];
+
+      document.getElementById("inventoryTitle").textContent = `Change ${label}`;
+      document.getElementById("inventoryTabs").style.display = "none";
+
+      const items = getOwnedItemsForSlot(slot);
+      const rowData = [{ none: true }].concat(items);
+      const page = getSlotPage(slot, rowData.length);
+      const startIndex = page * EQUIPMENT_PAGE_SIZE;
+      const visibleRows = rowData.slice(startIndex, startIndex + EQUIPMENT_PAGE_SIZE);
+
+      let html = `
+        <button class="equipSlotRow" onclick="renderEquipSlot('${slot}')">
+          <span class="equipSlotLabel">Back</span>
+          <span class="equipSlotValue">${label}</span>
+        </button>
+
+        <div class="equipCompactList" style="margin-top:6px;">
+      `;
+
+      html += visibleRows.map(item => {
+        if (item.none) {
+          return `
+            <button class="equipSlotRow equipItemRow" onclick="equipSlotItem('${slot}', null)">
+              <span class="equipIcon empty"></span>
+              <span class="equipSlotLabel">None</span>
+              <span class="equipSlotValue">Clear slot</span>
+            </button>
+          `;
+        }
+
+        if (isBeltSlot(slot)) {
+          const itemId = item.itemId;
+          const equipped = equippedId === itemId;
+          return `
+            <button class="equipSlotRow ${equipped ? "equipped" : ""} equipItemRow" onclick="equipSlotItem('${slot}', '${itemId}')">
+              ${consumableIconHtml(itemId, "equipIcon")}
+              <span class="equipSlotLabel">${item.itemName}${equipped ? " *" : ""}</span>
+              <span class="equipSlotValue">x${item.quantity}</span>
+            </button>
+          `;
+        }
+
+        const itemId = item.itemId;
+        const equipped = equippedId === itemId;
+        const allowed = canEquip(itemId);
+        const rowClass = `equipSlotRow ${equipped ? "equipped" : ""} ${!allowed ? "locked" : ""}`;
+        const action = allowed ? `onclick="equipSlotItem('${slot}', '${itemId}')"` : "";
+
+        return `
+          <button class="${rowClass} equipItemRow" ${action}>
+            ${equipIconHtml(itemId)}
+            <span class="equipSlotLabel">${getEquipName(itemId)}${equipped ? " *" : ""}</span>
+            <span class="equipSlotValue">${getPrimaryItemValue(itemId)}</span>
+          </button>
+        `;
+      }).join("");
+
+      html += `</div>${renderEquipmentPager(slot, rowData.length)}`;
+      content.innerHTML = html;
+    }
+
+    function renderRuneSlots(slot) {
+      const content = document.getElementById("inventoryContent");
+      const itemId = player.equipment[slot];
+
+      document.getElementById("inventoryTitle").textContent = `${getSlotLabel(slot)} Runes`;
+      document.getElementById("inventoryTabs").style.display = "none";
+
+      if (!itemId) {
+        content.innerHTML = `
+          <button class="equipSlotRow" onclick="renderEquipSlot('${slot}')">
+            <span class="equipSlotLabel">Back</span>
+            <span class="equipSlotValue">${getSlotLabel(slot)}</span>
+          </button>
+          <div class="smallNote">No item equipped.</div>
+        `;
+        return;
+      }
+
+      const item = getEquipItem(itemId);
+      const record = getOrCreateEquipmentRecord(itemId);
+      normalizeEquipmentSockets(itemId);
+
+      let html = `
+        <button class="equipSlotRow" onclick="renderEquipSlot('${slot}')">
+          <span class="equipSlotLabel">Back</span>
+          <span class="equipSlotValue">${getSlotLabel(slot)}</span>
+        </button>
+
+        <div class="smallNote">${getEquipName(itemId)}</div>
+        <div class="equipCompactList">
+      `;
+
+      if (!item || !item.maxSockets) {
+        html += `<div class="smallNote">This item has no rune sockets.</div>`;
+      } else {
+        for (let i = 0; i < record.socketsUnlocked; i++) {
+          const socket = record.sockets[i];
+          const runeText = socket && socket.runeId
+            ? getRuneDisplayName(socket.runeId, socket.level || 0)
+            : "Empty";
+
+          html += `
+            <button class="equipSlotRow" onclick="renderRuneSelect('${slot}', ${i})">
+              <span class="equipSlotLabel">Rune ${i + 1}</span>
+              <span class="equipSlotValue">${runeText}</span>
+            </button>
+          `;
+        }
+
+        if (record.socketsUnlocked < item.maxSockets) {
+          html += `<div class="smallNote">Locked sockets: ${item.maxSockets - record.socketsUnlocked}. Shrine merchant unlocks these later.</div>`;
+        }
+      }
+
+      html += `</div>`;
+      content.innerHTML = html;
+    }
+
+    function renderSocketRows(slot, itemId) {
+      if (!itemId) {
+        return `<div class="smallNote">No item equipped. Equip an item before socketing runes.</div>`;
+      }
+
+      const item = getEquipItem(itemId);
+      const record = getOrCreateEquipmentRecord(itemId);
+
+      if (!item || !item.maxSockets) {
+        return `<div class="smallNote">This item has no rune sockets.</div>`;
+      }
+
+      normalizeEquipmentSockets(itemId);
+
+      let html = `<div class="smallNote">Rune Sockets</div>`;
+
+      for (let i = 0; i < record.socketsUnlocked; i++) {
+        const socket = record.sockets[i];
+        const runeText = socket && socket.runeId
+          ? `${getRuneDisplayName(socket.runeId, socket.level || 0)} · ${getShortRuneStatLine(socket.runeId, socket.level || 0)}`
+          : "Empty";
+
+        html += `
+          <button class="sotnRow" onclick="renderRuneSelect('${slot}', ${i})">
+            <span class="sotnSlot">Rune ${i + 1}</span>
+            <span class="sotnValue">
+              <span style="display:inline-grid;grid-template-columns:30px 1fr;gap:6px;align-items:center;">
+                ${socketRuneIconHtml(socket).replace('class="menuIcon"', 'class="menuIcon" style="width:28px;height:28px;"')}
+                <span>${runeText}</span>
+              </span>
+            </span>
+          </button>
+        `;
+      }
+
+      if (record.socketsUnlocked < item.maxSockets) {
+        html += `<div class="smallNote">Locked sockets: ${item.maxSockets - record.socketsUnlocked}. Shrine merchant will unlock these later.</div>`;
+      }
+
+      return html;
+    }
+
+    function renderRuneSelect(slot, socketIndex) {
+      const itemId = player.equipment[slot];
+      const record = getOrCreateEquipmentRecord(itemId);
+      const currentSocket = record.sockets[socketIndex] || null;
+
+      document.getElementById("inventoryTitle").textContent = `Rune ${socketIndex + 1}`;
+      document.getElementById("inventoryTabs").style.display = "none";
+
+      const content = document.getElementById("inventoryContent");
+
+      const exclude = { itemId, socketIndex };
+      const runes = typeof getRuneInventoryList === "function" ? getRuneInventoryList(player, exclude) : [];
+
+      let html = `
+        <div class="menuHeader">
+          <span>${getEquipName(itemId)}</span>
+          <span>${currentSocket ? getRuneDisplayName(currentSocket.runeId, currentSocket.level || 0) : "Empty"}</span>
+        </div>
+
+        <button class="sotnRow" onclick="renderEquipSlot('${slot}')">
+          <span class="sotnSlot">Back</span>
+          <span class="sotnValue">Return to ${getSlotLabel(slot)}</span>
+        </button>
+
+        <button class="sotnRow" onclick="socketRune('${slot}', ${socketIndex}, null, 0)">
+          <span class="sotnSlot">None</span>
+          <span class="sotnValue">Remove rune</span>
+        </button>
+      `;
+
+      if (!runes.length) {
+        html += `<div class="smallNote">No runes owned.</div>`;
+        content.innerHTML = html;
+        return;
+      }
+
+      html += runes.map(entry => {
+        const current = currentSocket &&
+          currentSocket.runeId === entry.runeId &&
+          (currentSocket.level || 0) === entry.level;
+
+        const available = entry.available > 0 || current;
+
+        return `
+          <button class="compactRow ${current ? "equipped" : ""} ${!available ? "locked" : ""}" ${available ? `onclick="socketRune('${slot}', ${socketIndex}, '${entry.runeId}', ${entry.level})"` : ""}>
+            ${compactIconHtml(entry.image, "runes")}
+            <div>
+              <div class="compactName">${entry.displayName}${current ? " [Socketed]" : ""}</div>
+              <div class="compactSub">${getShortRuneStatLine(entry)}</div>
+            </div>
+            <div class="compactQty">Free ${entry.available}</div>
+          </button>
+        `;
+      }).join("");
+
+      content.innerHTML = html;
+    }
+
+    function socketRune(slot, socketIndex, runeId, level = 0) {
+      const itemId = player.equipment[slot];
+      const record = getOrCreateEquipmentRecord(itemId);
+
+      if (!record || !Array.isArray(record.sockets)) {
+        setMessage("No socket available.");
+        renderEquipSlot(slot);
+        return;
+      }
+
+      if (runeId === null) {
+        record.sockets[socketIndex] = null;
+        recalcDerivedStats();
+        updateBars();
+        setMessage("Rune removed.");
+        renderEquipSlot(slot);
+        return;
+      }
+
+      const exclude = { itemId, socketIndex };
+      const available = getAvailableRuneQuantity(player, runeId, level, exclude);
+
+      if (available <= 0) {
+        setMessage("No free copy of that rune.");
+        renderRuneSelect(slot, socketIndex);
+        return;
+      }
+
+      record.sockets[socketIndex] = { runeId, level };
+      recalcDerivedStats();
+      updateBars();
+      setMessage(`Socketed ${getRuneDisplayName(runeId, level)}.`);
+      renderEquipSlot(slot);
+    }
+
+    function equipSlotItem(slot, itemId) {
+      if (isBeltSlot(slot)) {
+        player.equipment[slot] = itemId || null;
+        updateCombatBeltSlots();
+        setMessage(itemId ? `${getSlotLabel(slot)} set to ${getConsumableName(itemId)}.` : `${getSlotLabel(slot)} cleared.`);
+        renderEquipSlot(slot);
+        return;
+      }
+
+      if (!itemId) {
+        player.equipment[slot] = null;
+        recalcDerivedStats();
+        updateBars();
+        setMessage(`${getSlotLabel(slot)} removed.`);
+        renderEquipSlot(slot);
+        return;
+      }
+
+      if (!canEquip(itemId)) {
+        setMessage("Requirements not met.");
+        renderEquipSlot(slot);
+        return;
+      }
+
+      player.equipment[slot] = itemId;
+
+      if (slot === "weapon" || slot === "armor") {
+        normalizeEquipmentSockets(itemId);
+      }
+
+      recalcDerivedStats();
+      updateBars();
+      setMessage(`Equipped ${getEquipName(itemId)}.`);
+      renderEquipSlot(slot);
+    }
+
+
+    function renderCombatBeltButton(slot) {
+      const btn = document.querySelector(`.beltButton[onclick="useBeltSlot('${slot}')"]`);
+      if (!btn) return;
+
+      const itemId = player.equipment[slot];
+      const qty = getConsumableQuantityForSlot(slot);
+      const hasUsableItem = !!itemId && qty > 0;
+
+      btn.classList.toggle("empty", !hasUsableItem);
+      btn.setAttribute("aria-label", hasUsableItem ? getConsumableName(itemId) : `${getSlotLabel(slot)} empty`);
+      btn.title = hasUsableItem ? `${getConsumableName(itemId)} x${qty}` : `${getSlotLabel(slot)} empty`;
+
+      if (!hasUsableItem) {
+        btn.innerHTML = "";
+        return;
+      }
+
+      const item = typeof getConsumable === "function" ? getConsumable(itemId) : null;
+      const icon = item && item.image
+        ? `<img class="beltItemIcon" src="assets/items/${item.image}" alt="">`
+        : "";
+
+      btn.innerHTML = `${icon}<span class="beltQtyBadge">${qty}</span>`;
+    }
+
+    function updateCombatBeltSlots() {
+      ["belt1", "belt2", "belt3", "belt4"].forEach(renderCombatBeltButton);
+    }
+
+    function useBeltSlot(slot) {
+      const itemId = player.equipment[slot];
+      if (!itemId || getConsumableQuantityForSlot(slot) <= 0) {
+        updateCombatBeltSlots();
+        return;
+      }
+
+      if (typeof useConsumable !== "function") {
+        setMessage("Item loader not found.");
+        return;
+      }
+
+      const result = useConsumable(itemId, player, gameMode);
+
+      if (result.escape && gameMode === "encounter") {
+        runAway();
+      }
+
+      updateBars();
+      updateCombatBeltSlots();
+      if (gameMode !== "encounter") setMessage(result.message);
+    }
+
+    // =========================
+    // INIT
+    // =========================
+
+    ensureFullInventoryShape();
+    const loadedLocalSave = loadGameState();
+    ensureFullInventoryShape();
+
+    Object.keys(player.inventory.equipment).forEach(itemId => {
+      const item = getEquipItem(itemId);
+      const record = player.inventory.equipment[itemId];
+
+      if (!item || !record) return;
+
+      if (record.socketsUnlocked === undefined) {
+        record.socketsUnlocked = Math.min(item.maxSockets || 0, item.maxSockets > 0 ? 1 : 0);
+      }
+
+      normalizeEquipmentSockets(itemId);
+    });
+
+    recalcDerivedStats();
+    updateCombatBeltSlots();
+    saveReady = true;
+
+    if (loadedLocalSave) {
+      startNewFloor();
+      setMessage(`Save loaded. New floor layout started on floor ${currentFloor}.`);
+    } else {
+      startNewFloor();
+    }
+  </script>
+</body>
+</html>

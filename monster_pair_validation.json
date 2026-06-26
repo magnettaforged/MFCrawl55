@@ -1,0 +1,188 @@
+{
+  "source_monloc_rows": 70,
+  "combined_monloc_rows": 35,
+  "groups": {
+    "bandit": [
+      "bandit1",
+      "bandit2"
+    ],
+    "bats": [
+      "bats1",
+      "bats2"
+    ],
+    "bcrab": [
+      "bcrab1",
+      "bcrab2"
+    ],
+    "bdragon": [
+      "bdragon1",
+      "bdragon2"
+    ],
+    "bgoblin": [
+      "bgoblin1",
+      "bgoblin2"
+    ],
+    "bkraken": [
+      "bkraken1",
+      "bkraken2"
+    ],
+    "borc": [
+      "borc1",
+      "borc2"
+    ],
+    "bpirate": [
+      "bpirate1",
+      "bpirate2"
+    ],
+    "bpirate_b": [
+      "bpirate3",
+      "bpirate4"
+    ],
+    "captain": [
+      "captain1",
+      "captain2"
+    ],
+    "crab": [
+      "crab1",
+      "crab2"
+    ],
+    "fbandit": [
+      "fbandit1",
+      "fbandit2"
+    ],
+    "fbandit_b": [
+      "fbandit3",
+      "fbandit4"
+    ],
+    "fbandit_c": [
+      "fbandit5",
+      "fbandit6"
+    ],
+    "fpirate": [
+      "fpirate1",
+      "fpirate2"
+    ],
+    "fpirate_b": [
+      "fpirate3",
+      "fpirate4"
+    ],
+    "goblin": [
+      "goblin1",
+      "goblin2"
+    ],
+    "multicrab": [
+      "multicrab1",
+      "multicrab2"
+    ],
+    "mushroom": [
+      "mushroom1",
+      "mushroom2"
+    ],
+    "mzombie": [
+      "mzombie1",
+      "mzombie2"
+    ],
+    "mzombie_b": [
+      "mzombie3",
+      "mzombie4"
+    ],
+    "octopus": [
+      "octopus1",
+      "octopus2"
+    ],
+    "orc": [
+      "orc1",
+      "orc2"
+    ],
+    "rat": [
+      "rat1",
+      "rat2"
+    ],
+    "skelemage": [
+      "skelemage1",
+      "skelemage2"
+    ],
+    "skelemage_b": [
+      "skelemage3",
+      "skelemage4"
+    ],
+    "skeleswsh": [
+      "skeleswsh1",
+      "skeleswsh2"
+    ],
+    "skeleton": [
+      "skeleton1",
+      "skeleton2"
+    ],
+    "skeleton_b": [
+      "skeleton3",
+      "skeleton4"
+    ],
+    "spider": [
+      "spider1",
+      "spider2"
+    ],
+    "spider_b": [
+      "spider3",
+      "spider4"
+    ],
+    "squid": [
+      "squid1",
+      "squid2"
+    ],
+    "wolf": [
+      "wolf1",
+      "wolf2"
+    ],
+    "wraith": [
+      "wraith1",
+      "wraith2"
+    ],
+    "wraith_b": [
+      "wraith3",
+      "wraith4"
+    ]
+  },
+  "missing_old_monster_entries": [],
+  "location_mismatches_inside_groups": [],
+  "combined_ids": [
+    "bandit",
+    "bats",
+    "bcrab",
+    "bdragon",
+    "bgoblin",
+    "bkraken",
+    "borc",
+    "bpirate",
+    "bpirate_b",
+    "captain",
+    "crab",
+    "fbandit",
+    "fbandit_b",
+    "fbandit_c",
+    "fpirate",
+    "fpirate_b",
+    "goblin",
+    "multicrab",
+    "mushroom",
+    "mzombie",
+    "mzombie_b",
+    "octopus",
+    "orc",
+    "rat",
+    "skelemage",
+    "skelemage_b",
+    "skeleswsh",
+    "skeleton",
+    "skeleton_b",
+    "spider",
+    "spider_b",
+    "squid",
+    "wolf",
+    "wraith",
+    "wraith_b"
+  ],
+  "new_monster_entries": 35,
+  "new_monloc_rows": 35,
+  "paired_ids_removed": 35
+}
