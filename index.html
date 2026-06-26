@@ -2787,7 +2787,7 @@
       const front = getRelativeTile(0);
       const left = getRelativeTile(-1);
       const right = getRelativeTile(1);
-      const back = getRelativeTile(2);
+      const back = getPreviousPosition();
 
       const currentTile = getTile(playerX, playerY);
       const chestDeadEnd = currentTile === "C";
@@ -2800,10 +2800,11 @@
       };
 
       // Exit markers report the actual movement truth.
+      // Back is a breadcrumb return to the previous room, not fixed north.
       show("exitForward", !chestDeadEnd && canMoveTo(front.x, front.y), "Forward");
       show("exitLeft", !chestDeadEnd && canMoveTo(left.x, left.y), "Left Path");
       show("exitRight", !chestDeadEnd && canMoveTo(right.x, right.y), "Right Path");
-      show("exitBack", canMoveTo(back.x, back.y), "Back");
+      show("exitBack", !!back, "Back");
     }
 
     function updateDebug() {
@@ -2811,12 +2812,12 @@
       const front = getRelativeTile(0);
       const left = getRelativeTile(-1);
       const right = getRelativeTile(1);
-      const back = getRelativeTile(2);
+      const back = getPreviousPosition();
 
       const f = canMoveTo(front.x, front.y) ? "open" : "wall";
       const l = canMoveTo(left.x, left.y) ? "open" : "wall";
       const r = canMoveTo(right.x, right.y) ? "open" : "wall";
-      const b = canMoveTo(back.x, back.y) ? "open" : "wall";
+      const b = back ? "history" : "none";
 
       document.getElementById("debugLine").textContent =
         `Img:${lastRoomImageName} X:${playerX} Y:${playerY} Face:S Tile:${currentTile} F:${f} L:${l} R:${r} B:${b} Hist:${moveHistory.length}`;
@@ -3045,8 +3046,16 @@
       moveHistory.push({
         x: playerX,
         y: playerY,
-        dir: playerDir
+        dir: 2
       });
+    }
+
+    function getPreviousPosition() {
+      if (!Array.isArray(moveHistory) || moveHistory.length === 0) return null;
+      const prev = moveHistory[moveHistory.length - 1];
+      if (!prev || typeof prev.x !== "number" || typeof prev.y !== "number") return null;
+      if (!canMoveTo(prev.x, prev.y)) return null;
+      return prev;
     }
 
     function moveToRelative(relativeDir, newFacingDir, moveLabel) {
@@ -3054,9 +3063,9 @@
       if (gameMode === "encounter") return;
 
       const currentTile = getTile(playerX, playerY);
-      if (currentTile === "C" && relativeDir !== 2) {
+      if (currentTile === "C") {
         updateRoomView();
-        setMessage("The chest room is a dead end.");
+        setMessage("The chest room is a dead end. Use Back to leave.");
         return;
       }
 
@@ -3084,7 +3093,24 @@
 
 
     function moveBack() {
-      moveToRelative(2, 2, "back");
+      if (menuIsOpen()) return;
+      if (gameMode === "encounter") return;
+
+      const prev = getPreviousPosition();
+      if (!prev) {
+        updateRoomView();
+        setMessage("No back path.");
+        return;
+      }
+
+      moveHistory.pop();
+      playRoomTransition();
+
+      playerDir = 2;
+      playerX = prev.x;
+      playerY = prev.y;
+
+      enterTile(getTile(playerX, playerY));
     }
 
 
