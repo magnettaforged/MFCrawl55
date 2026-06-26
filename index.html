@@ -3060,18 +3060,24 @@
         return;
       }
 
-      const next = getRelativeTile(relativeDir);
+    function moveToFixed(dx, dy, moveLabel) {
+      if (isInCombat) return;
+
+      const next = {
+       x: playerX + dx,
+       y: playerY + dy
+      };
 
       if (!canMoveTo(next.x, next.y)) {
-        updateRoomView();
-        setMessage(`No ${moveLabel} path.`);
-        return;
+       updateRoomView();
+       setMessage(`No ${moveLabel} path.`);
+       return;
       }
 
       saveCurrentPosition();
       playRoomTransition();
 
-      playerDir = 2;
+      playerDir = 2; // always south
       playerX = next.x;
       playerY = next.y;
 
@@ -3079,24 +3085,20 @@
     }
 
     function moveForward() {
-      moveToRelative(0, 2, "forward");
+      moveToFixed(0, 1, "forward");
     }
-
 
     function moveBack() {
-      moveToRelative(2, 2, "back");
+      moveToFixed(0, -1, "back");
     }
-
 
     function turnLeft() {
-      moveToRelative(-1, 2, "left");
+      moveToFixed(-1, 0, "left");
     }
-
 
     function turnRight() {
-      moveToRelative(1, 2, "right");
+      moveToFixed(1, 0, "right");
     }
-
 
 
     function setOverlayTitle(title) {
