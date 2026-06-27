@@ -1846,9 +1846,8 @@
     }
 
     function getCurrentMonsterPoolId() {
-      // Monster selection now uses actual floor level, not 5-floor difficulty bands.
-      // Example: c1, b7, f12. monsterLoader.js handles startFloor filtering.
-      return `${currentFloorTheme}${getMonsterFloorLevel(currentFloor)}`;
+      // Theme-only fallback id. The current monsterLoader reads currentFloor separately in startEncounter().
+      return currentFloorTheme || "c";
     }
 
     function findEntrancePosition(grid) {
@@ -4520,15 +4519,22 @@
 
 
     function startEncounter(poolId, encounterKey, tileType = "M") {
-      if (typeof getRandomMonsterFromPool !== "function") {
+      let rolledMonster = null;
+
+      // Preferred current loader: select by theme + floor directly.
+      // This prevents errors like "No monster found for c15" when older pool ids are interpreted literally.
+      if (typeof getRandomMonsterForTheme === "function") {
+        rolledMonster = getRandomMonsterForTheme(currentFloorTheme, tileType, currentFloor);
+      } else if (typeof getRandomMonsterFromPool === "function") {
+        // Backward-compatible fallback for older monsterLoader.js.
+        rolledMonster = getRandomMonsterFromPool(poolId, tileType);
+      } else {
         setMessage("Monster loader not found. Check script load order.");
         return;
       }
 
-      const rolledMonster = getRandomMonsterFromPool(poolId, tileType);
-
       if (!rolledMonster) {
-        setMessage(`No monster found for ${poolId}.`);
+        setMessage(`No monster found for ${currentFloorTheme} floor ${currentFloor}.`);
         return;
       }
 
