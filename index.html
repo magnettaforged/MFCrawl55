@@ -1908,7 +1908,7 @@
       const mapEl = document.getElementById("mapIndicator");
       if (mapEl) {
         const mapName = currentMap && currentMap.name ? currentMap.name : currentMapId || "fallback";
-        mapEl.textContent = `Map: ${mapName}`;
+        mapEl.textContent = `Map: ${mapName}  |  Loc: ${getGridLocationLabel(playerX, playerY)}`;
       }
     }
 
@@ -2779,6 +2779,13 @@
       return `${x},${y}`;
     }
 
+    function getGridLocationLabel(x, y) {
+      const columns = "ABCDEFGHIJ";
+      const col = columns[x] || "?";
+      const row = Number.isFinite(y) ? y + 1 : "?";
+      return `${col}${row}`;
+    }
+
 
     function updateFacingAndExits() {
       const badge = document.getElementById("facingBadge");
@@ -2851,8 +2858,11 @@
       // then the player arrives facing that direction.
       let absoluteDir = playerDir;
 
-      if (relativeDir === -1) absoluteDir = (playerDir + 3) % 4;
-      else if (relativeDir === 1) absoluteDir = (playerDir + 1) % 4;
+      // Screen-relative controls:
+      // Left means the visible left branch, not compass-left math.
+      // With the starting south-facing view, Left must go west and Right must go east.
+      if (relativeDir === -1) absoluteDir = (playerDir + 1) % 4;
+      else if (relativeDir === 1) absoluteDir = (playerDir + 3) % 4;
       else if (relativeDir === 2) absoluteDir = (playerDir + 2) % 4;
 
       const offset = getDirOffset(absoluteDir);
