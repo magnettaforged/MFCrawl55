@@ -2782,7 +2782,10 @@
 
     function updateFacingAndExits() {
       const badge = document.getElementById("facingBadge");
-      if (badge) badge.textContent = "Facing S";
+      if (badge) {
+        const dirLabels = ["N", "E", "S", "W"];
+        badge.textContent = `Facing ${dirLabels[playerDir] || "S"}`;
+      }
 
       const front = getRelativeTile(0);
       const left = getRelativeTile(-1);
@@ -2816,8 +2819,9 @@
       const r = canMoveTo(right.x, right.y) ? "open" : "wall";
       const b = canMoveTo(back.x, back.y) ? "open" : "wall";
 
+      const dirLabels = ["N", "E", "S", "W"];
       document.getElementById("debugLine").textContent =
-        `Img:${lastRoomImageName} X:${playerX} Y:${playerY} Face:S Tile:${currentTile} F:${f} L:${l} R:${r} B:${b}`;
+        `Img:${lastRoomImageName} X:${playerX} Y:${playerY} Face:${dirLabels[playerDir] || "S"} Tile:${currentTile} F:${f} L:${l} R:${r} B:${b}`;
     }
 
     function getTile(x, y) {
@@ -2842,20 +2846,22 @@
     }
 
     function getRelativeTile(relativeDir) {
-      // Grid-fixed crawler view. The player is always visually facing south/down.
-      //  0 = forward/south, -1 = left/west, 1 = right/east, 2 = back/north.
-      let dx = 0;
-      let dy = 0;
+      // Relative movement without a pivot step.
+      // Clicking Left/Right/Back immediately moves into that visible room,
+      // then the player arrives facing that direction.
+      let absoluteDir = playerDir;
 
-      if (relativeDir === 0) dy = 1;
-      else if (relativeDir === -1) dx = -1;
-      else if (relativeDir === 1) dx = 1;
-      else if (relativeDir === 2) dy = -1;
+      if (relativeDir === -1) absoluteDir = (playerDir + 3) % 4;
+      else if (relativeDir === 1) absoluteDir = (playerDir + 1) % 4;
+      else if (relativeDir === 2) absoluteDir = (playerDir + 2) % 4;
+
+      const offset = getDirOffset(absoluteDir);
 
       return {
-        x: playerX + dx,
-        y: playerY + dy,
-        tile: getTile(playerX + dx, playerY + dy)
+        x: playerX + offset.dx,
+        y: playerY + offset.dy,
+        dir: absoluteDir,
+        tile: getTile(playerX + offset.dx, playerY + offset.dy)
       };
     }
 
@@ -3069,9 +3075,14 @@
 
       playRoomTransition();
 
-      playerDir = 2;
       playerX = next.x;
       playerY = next.y;
+
+      // Forward/left/right face the direction moved.
+      // Back is a backward step only; it does not turn the player around.
+      if (relativeDir !== 2) {
+        playerDir = next.dir;
+      }
 
       enterTile(getTile(playerX, playerY));
     }
