@@ -1830,7 +1830,7 @@
     let playerX = 1;
     let playerY = 1;
     let playerDir = 2;
-    let moveHistory = []; // movement breadcrumb/debug only; view is grid-fixed south
+    let moveHistory = []; // kept only for save compatibility; movement is grid-fixed south
 
     const dirNames = ["N", "E", "S", "W"];
     const openedChests = new Set();
@@ -2787,10 +2787,7 @@
       const front = getRelativeTile(0);
       const left = getRelativeTile(-1);
       const right = getRelativeTile(1);
-      const back = getPreviousPosition();
-
-      const currentTile = getTile(playerX, playerY);
-      const chestDeadEnd = currentTile === "C";
+      const back = getRelativeTile(2);
 
       const show = (id, shouldShow, label) => {
         const el = document.getElementById(id);
@@ -2799,12 +2796,12 @@
         el.classList.toggle("show", !!shouldShow);
       };
 
-      // Exit markers report the actual movement truth.
-      // Back is a breadcrumb return to the previous room, not fixed north.
-      show("exitForward", !chestDeadEnd && canMoveTo(front.x, front.y), "Forward");
-      show("exitLeft", !chestDeadEnd && canMoveTo(left.x, left.y), "Left Path");
-      show("exitRight", !chestDeadEnd && canMoveTo(right.x, right.y), "Right Path");
-      show("exitBack", !!back, "Back");
+      // Exit markers are fixed to the local grid.
+      // Forward = south, Back = north, Left = west, Right = east.
+      show("exitForward", canMoveTo(front.x, front.y), "Forward");
+      show("exitLeft", canMoveTo(left.x, left.y), "Left Path");
+      show("exitRight", canMoveTo(right.x, right.y), "Right Path");
+      show("exitBack", canMoveTo(back.x, back.y), "Back");
     }
 
     function updateDebug() {
@@ -2812,15 +2809,15 @@
       const front = getRelativeTile(0);
       const left = getRelativeTile(-1);
       const right = getRelativeTile(1);
-      const back = getPreviousPosition();
+      const back = getRelativeTile(2);
 
       const f = canMoveTo(front.x, front.y) ? "open" : "wall";
       const l = canMoveTo(left.x, left.y) ? "open" : "wall";
       const r = canMoveTo(right.x, right.y) ? "open" : "wall";
-      const b = back ? "history" : "none";
+      const b = canMoveTo(back.x, back.y) ? "open" : "wall";
 
       document.getElementById("debugLine").textContent =
-        `Img:${lastRoomImageName} X:${playerX} Y:${playerY} Face:S Tile:${currentTile} F:${f} L:${l} R:${r} B:${b} Hist:${moveHistory.length}`;
+        `Img:${lastRoomImageName} X:${playerX} Y:${playerY} Face:S Tile:${currentTile} F:${f} L:${l} R:${r} B:${b}`;
     }
 
     function getTile(x, y) {
@@ -3062,13 +3059,6 @@
       if (menuIsOpen()) return;
       if (gameMode === "encounter") return;
 
-      const currentTile = getTile(playerX, playerY);
-      if (currentTile === "C") {
-        updateRoomView();
-        setMessage("The chest room is a dead end. Use Back to leave.");
-        return;
-      }
-
       const next = getRelativeTile(relativeDir);
 
       if (!canMoveTo(next.x, next.y)) {
@@ -3077,7 +3067,6 @@
         return;
       }
 
-      saveCurrentPosition();
       playRoomTransition();
 
       playerDir = 2;
@@ -3093,24 +3082,7 @@
 
 
     function moveBack() {
-      if (menuIsOpen()) return;
-      if (gameMode === "encounter") return;
-
-      const prev = getPreviousPosition();
-      if (!prev) {
-        updateRoomView();
-        setMessage("No back path.");
-        return;
-      }
-
-      moveHistory.pop();
-      playRoomTransition();
-
-      playerDir = 2;
-      playerX = prev.x;
-      playerY = prev.y;
-
-      enterTile(getTile(playerX, playerY));
+      moveToRelative(2, 2, "back");
     }
 
 
