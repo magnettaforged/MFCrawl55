@@ -1830,7 +1830,8 @@
     let playerX = 1;
     let playerY = 1;
     let playerDir = 2;
-    let moveHistory = []; // kept only for save compatibility; movement is grid-fixed south
+    let moveHistory = []; // kept only for save compatibility
+    let facingHistory = []; // restores view direction after a back-step
 
     const dirNames = ["N", "E", "S", "W"];
     const openedChests = new Set();
@@ -1940,6 +1941,7 @@
       playerY = start.y;
       playerDir = 2;
       moveHistory = [];
+      facingHistory = [];
       openedChests.clear();
       clearedMonsters.clear();
 
@@ -2077,6 +2079,7 @@
         playerY,
         playerDir,
         moveHistory: Array.isArray(moveHistory) ? moveHistory.slice() : [],
+        facingHistory: Array.isArray(facingHistory) ? facingHistory.slice() : [],
         openedChests: Array.from(openedChests || []),
         clearedMonsters: Array.from(clearedMonsters || []),
         player: JSON.parse(JSON.stringify(player))
@@ -2136,6 +2139,7 @@
         playerY = 1;
         playerDir = 2;
         moveHistory = [];
+      facingHistory = [];
         openedChests.clear();
         clearedMonsters.clear();
 
@@ -2854,8 +2858,8 @@
 
     function getRelativeTile(relativeDir) {
       // Relative movement without a pivot step.
-      // Clicking Left/Right/Back immediately moves into that visible room,
-      // then the player arrives facing that direction.
+      // Clicking Left/Right immediately enters that visible room and faces that way.
+      // Clicking Back steps backward, then restores the prior view direction.
       let absoluteDir = playerDir;
 
       // Screen-relative controls:
@@ -3075,6 +3079,7 @@
       if (menuIsOpen()) return;
       if (gameMode === "encounter") return;
 
+      const oldDir = playerDir;
       const next = getRelativeTile(relativeDir);
 
       if (!canMoveTo(next.x, next.y)) {
@@ -3088,9 +3093,19 @@
       playerX = next.x;
       playerY = next.y;
 
-      // Forward/left/right face the direction moved.
-      // Back is a backward step only; it does not turn the player around.
-      if (relativeDir !== 2) {
+      if (relativeDir === 2) {
+        // Back-step: move opposite current view, then restore the previous view.
+        // This prevents side-room backtracking from leaving the player turned around.
+        if (Array.isArray(facingHistory) && facingHistory.length > 0) {
+          playerDir = facingHistory.pop();
+        } else {
+          playerDir = oldDir;
+        }
+      } else {
+        // Forward/left/right immediately enter the visible destination room
+        // and face the direction just moved. No pivot-only step occurs.
+        if (!Array.isArray(facingHistory)) facingHistory = [];
+        facingHistory.push(oldDir);
         playerDir = next.dir;
       }
 
