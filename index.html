@@ -516,6 +516,24 @@
     }
 
 
+    .runeListRow {
+      min-height: 52px;
+    }
+
+    .runeListRow .compactName {
+      font-size: 12.5px;
+      line-height: 1.1;
+    }
+
+    .runeListRow .compactSub {
+      display: block;
+      font-size: 11.5px;
+      line-height: 1.15;
+      margin-top: 3px;
+      white-space: nowrap;
+    }
+
+
     .compactIconWrap {
       position: relative;
       width: 40px;
@@ -1939,7 +1957,7 @@
 
   <script>
     
-    const GAME_VERSION = "v0.4.5";
+    const GAME_VERSION = "v0.4.7";
 // =========================
     // MAP / FLOOR STATE
     // =========================
@@ -5270,7 +5288,7 @@
 
     const EQUIPMENT_PAGE_SIZE = 8;
 
-    const INVENTORY_PAGE_SIZE = 8;
+    const INVENTORY_PAGE_SIZE = 6;
 
     let inventoryPage = {
       consumables: 0,
@@ -5907,21 +5925,45 @@
         : (entryOrRuneId?.runeId || entryOrRuneId?.itemId || "");
 
       const lvl = Number(typeof entryOrRuneId === "object" ? (entryOrRuneId.level ?? level ?? 0) : (level ?? 0)) || 0;
-      const step = lvl + 1;
 
+      if (typeof getRuneById === "function" && typeof getRuneValue === "function") {
+        const rune = getRuneById(runeId);
+        if (rune) {
+          const value = getRuneValue(runeId, lvl);
+          const v = Number.isInteger(value) ? value : Number(value.toFixed(1));
+
+          switch (rune.effectType) {
+            case "gold_find_pct": return `+${v}% Gold`;
+            case "attack_pct": return `+${v}% Atk`;
+            case "pierce_pct": return `-${v}% Enemy Def`;
+            case "magic_pct": return `+${v}% Mag`;
+            case "speed_pct": return `+${v}% Spd`;
+            case "fire_weapon_pct": return `+${v}% Fire Atk`;
+            case "life_steal_pct": return `${v}% Life Steal`;
+            case "shock_weapon_pct": return `+${v}% Shock Atk`;
+            case "slow_chance_pct": return `${v}% Slow`;
+            case "light_bonus_pct": return `+${v}% Light Dmg`;
+            case "defense_pct": return `+${v}% Def`;
+            case "undead_bonus_pct": return `+${v}% Undead Dmg`;
+            default: return rune.shortLabel || rune.description || "Passive";
+          }
+        }
+      }
+
+      const step = lvl + 1;
       const shortLines = {
         fehu: `+${10 * step}% Gold`,
-        uruz: `+${10 * step}% Attack`,
+        uruz: `+${10 * step}% Atk`,
         thurisaz: `-${10 * step}% Enemy Def`,
-        ansuz: `+${10 * step}% Magic`,
-        raidho: `+${10 * step}% Speed`,
-        kenaz: `+${10 * step}% Fire Attack`,
+        ansuz: `+${10 * step}% Mag`,
+        raidho: `+${10 * step}% Spd`,
+        kenaz: `+${10 * step}% Fire Atk`,
         gebo: `${5 * step}% Life Steal`,
-        hagalaz: `+${10 * step}% Shock Attack`,
-        isa: `${10 * step}% Slow Chance`,
-        eihwaz: `+${10 * step}% Dark Attack`,
-        algiz: `+${10 * step}% Defense`,
-        sowilo: `+${10 * step}% Holy Attack`
+        hagalaz: `+${10 * step}% Shock Atk`,
+        isa: `${10 * step}% Slow`,
+        eihwaz: `+${10 * step}% Light Dmg`,
+        algiz: `+${10 * step}% Def`,
+        sowilo: `+${10 * step}% Undead Dmg`
       };
 
       return shortLines[runeId] || (typeof entryOrRuneId === "object" ? (entryOrRuneId.statLine || "Passive") : "Passive");
@@ -6044,15 +6086,16 @@
       }
 
       if (category === "runes") {
-        html += `<div class="twoColList">`;
+        html += `<div class="oneColList">`;
         if (!list.length) {
           html += `<div class="smallNote">No available runes.</div>`;
         } else {
           html += visible.map(entry => `
-            <button class="compactRow" onclick="renderInventoryRuneDetail('${entry.runeId}', ${entry.level || 0})" title="${entry.statLine || ""}">
+            <button class="compactRow runeListRow" onclick="renderInventoryRuneDetail('${entry.runeId}', ${entry.level || 0})" title="${entry.statLine || ""}">
               ${compactIconWithQtyHtml(entry.image, "runes", entry.quantity)}
               <div>
                 <div class="compactName">${entry.displayName}</div>
+                <span class="compactSub">${getShortRuneStatLine(entry)}</span>
               </div>
             </button>
           `).join("");
@@ -6591,6 +6634,8 @@
         return;
       }
 
+      html += `<div class="oneColList">`;
+
       html += runes.map(entry => {
         const current = currentSocket &&
           currentSocket.runeId === entry.runeId &&
@@ -6599,14 +6644,17 @@
         const available = entry.available > 0 || current;
 
         return `
-          <button class="compactRow ${current ? "equipped" : ""} ${!available ? "locked" : ""}" ${available ? `onclick="socketRune('${slot}', ${socketIndex}, '${entry.runeId}', ${entry.level})"` : ""}>
+          <button class="compactRow runeListRow ${current ? "equipped" : ""} ${!available ? "locked" : ""}" ${available ? `onclick="socketRune('${slot}', ${socketIndex}, '${entry.runeId}', ${entry.level})"` : ""}>
             ${compactIconWithQtyHtml(entry.image, "runes", entry.available)}
             <div>
               <div class="compactName">${entry.displayName}${current ? " [Socketed]" : ""}</div>
+              <span class="compactSub">${getShortRuneStatLine(entry)}</span>
             </div>
           </button>
         `;
       }).join("");
+
+      html += `</div>`;
 
       content.innerHTML = html;
     }

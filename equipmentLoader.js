@@ -34,6 +34,16 @@ function defaultMaxSocketsForSlot(slot) {
   return 0;
 }
 
+function buildPosePath(assets) {
+  if (!assets) return "";
+  const folder = assets.folder || assets.poseFolder || "";
+  const base = assets.base || assets.poseBase || "";
+  const pose = assets.defaultPose || (Array.isArray(assets.poses) && assets.poses.length ? assets.poses[0] : "p01");
+
+  if (folder && base) return `${folder}/${base}${pose}.png`;
+  return "";
+}
+
 function normalizeEquipmentRow(row, slot) {
   return {
     slot,
@@ -47,6 +57,7 @@ function normalizeEquipmentRow(row, slot) {
     character: (row.Character || "all").toLowerCase(),
 
     tier: (row.Tier || "").toLowerCase(),
+    material: (row.Material || "").toLowerCase(),
     rarity: (row.Rarity || "common").toLowerCase(),
     maxSockets: row.MaxSockets === undefined || row.MaxSockets === ""
       ? defaultMaxSocketsForSlot(slot)
@@ -76,6 +87,59 @@ function normalizeEquipmentRow(row, slot) {
   };
 }
 
+function normalizeEquipmentObject(itemId, data, slot) {
+  const stats = data.stats || {};
+  const assets = data.assets || {};
+  const text = data.text || {};
+
+  const posePath = buildPosePath(assets);
+  const image = assets.image || assets.inventory || posePath || assets.icon || "";
+
+  return {
+    slot,
+
+    itemName: data.itemName || data.name || itemId,
+    itemId: data.itemId || itemId,
+    image,
+    icon: assets.icon || image,
+    statusImage: assets.statusImage || assets.poseImage || posePath || image,
+
+    character: (data.character || "all").toLowerCase(),
+
+    tier: (data.tier || "").toLowerCase(),
+    material: (data.material || "").toLowerCase(),
+    rarity: (data.rarity || "common").toLowerCase(),
+    maxSockets: data.maxSockets === undefined || data.maxSockets === ""
+      ? defaultMaxSocketsForSlot(slot)
+      : equipNumber(data.maxSockets),
+
+    reqLevel: equipNumber(data.reqLevel),
+    reqStr: equipNumber(data.reqStr),
+    reqDex: equipNumber(data.reqDex),
+
+    hp: equipNumber(stats.hp ?? data.hp),
+    mp: equipNumber(stats.mp ?? data.mp),
+
+    atk: equipNumber(stats.atk ?? data.atk),
+    mag: equipNumber(stats.mag ?? data.mag),
+    def: equipNumber(stats.def ?? data.def),
+    mdef: equipNumber(stats.mdef ?? data.mdef),
+    speed: equipNumber(stats.speed ?? data.speed),
+
+    crit: equipNumber(stats.crit ?? data.crit),
+    dodge: equipNumber(stats.dodge ?? data.dodge),
+    goldFind: equipNumber(stats.goldFind ?? data.goldFind),
+
+    value: equipNumber(data.value),
+
+    description: text.description || data.description || "",
+    flavorText: text.flavorText || data.flavorText || text.flavor || data.flavor || "",
+
+    assets,
+    text
+  };
+}
+
 const GAME_EQUIPMENT = {
   weapon: {},
   armor: {},
@@ -86,22 +150,44 @@ const GAME_EQUIPMENT = {
 
 const GAME_EQUIPMENT_BY_ID = {};
 
-function addEquipmentRows(rawText, slot) {
-  if (!rawText) return;
+function addEquipmentRows(rawData, slot) {
+  if (!rawData) return;
 
-  const rows = parseEquipmentCsvTable(rawText);
+  if (typeof rawData === "string") {
+    const rows = parseEquipmentCsvTable(rawData);
 
-  rows.forEach(row => {
-    const item = normalizeEquipmentRow(row, slot);
+    rows.forEach(row => {
+      const item = normalizeEquipmentRow(row, slot);
 
-    if (!item.itemId) {
-      console.warn("Equipment row missing ItemID:", row);
-      return;
-    }
+      if (!item.itemId) {
+        console.warn("Equipment row missing ItemID:", row);
+        return;
+      }
 
-    GAME_EQUIPMENT[slot][item.itemId] = item;
-    GAME_EQUIPMENT_BY_ID[item.itemId] = item;
-  });
+      GAME_EQUIPMENT[slot][item.itemId] = item;
+      GAME_EQUIPMENT_BY_ID[item.itemId] = item;
+    });
+
+    return;
+  }
+
+  if (typeof rawData === "object") {
+    Object.entries(rawData).forEach(([itemId, data]) => {
+      const item = normalizeEquipmentObject(itemId, data || {}, slot);
+
+      if (!item.itemId) {
+        console.warn("Equipment object missing ItemID:", itemId, data);
+        return;
+      }
+
+      GAME_EQUIPMENT[slot][item.itemId] = item;
+      GAME_EQUIPMENT_BY_ID[item.itemId] = item;
+    });
+
+    return;
+  }
+
+  console.warn("Unsupported equipment data format:", slot, rawData);
 }
 
 function buildEquipmentTables() {

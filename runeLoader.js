@@ -26,25 +26,55 @@ function runeNumber(value) {
 
 const GAME_RUNES = {};
 
+function normalizeRuneObject(runeId, data) {
+  return {
+    runeName: data.runeName || data.name || "Unknown",
+    runeId: data.runeId || data.id || runeId || "",
+    image: data.image || "",
+    symbol: data.symbol || "",
+    meaning: data.meaning || "",
+    effectType: data.effectType || "",
+    baseValue: runeNumber(data.baseValue),
+    color: data.color || "",
+    shortLabel: data.shortLabel || "",
+    description: data.description || ""
+  };
+}
+
+function normalizeRuneRow(row) {
+  return {
+    runeName: row.RuneName || row.Name || "Unknown",
+    runeId: row.RuneID || row.ID || row.Id || "",
+    image: row.Image || "",
+    symbol: row.Symbol || "",
+    meaning: row.Meaning || "",
+    effectType: row.EffectType || "",
+    baseValue: runeNumber(row.BaseValue),
+    color: row.Color || "",
+    shortLabel: row.ShortLabel || "",
+    description: row.Description || ""
+  };
+}
+
 function buildRuneTable() {
   if (typeof RUNE_DATA === "undefined") return;
 
-  parseRuneCsvTable(RUNE_DATA).forEach(row => {
-    const rune = {
-      runeName: row.RuneName || "Unknown",
-      runeId: row.RuneID || "",
-      image: row.Image || "",
-      symbol: row.Symbol || "",
-      meaning: row.Meaning || "",
-      effectType: row.EffectType || "",
-      baseValue: runeNumber(row.BaseValue),
-      color: row.Color || "",
-      description: row.Description || ""
-    };
+  if (typeof RUNE_DATA === "string") {
+    parseRuneCsvTable(RUNE_DATA).forEach(row => {
+      const rune = normalizeRuneRow(row);
+      if (!rune.runeId) return;
+      GAME_RUNES[rune.runeId] = rune;
+    });
+    return;
+  }
 
-    if (!rune.runeId) return;
-    GAME_RUNES[rune.runeId] = rune;
-  });
+  if (typeof RUNE_DATA === "object") {
+    Object.entries(RUNE_DATA).forEach(([runeId, data]) => {
+      const rune = normalizeRuneObject(runeId, data || {});
+      if (!rune.runeId) return;
+      GAME_RUNES[rune.runeId] = rune;
+    });
+  }
 }
 
 buildRuneTable();
@@ -86,6 +116,30 @@ function getRuneStatLine(runeId, level = 0) {
     case "defense_pct": return `Defense +${value}%`;
     case "undead_bonus_pct": return `Undead enemies take +${value}% damage`;
     default: return rune.description || "";
+  }
+}
+
+function getShortRuneStatLine(runeId, level = 0) {
+  const rune = getRuneById(runeId);
+  if (!rune) return "";
+
+  const value = getRuneValue(runeId, level);
+  const v = Number.isInteger(value) ? value : Number(value.toFixed(1));
+
+  switch (rune.effectType) {
+    case "gold_find_pct": return `+${v}% Gold`;
+    case "attack_pct": return `+${v}% Atk`;
+    case "pierce_pct": return `-${v}% Enemy Def`;
+    case "magic_pct": return `+${v}% Mag`;
+    case "speed_pct": return `+${v}% Spd`;
+    case "fire_weapon_pct": return `+${v}% Fire Atk`;
+    case "life_steal_pct": return `${v}% Life Steal`;
+    case "shock_weapon_pct": return `+${v}% Shock Atk`;
+    case "slow_chance_pct": return `${v}% Slow`;
+    case "light_bonus_pct": return `+${v}% Light Dmg`;
+    case "defense_pct": return `+${v}% Def`;
+    case "undead_bonus_pct": return `+${v}% Undead Dmg`;
+    default: return rune.shortLabel || rune.description || "Passive";
   }
 }
 

@@ -1,20 +1,151 @@
 // =========================
 // RUNES.JS
-// Images should be in assets/runes/
+// Modern vertical rune data.
+// One object per rune, keyed by RuneID.
 // =========================
 
-const RUNE_DATA = `
-RuneName,RuneID,Image,Symbol,Meaning,EffectType,BaseValue,Color,Description
-Fehu,fehu,rune1.png,ᚠ,Wealth and reward,gold_find_pct,10,gold,Gold find increased by 10%.
-Uruz,uruz,rune2.png,ᚢ,Strength and endurance,attack_pct,10,red,Attack increased by 10%.
-Thurisaz,thurisaz,rune3.png,ᚦ,Thorn and disruption,pierce_pct,10,crimson,Ignores 10% of enemy defense.
-Ansuz,ansuz,rune4.png,ᚨ,Wisdom and divine breath,magic_pct,10,violet,Magic increased by 10%.
-Raidho,raidho,rune5.png,ᚱ,Journey and movement,speed_pct,10,white,Speed increased by 10%.
-Kenaz,kenaz,rune6.png,ᚲ,Torch and craft,fire_weapon_pct,10,orange,Adds 10% weapon attack as fire damage.
-Gebo,gebo,rune7.png,ᚷ,Gift and exchange,life_steal_pct,5,green,Life steal 5%.
-Hagalaz,hagalaz,rune8.png,ᚺ,Hail and disruption,shock_weapon_pct,10,blue,Adds 10% weapon attack as shock damage.
-Isa,isa,rune9.png,ᛁ,Ice and stillness,slow_chance_pct,10,cyan,Slow chance 10%.
-Eihwaz,eihwaz,rune10.png,ᛇ,Yew death and endurance,light_bonus_pct,10,darkgreen,Light enemies take 10% increased damage.
-Algiz,algiz,rune11.png,ᛉ,Protection and warding,defense_pct,10,silver,Defense increased by 10%.
-Sowilo,sowilo,rune12.png,ᛋ,Sun victory and cleansing,undead_bonus_pct,10,gold,Undead monsters take 10% increased damage.
-`;
+const RUNE_DATA = {
+  fehu: {
+    runeName: "Fehu",
+    image: "rune1.png",
+    symbol: "ᚠ",
+    meaning: "Wealth and reward",
+    effectType: "gold_find_pct",
+    baseValue: 10,
+    color: "gold",
+    shortLabel: "+10% Gold",
+    description: "Gold find increased by 10%."
+  },
+
+  uruz: {
+    runeName: "Uruz",
+    image: "rune2.png",
+    symbol: "ᚢ",
+    meaning: "Strength and endurance",
+    effectType: "attack_pct",
+    baseValue: 10,
+    color: "red",
+    shortLabel: "+10% Atk",
+    description: "Attack increased by 10%."
+  },
+
+  thurisaz: {
+    runeName: "Thurisaz",
+    image: "rune3.png",
+    symbol: "ᚦ",
+    meaning: "Thorn and disruption",
+    effectType: "pierce_pct",
+    baseValue: 10,
+    color: "crimson",
+    shortLabel: "-10% Enemy Def",
+    description: "Ignores 10% of enemy defense."
+  },
+
+  ansuz: {
+    runeName: "Ansuz",
+    image: "rune4.png",
+    symbol: "ᚨ",
+    meaning: "Wisdom and divine breath",
+    effectType: "magic_pct",
+    baseValue: 10,
+    color: "violet",
+    shortLabel: "+10% Mag",
+    description: "Magic increased by 10%."
+  },
+
+  raidho: {
+    runeName: "Raidho",
+    image: "rune5.png",
+    symbol: "ᚱ",
+    meaning: "Journey and movement",
+    effectType: "speed_pct",
+    baseValue: 10,
+    color: "white",
+    shortLabel: "+10% Spd",
+    description: "Speed increased by 10%."
+  },
+
+  kenaz: {
+    runeName: "Kenaz",
+    image: "rune6.png",
+    symbol: "ᚲ",
+    meaning: "Torch and craft",
+    effectType: "fire_weapon_pct",
+    baseValue: 10,
+    color: "orange",
+    shortLabel: "+10% Fire Atk",
+    description: "Adds 10% weapon attack as fire damage."
+  },
+
+  gebo: {
+    runeName: "Gebo",
+    image: "rune7.png",
+    symbol: "ᚷ",
+    meaning: "Gift and exchange",
+    effectType: "life_steal_pct",
+    baseValue: 5,
+    color: "green",
+    shortLabel: "5% Life Steal",
+    description: "Life steal 5%."
+  },
+
+  hagalaz: {
+    runeName: "Hagalaz",
+    image: "rune8.png",
+    symbol: "ᚺ",
+    meaning: "Hail and disruption",
+    effectType: "shock_weapon_pct",
+    baseValue: 10,
+    color: "blue",
+    shortLabel: "+10% Shock Atk",
+    description: "Adds 10% weapon attack as shock damage."
+  },
+
+  isa: {
+    runeName: "Isa",
+    image: "rune9.png",
+    symbol: "ᛁ",
+    meaning: "Ice and stillness",
+    effectType: "slow_chance_pct",
+    baseValue: 10,
+    color: "cyan",
+    shortLabel: "10% Slow",
+    description: "Slow chance 10%."
+  },
+
+  eihwaz: {
+    runeName: "Eihwaz",
+    image: "rune10.png",
+    symbol: "ᛇ",
+    meaning: "Yew death and endurance",
+    effectType: "light_bonus_pct",
+    baseValue: 10,
+    color: "darkgreen",
+    shortLabel: "+10% Light Dmg",
+    description: "Light enemies take 10% increased damage."
+  },
+
+  algiz: {
+    runeName: "Algiz",
+    image: "rune11.png",
+    symbol: "ᛉ",
+    meaning: "Protection and warding",
+    effectType: "defense_pct",
+    baseValue: 10,
+    color: "silver",
+    shortLabel: "+10% Def",
+    description: "Defense increased by 10%."
+  },
+
+  sowilo: {
+    runeName: "Sowilo",
+    image: "rune12.png",
+    symbol: "ᛋ",
+    meaning: "Sun victory and cleansing",
+    effectType: "undead_bonus_pct",
+    baseValue: 10,
+    color: "gold",
+    shortLabel: "+10% Undead Dmg",
+    description: "Undead monsters take 10% increased damage."
+  }
+};

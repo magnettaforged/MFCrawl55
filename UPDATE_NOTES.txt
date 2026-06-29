@@ -66,3 +66,23 @@ Armor variant patch v0.4.5:
 - Black and White Full Plate have 8 sockets.
 - New rare/full-plate variants are obtainable through the normal equipment table.
 - Updated armor descriptions/flavor text for the detail page.
+
+
+Modern vertical data patch v0.4.6:
+- Converted armor.js from CSV rows to organized vertical objects.
+- Converted weapons.js from CSV rows to organized vertical objects.
+- Converted monloc.js from CSV table to vertical object flags.
+- equipmentLoader.js now supports both modern object-style data and legacy CSV strings.
+- monster.js and maps.js were already object-style and were left structurally unchanged.
+
+
+Monster scaling + rune UI patch v0.4.7:
+- Monster scaling now uses scaleLevel = currentFloor - monster.startFloor.
+- Monster base stats now represent strength when the monster enters the pool.
+- Scaling is additive per floor instead of multiplicative double-scaling from floor 1.
+- Boss attack scaling is intentionally modest; boss HP still grows more.
+- Spell/ranged damage also scales from startFloor only.
+- Added modern vertical runes.js data.
+- runeLoader.js supports modern object-style rune data and legacy CSV.
+- Rune inventory list is now single-column with quick effect text.
+- Inventory page size reduced to 6 rows, creating more pages but cleaner rune rows.

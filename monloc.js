@@ -1,108 +1,50 @@
 // =========================
 // monloc.js
-// Theme-based monster location table
-// =========================
+// Modern vertical monster location data.
 //
-// Edit this like a spreadsheet.
-//
-// Columns:
+// Theme flags:
 // c  = normal Castle monster
 // b  = normal Beach monster
 // f  = normal Forest monster
 // bc = Castle boss
 // bb = Beach boss
 // bf = Forest boss
-//
-// Y = included
-// N = not included
-//
-// Difficulty is not stored here.
-// monsterLoader.js can scale selected monsters by floor/difficulty.
-//
-// Visual variants are grouped in monster.js by images[].
-// Example: rat = rat1.png / rat2.png.
+// =========================
 
-const MONSTER_LOCATION_TABLE = `
-monid,c,b,f,bc,bb,bf
-bandit,Y,Y,Y,N,N,N
-bats,Y,N,Y,N,N,N
-bcrab,N,N,N,N,Y,N
-bdragon,N,N,N,Y,Y,Y
-bgoblin,N,N,Y,N,N,N
-bkraken,N,N,N,N,Y,N
-borc,N,N,N,N,N,Y
-bpirate,N,N,N,N,Y,N
-bpirate_b,N,N,N,N,Y,N
-captain,N,N,N,Y,N,N
-crab,N,Y,N,N,N,N
-fbandit,Y,Y,Y,N,N,N
-fbandit_b,Y,Y,Y,N,N,N
-fbandit_c,Y,Y,Y,N,N,N
-fpirate,N,Y,N,N,N,N
-fpirate_b,N,Y,N,N,N,N
-goblin,N,N,Y,N,N,N
-multicrab,N,Y,N,N,N,N
-mushroom,N,N,Y,N,N,N
-mzombie,Y,Y,Y,N,N,N
-mzombie_b,Y,Y,Y,N,N,N
-octopus,N,Y,N,N,N,N
-orc,N,N,Y,N,N,N
-rat,Y,Y,Y,N,N,N
-skelemage,N,N,N,Y,N,N
-skelemage_b,Y,N,N,N,N,N
-skeleswsh,Y,N,N,N,N,N
-skeleton,Y,N,N,N,N,N
-skeleton_b,Y,N,N,N,N,N
-spider,Y,N,Y,N,N,N
-spider_b,Y,N,Y,N,N,N
-squid,N,Y,N,N,N,N
-wolf,Y,Y,Y,N,N,N
-wraith,Y,N,N,N,N,N
-wraith_b,N,N,N,Y,N,N
-`;
-
-function parseMonsterLocationTable(rawText) {
-  const lines = rawText.trim().split("\n").map(line => line.trim()).filter(Boolean);
-  const headers = lines[0].split(",").map(h => h.trim().toLowerCase());
-  const rows = [];
-
-  for (let i = 1; i < lines.length; i++) {
-    const values = lines[i].split(",").map(v => v.trim());
-    const row = {};
-
-    headers.forEach((header, index) => {
-      row[header] = values[index] || "N";
-    });
-
-    rows.push(row);
-  }
-
-  return { headers, rows };
-}
-
-function isLocationYes(value) {
-  return String(value || "").trim().toUpperCase() === "Y";
-}
-
-function buildMonsterLocations(rawText) {
-  const parsed = parseMonsterLocationTable(rawText);
-  const locations = {};
-
-  parsed.rows.forEach(row => {
-    const monid = row.monid;
-    if (!monid) return;
-
-    locations[monid] = {
-      c: isLocationYes(row.c),
-      b: isLocationYes(row.b),
-      f: isLocationYes(row.f),
-      bc: isLocationYes(row.bc),
-      bb: isLocationYes(row.bb),
-      bf: isLocationYes(row.bf)
-    };
-  });
-
-  return locations;
-}
-
-const MONSTER_LOCATIONS = buildMonsterLocations(MONSTER_LOCATION_TABLE);
+const MONSTER_LOCATIONS = {
+  bandit: {"c": true, "b": true, "f": true, "bc": false, "bb": false, "bf": false},
+  bats: {"c": true, "b": false, "f": true, "bc": false, "bb": false, "bf": false},
+  bcrab: {"c": false, "b": false, "f": false, "bc": false, "bb": true, "bf": false},
+  bdragon: {"c": false, "b": false, "f": false, "bc": true, "bb": true, "bf": true},
+  bgoblin: {"c": false, "b": false, "f": true, "bc": false, "bb": false, "bf": false},
+  bkraken: {"c": false, "b": false, "f": false, "bc": false, "bb": true, "bf": false},
+  borc: {"c": false, "b": false, "f": false, "bc": false, "bb": false, "bf": true},
+  bpirate: {"c": false, "b": false, "f": false, "bc": false, "bb": true, "bf": false},
+  bpirate_b: {"c": false, "b": false, "f": false, "bc": false, "bb": true, "bf": false},
+  captain: {"c": false, "b": false, "f": false, "bc": true, "bb": false, "bf": false},
+  crab: {"c": false, "b": true, "f": false, "bc": false, "bb": false, "bf": false},
+  fbandit: {"c": true, "b": true, "f": true, "bc": false, "bb": false, "bf": false},
+  fbandit_b: {"c": true, "b": true, "f": true, "bc": false, "bb": false, "bf": false},
+  fbandit_c: {"c": true, "b": true, "f": true, "bc": false, "bb": false, "bf": false},
+  fpirate: {"c": false, "b": true, "f": false, "bc": false, "bb": false, "bf": false},
+  fpirate_b: {"c": false, "b": true, "f": false, "bc": false, "bb": false, "bf": false},
+  goblin: {"c": false, "b": false, "f": true, "bc": false, "bb": false, "bf": false},
+  multicrab: {"c": false, "b": true, "f": false, "bc": false, "bb": false, "bf": false},
+  mushroom: {"c": false, "b": false, "f": true, "bc": false, "bb": false, "bf": false},
+  mzombie: {"c": true, "b": true, "f": true, "bc": false, "bb": false, "bf": false},
+  mzombie_b: {"c": true, "b": true, "f": true, "bc": false, "bb": false, "bf": false},
+  octopus: {"c": false, "b": true, "f": false, "bc": false, "bb": false, "bf": false},
+  orc: {"c": false, "b": false, "f": true, "bc": false, "bb": false, "bf": false},
+  rat: {"c": true, "b": true, "f": true, "bc": false, "bb": false, "bf": false},
+  skelemage: {"c": false, "b": false, "f": false, "bc": true, "bb": false, "bf": false},
+  skelemage_b: {"c": true, "b": false, "f": false, "bc": false, "bb": false, "bf": false},
+  skeleswsh: {"c": true, "b": false, "f": false, "bc": false, "bb": false, "bf": false},
+  skeleton: {"c": true, "b": false, "f": false, "bc": false, "bb": false, "bf": false},
+  skeleton_b: {"c": true, "b": false, "f": false, "bc": false, "bb": false, "bf": false},
+  spider: {"c": true, "b": false, "f": true, "bc": false, "bb": false, "bf": false},
+  spider_b: {"c": true, "b": false, "f": true, "bc": false, "bb": false, "bf": false},
+  squid: {"c": false, "b": true, "f": false, "bc": false, "bb": false, "bf": false},
+  wolf: {"c": true, "b": true, "f": true, "bc": false, "bb": false, "bf": false},
+  wraith: {"c": true, "b": false, "f": false, "bc": false, "bb": false, "bf": false},
+  wraith_b: {"c": false, "b": false, "f": false, "bc": true, "bb": false, "bf": false},
+};

@@ -1,28 +1,477 @@
 // =========================
 // ARMOR.JS
-// Maya armor/status icon test data
-// Images are full relative paths so the loader/UI can use nested folders.
+// Modern vertical armor data.
+//
+// Organization:
+// - One object per armor item, keyed by ItemID.
+// - stats controls gameplay values.
+// - assets controls icon and pose/status images.
+// - text controls description and flavor text.
 //
 // Current Maya pose folders:
-// mt1cloth/mclothpose
-// mt2chain/mchainpose
-// mt3lightplate/mlppose
-// mt4fullplate/mfppose
+// - mt1cloth/mclothpose
+// - mt2chain/mchainpose
+// - mt3lightplate/mlppose
+// - mt4fullplate/mfppose
 // =========================
 
-const ARMOR_DATA = `
-ItemName,ItemID,Character,Image,Icon,StatusImage,Tier,Rarity,MaxSockets,ReqLevel,ReqStr,Def,MDef,Speed,Crit,Dodge,GoldFind,Value,Description,FlavorText
-Maya Cloth Garb,maya_cloth,maya,assets/armor/maya/mt1cloth/mclothpose/mclothp01.png,assets/armor/maya/mt1cloth/mclothicon.png,assets/armor/maya/mt1cloth/mclothpose/mclothp01.png,mt1cloth,common,1,1,0,1,1,0,0,2,0,8,Simple cloth armor for Maya.,Light and easy to move in.
-Maya Copper Chain,maya_copper_chain,maya,assets/armor/maya/mt2chain/mchainpose/mcchainp01.png,assets/armor/maya/mt2chain/mcchainicon.png,assets/armor/maya/mt2chain/mchainpose/mcchainp01.png,mt2chain,common,1,3,0,5,1,-1,0,1,0,45,Copper chain armor for Maya.,Flexible chain with modest protection.
-Maya Gold Chain,maya_gold_chain,maya,assets/armor/maya/mt2chain/mchainpose/mgchainp01.png,assets/armor/maya/mt2chain/mgchainicon.png,assets/armor/maya/mt2chain/mchainpose/mgchainp01.png,mt2chain,uncommon,1,3,0,4,1,-2,0,1,10,90,Gold chain armor with improved treasure finding.,Soft metal but lucky.
-Maya Steel Chain,maya_steel_chain,maya,assets/armor/maya/mt2chain/mchainpose/mschainp01.png,assets/armor/maya/mt2chain/mschainicon.png,assets/armor/maya/mt2chain/mchainpose/mschainp01.png,mt2chain,uncommon,1,3,0,7,2,-1,0,1,0,95,Steel chain armor for Maya.,A practical defensive upgrade.
-Maya Copper Light Plate,maya_copper_lightplate,maya,assets/armor/maya/mt3lightplate/mlppose/mclplatep01.png,assets/armor/maya/mt3lightplate/mclightplateicon.png,assets/armor/maya/mt3lightplate/mlppose/mclplatep01.png,mt3lightplate,uncommon,2,6,0,9,2,-2,0,1,0,140,Copper light plate armor for Maya.,More coverage without becoming too heavy.
-Maya Gold Light Plate,maya_gold_lightplate,maya,assets/armor/maya/mt3lightplate/mlppose/mglplatep01.png,assets/armor/maya/mt3lightplate/mglightplateicon.png,assets/armor/maya/mt3lightplate/mlppose/mglplatep01.png,mt3lightplate,rare,2,6,0,8,2,-3,0,1,20,260,Gold light plate armor with stronger treasure finding.,Heavy shine with profitable luck.
-Maya Steel Light Plate,maya_steel_lightplate,maya,assets/armor/maya/mt3lightplate/mlppose/mslplatep01.png,assets/armor/maya/mt3lightplate/mslightplateicon.png,assets/armor/maya/mt3lightplate/mlppose/mslplatep01.png,mt3lightplate,rare,2,6,0,12,3,-2,0,1,0,280,Steel light plate armor for Maya.,Reliable plate protection.
-Maya Copper Full Plate,maya_copper_fullplate,maya,assets/armor/maya/mt4fullplate/mfppose/mcfplatep01.png,assets/armor/maya/mt4fullplate/mcfullplateicon.png,assets/armor/maya/mt4fullplate/mfppose/mcfplatep01.png,mt4fullplate,rare,2,10,0,15,3,-4,0,0,0,360,Copper full plate armor for Maya.,Heavy plated protection.
-Maya Gold Full Plate,maya_gold_fullplate,maya,assets/armor/maya/mt4fullplate/mfppose/mgfplatep01.png,assets/armor/maya/mt4fullplate/mgfullplateicon.png,assets/armor/maya/mt4fullplate/mfppose/mgfplatep01.png,mt4fullplate,epic,2,10,0,13,3,-5,0,0,30,650,Gold full plate armor with major treasure finding.,Impractical but profitable.
-Maya Steel Full Plate,maya_steel_fullplate,maya,assets/armor/maya/mt4fullplate/mfppose/msfplatep01.png,assets/armor/maya/mt4fullplate/msfullplateicon.png,assets/armor/maya/mt4fullplate/mfppose/msfplatep01.png,mt4fullplate,epic,2,10,0,19,4,-4,0,0,0,700,Steel full plate armor for Maya.,The standard high-defense full plate.
-Maya Jade Full Plate,maya_jade_fullplate,maya,assets/armor/maya/mt4fullplate/mfppose/mjfplatep01.png,assets/armor/maya/mt4fullplate/mjfullplateicon.png,assets/armor/maya/mt4fullplate/mfppose/mjfplatep01.png,mt4fullplate,legendary,4,14,0,26,14,-3,0,2,5,1400,Frosted jade full plate with strong magic defense.,Mystic green armor that bends hostile magic.
-Maya Black Full Plate,maya_black_fullplate,maya,assets/armor/maya/mt4fullplate/mfppose/mbfplatep01.png,assets/armor/maya/mt4fullplate/mbfullplateicon.png,assets/armor/maya/mt4fullplate/mfppose/mbfplatep01.png,mt4fullplate,mythic,8,18,0,34,10,-6,4,0,0,2500,Black full plate inspired by impossible hacked relic armor.,Too many sockets and too much power.
-Maya White Full Plate,maya_white_fullplate,maya,assets/armor/maya/mt4fullplate/mfppose/mwfplatep01.png,assets/armor/maya/mt4fullplate/mwfullplateicon.png,assets/armor/maya/mt4fullplate/mfppose/mwfplatep01.png,mt4fullplate,mythic,8,18,0,32,16,-4,2,2,10,2600,White full plate inspired by impossible hacked relic armor.,Blinding armor with absurd socket potential.
-`;
+const ARMOR_DATA = {
+
+  // =========================
+  // MAYA — CLOTH
+  // =========================
+  maya_cloth: {
+      "itemName": "Maya Cloth Garb",
+      "character": "maya",
+      "tier": "mt1cloth",
+      "material": "cloth",
+      "rarity": "common",
+      "reqLevel": 1,
+      "maxSockets": 1,
+      "value": 8,
+      "stats": {
+          "def": 1,
+          "mdef": 1,
+          "speed": 0,
+          "crit": 0,
+          "dodge": 2,
+          "goldFind": 0
+      },
+      "assets": {
+          "icon": "assets/armor/maya/mt1cloth/mclothicon.png",
+          "folder": "assets/armor/maya/mt1cloth/mclothpose",
+          "base": "mcloth",
+          "poses": [
+              "p01",
+              "p02",
+              "p03"
+          ],
+          "defaultPose": "p01"
+      },
+      "text": {
+          "description": "Simple cloth armor for Maya.",
+          "flavorText": "Light and easy to move in."
+      }
+  },
+
+
+  // =========================
+  // MAYA — CHAIN
+  // =========================
+  maya_copper_chain: {
+      "itemName": "Maya Copper Chain",
+      "character": "maya",
+      "tier": "mt2chain",
+      "material": "copper",
+      "rarity": "common",
+      "reqLevel": 3,
+      "maxSockets": 1,
+      "value": 45,
+      "stats": {
+          "def": 5,
+          "mdef": 1,
+          "speed": -1,
+          "crit": 0,
+          "dodge": 1,
+          "goldFind": 0
+      },
+      "assets": {
+          "icon": "assets/armor/maya/mt2chain/mcchainicon.png",
+          "folder": "assets/armor/maya/mt2chain/mchainpose",
+          "base": "mcchain",
+          "poses": [
+              "p01",
+              "p02",
+              "p03"
+          ],
+          "defaultPose": "p01"
+      },
+      "text": {
+          "description": "Copper chain armor for Maya.",
+          "flavorText": "Flexible chain with modest protection."
+      }
+  },
+
+  maya_gold_chain: {
+      "itemName": "Maya Gold Chain",
+      "character": "maya",
+      "tier": "mt2chain",
+      "material": "gold",
+      "rarity": "uncommon",
+      "reqLevel": 3,
+      "maxSockets": 1,
+      "value": 90,
+      "stats": {
+          "def": 4,
+          "mdef": 1,
+          "speed": -2,
+          "crit": 0,
+          "dodge": 1,
+          "goldFind": 10
+      },
+      "assets": {
+          "icon": "assets/armor/maya/mt2chain/mgchainicon.png",
+          "folder": "assets/armor/maya/mt2chain/mchainpose",
+          "base": "mgchain",
+          "poses": [
+              "p01",
+              "p02",
+              "p03"
+          ],
+          "defaultPose": "p01"
+      },
+      "text": {
+          "description": "Gold chain armor with improved treasure finding.",
+          "flavorText": "Soft metal but lucky."
+      }
+  },
+
+  maya_steel_chain: {
+      "itemName": "Maya Steel Chain",
+      "character": "maya",
+      "tier": "mt2chain",
+      "material": "steel",
+      "rarity": "uncommon",
+      "reqLevel": 3,
+      "maxSockets": 1,
+      "value": 95,
+      "stats": {
+          "def": 7,
+          "mdef": 2,
+          "speed": -1,
+          "crit": 0,
+          "dodge": 1,
+          "goldFind": 0
+      },
+      "assets": {
+          "icon": "assets/armor/maya/mt2chain/mschainicon.png",
+          "folder": "assets/armor/maya/mt2chain/mchainpose",
+          "base": "mschain",
+          "poses": [
+              "p01",
+              "p02",
+              "p03"
+          ],
+          "defaultPose": "p01"
+      },
+      "text": {
+          "description": "Steel chain armor for Maya.",
+          "flavorText": "A practical defensive upgrade."
+      }
+  },
+
+
+  // =========================
+  // MAYA — LIGHT PLATE
+  // =========================
+  maya_copper_lightplate: {
+      "itemName": "Maya Copper Light Plate",
+      "character": "maya",
+      "tier": "mt3lightplate",
+      "material": "copper",
+      "rarity": "uncommon",
+      "reqLevel": 6,
+      "maxSockets": 2,
+      "value": 140,
+      "stats": {
+          "def": 9,
+          "mdef": 2,
+          "speed": -2,
+          "crit": 0,
+          "dodge": 1,
+          "goldFind": 0
+      },
+      "assets": {
+          "icon": "assets/armor/maya/mt3lightplate/mclightplateicon.png",
+          "folder": "assets/armor/maya/mt3lightplate/mlppose",
+          "base": "mclplate",
+          "poses": [
+              "p01",
+              "p02",
+              "p03"
+          ],
+          "defaultPose": "p01"
+      },
+      "text": {
+          "description": "Copper light plate armor for Maya.",
+          "flavorText": "More coverage without becoming too heavy."
+      }
+  },
+
+  maya_gold_lightplate: {
+      "itemName": "Maya Gold Light Plate",
+      "character": "maya",
+      "tier": "mt3lightplate",
+      "material": "gold",
+      "rarity": "rare",
+      "reqLevel": 6,
+      "maxSockets": 2,
+      "value": 260,
+      "stats": {
+          "def": 8,
+          "mdef": 2,
+          "speed": -3,
+          "crit": 0,
+          "dodge": 1,
+          "goldFind": 20
+      },
+      "assets": {
+          "icon": "assets/armor/maya/mt3lightplate/mglightplateicon.png",
+          "folder": "assets/armor/maya/mt3lightplate/mlppose",
+          "base": "mglplate",
+          "poses": [
+              "p01",
+              "p02",
+              "p03"
+          ],
+          "defaultPose": "p01"
+      },
+      "text": {
+          "description": "Gold light plate armor with stronger treasure finding.",
+          "flavorText": "Heavy shine with profitable luck."
+      }
+  },
+
+  maya_steel_lightplate: {
+      "itemName": "Maya Steel Light Plate",
+      "character": "maya",
+      "tier": "mt3lightplate",
+      "material": "steel",
+      "rarity": "rare",
+      "reqLevel": 6,
+      "maxSockets": 2,
+      "value": 280,
+      "stats": {
+          "def": 12,
+          "mdef": 3,
+          "speed": -2,
+          "crit": 0,
+          "dodge": 1,
+          "goldFind": 0
+      },
+      "assets": {
+          "icon": "assets/armor/maya/mt3lightplate/mslightplateicon.png",
+          "folder": "assets/armor/maya/mt3lightplate/mlppose",
+          "base": "mslplate",
+          "poses": [
+              "p01",
+              "p02",
+              "p03"
+          ],
+          "defaultPose": "p01"
+      },
+      "text": {
+          "description": "Steel light plate armor for Maya.",
+          "flavorText": "Reliable plate protection."
+      }
+  },
+
+
+  // =========================
+  // MAYA — FULL PLATE
+  // =========================
+  maya_copper_fullplate: {
+      "itemName": "Maya Copper Full Plate",
+      "character": "maya",
+      "tier": "mt4fullplate",
+      "material": "copper",
+      "rarity": "rare",
+      "reqLevel": 10,
+      "maxSockets": 2,
+      "value": 360,
+      "stats": {
+          "def": 15,
+          "mdef": 3,
+          "speed": -4,
+          "crit": 0,
+          "dodge": 0,
+          "goldFind": 0
+      },
+      "assets": {
+          "icon": "assets/armor/maya/mt4fullplate/mcfullplateicon.png",
+          "folder": "assets/armor/maya/mt4fullplate/mfppose",
+          "base": "mcfplate",
+          "poses": [
+              "p01",
+              "p02",
+              "p03"
+          ],
+          "defaultPose": "p01"
+      },
+      "text": {
+          "description": "Copper full plate armor for Maya.",
+          "flavorText": "Heavy plated protection."
+      }
+  },
+
+  maya_gold_fullplate: {
+      "itemName": "Maya Gold Full Plate",
+      "character": "maya",
+      "tier": "mt4fullplate",
+      "material": "gold",
+      "rarity": "epic",
+      "reqLevel": 10,
+      "maxSockets": 2,
+      "value": 650,
+      "stats": {
+          "def": 13,
+          "mdef": 3,
+          "speed": -5,
+          "crit": 0,
+          "dodge": 0,
+          "goldFind": 30
+      },
+      "assets": {
+          "icon": "assets/armor/maya/mt4fullplate/mgfullplateicon.png",
+          "folder": "assets/armor/maya/mt4fullplate/mfppose",
+          "base": "mgfplate",
+          "poses": [
+              "p01",
+              "p02",
+              "p03"
+          ],
+          "defaultPose": "p01"
+      },
+      "text": {
+          "description": "Gold full plate armor with major treasure finding.",
+          "flavorText": "Impractical but profitable."
+      }
+  },
+
+  maya_steel_fullplate: {
+      "itemName": "Maya Steel Full Plate",
+      "character": "maya",
+      "tier": "mt4fullplate",
+      "material": "steel",
+      "rarity": "epic",
+      "reqLevel": 10,
+      "maxSockets": 2,
+      "value": 700,
+      "stats": {
+          "def": 19,
+          "mdef": 4,
+          "speed": -4,
+          "crit": 0,
+          "dodge": 0,
+          "goldFind": 0
+      },
+      "assets": {
+          "icon": "assets/armor/maya/mt4fullplate/msfullplateicon.png",
+          "folder": "assets/armor/maya/mt4fullplate/mfppose",
+          "base": "msfplate",
+          "poses": [
+              "p01",
+              "p02",
+              "p03"
+          ],
+          "defaultPose": "p01"
+      },
+      "text": {
+          "description": "Steel full plate armor for Maya.",
+          "flavorText": "The standard high-defense full plate."
+      }
+  },
+
+  maya_jade_fullplate: {
+      "itemName": "Maya Jade Full Plate",
+      "character": "maya",
+      "tier": "mt4fullplate",
+      "material": "jade",
+      "rarity": "legendary",
+      "reqLevel": 14,
+      "maxSockets": 4,
+      "value": 1400,
+      "stats": {
+          "def": 26,
+          "mdef": 14,
+          "speed": -3,
+          "crit": 0,
+          "dodge": 2,
+          "goldFind": 5
+      },
+      "assets": {
+          "icon": "assets/armor/maya/mt4fullplate/mjfullplateicon.png",
+          "folder": "assets/armor/maya/mt4fullplate/mfppose",
+          "base": "mjfplate",
+          "poses": [
+              "p01",
+              "p02",
+              "p03"
+          ],
+          "defaultPose": "p01"
+      },
+      "text": {
+          "description": "Frosted jade full plate with strong magic defense.",
+          "flavorText": "Mystic green armor that bends hostile magic."
+      }
+  },
+
+  maya_black_fullplate: {
+      "itemName": "Maya Black Full Plate",
+      "character": "maya",
+      "tier": "mt4fullplate",
+      "material": "black",
+      "rarity": "mythic",
+      "reqLevel": 18,
+      "maxSockets": 8,
+      "value": 2500,
+      "stats": {
+          "def": 34,
+          "mdef": 10,
+          "speed": -6,
+          "crit": 4,
+          "dodge": 0,
+          "goldFind": 0
+      },
+      "assets": {
+          "icon": "assets/armor/maya/mt4fullplate/mbfullplateicon.png",
+          "folder": "assets/armor/maya/mt4fullplate/mfppose",
+          "base": "mbfplate",
+          "poses": [
+              "p01",
+              "p02",
+              "p03"
+          ],
+          "defaultPose": "p01"
+      },
+      "text": {
+          "description": "Black full plate inspired by impossible hacked relic armor.",
+          "flavorText": "Too many sockets and too much power."
+      }
+  },
+
+  maya_white_fullplate: {
+      "itemName": "Maya White Full Plate",
+      "character": "maya",
+      "tier": "mt4fullplate",
+      "material": "white",
+      "rarity": "mythic",
+      "reqLevel": 18,
+      "maxSockets": 8,
+      "value": 2600,
+      "stats": {
+          "def": 32,
+          "mdef": 16,
+          "speed": -4,
+          "crit": 2,
+          "dodge": 2,
+          "goldFind": 10
+      },
+      "assets": {
+          "icon": "assets/armor/maya/mt4fullplate/mwfullplateicon.png",
+          "folder": "assets/armor/maya/mt4fullplate/mfppose",
+          "base": "mwfplate",
+          "poses": [
+              "p01",
+              "p02",
+              "p03"
+          ],
+          "defaultPose": "p01"
+      },
+      "text": {
+          "description": "White full plate inspired by impossible hacked relic armor.",
+          "flavorText": "Blinding armor with absurd socket potential."
+      }
+  },
+
+};
