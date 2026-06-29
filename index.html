@@ -442,7 +442,7 @@
     }
 
     .oneColList .compactRow {
-      grid-template-columns: 42px 1fr 34px;
+      grid-template-columns: 48px 1fr;
       min-height: 44px;
     }
 
@@ -454,7 +454,7 @@
     .compactRow {
       width: 100%;
       display: grid;
-      grid-template-columns: 38px 1fr 30px;
+      grid-template-columns: 46px 1fr;
       gap: 5px;
       align-items: center;
       min-height: 40px;
@@ -512,11 +512,42 @@
     }
 
     .compactQty {
+      display: none;
+    }
+
+
+    .compactIconWrap {
+      position: relative;
+      width: 40px;
+      height: 40px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .compactIconWrap .compactIcon,
+    .compactIconWrap .equipIcon {
+      width: 36px;
+      height: 36px;
+      object-fit: contain;
+    }
+
+    .compactQtyBadge {
+      position: absolute;
+      right: -2px;
+      bottom: -2px;
+      min-width: 15px;
+      height: 15px;
+      padding: 0 3px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.38);
+      background: rgba(0,0,0,0.82);
       color: #fff;
-      font-weight: normal;
-      font-size: 12px;
-      min-width: 18px;
-      text-align: right;
+      font-size: 9px;
+      line-height: 13px;
+      text-align: center;
+      font-weight: bold;
+      pointer-events: none;
     }
 
     .pageControls {
@@ -1361,12 +1392,12 @@
 
   
     .equipIconRow {
-      grid-template-columns: 42px 70px 1fr;
+      grid-template-columns: 46px 1fr;
       min-height: 44px;
     }
 
     .equipItemRow {
-      grid-template-columns: 42px 1fr auto;
+      grid-template-columns: 46px 1fr;
       min-height: 44px;
     }
 
@@ -1383,10 +1414,10 @@
 
     .equipDetailCard {
       display: grid;
-      grid-template-columns: 64px 1fr;
-      gap: 9px;
+      grid-template-columns: 112px 1fr;
+      gap: 7px;
       align-items: center;
-      min-height: 82px;
+      min-height: 122px;
       margin-bottom: 7px;
       padding: 8px;
       border: 1px solid rgba(214,168,79,0.35);
@@ -1395,16 +1426,16 @@
     }
 
     .equipDetailIcon {
-      width: 60px;
-      height: 60px;
+      width: 108px;
+      height: 108px;
       object-fit: contain;
       filter: drop-shadow(0 0 4px rgba(0,0,0,0.9));
     }
 
     .equipDetailIcon.empty {
       display: block;
-      width: 60px;
-      height: 60px;
+      width: 108px;
+      height: 108px;
       border: 1px solid rgba(255,255,255,0.18);
       border-radius: 6px;
       opacity: 0.25;
@@ -1428,6 +1459,74 @@
       display: grid;
       gap: 5px;
     }
+
+    .detailSection {
+      margin-top: 8px;
+      padding-top: 7px;
+      border-top: 1px solid rgba(214,168,79,0.24);
+    }
+
+    .detailSection:first-child {
+      margin-top: 0;
+      padding-top: 0;
+      border-top: none;
+    }
+
+    .detailLine,
+    .detailRuneRow {
+      display: grid;
+      grid-template-columns: 42px minmax(0, 1fr);
+      gap: 6px;
+      align-items: start;
+      min-height: 20px;
+      padding: 2px 0;
+      color: rgba(255,255,255,0.88);
+      font-size: 12px;
+      line-height: 1.22;
+    }
+
+    .detailLabel {
+      color: rgba(255,255,255,0.66);
+      font-weight: bold;
+    }
+
+    .detailValue {
+      color: #fff;
+      text-align: right;
+      overflow-wrap: normal;
+      word-break: normal;
+    }
+
+    .detailSection .detailLine .detailLabel {
+      white-space: nowrap;
+    }
+
+    .detailBlockTitle {
+      margin: 0 0 4px;
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.35px;
+    }
+
+    .detailTextBlock {
+      margin-top: 6px;
+      padding: 7px;
+      border: 1px solid rgba(214,168,79,0.22);
+      border-radius: 6px;
+      background: rgba(0,0,0,0.22);
+      color: rgba(255,255,255,0.86);
+      font-size: 12px;
+      line-height: 1.38;
+      white-space: normal;
+    }
+
+    .detailRuneList {
+      display: grid;
+      gap: 2px;
+    }
+
 
   
     .backGap {
@@ -1836,6 +1935,8 @@
     const dirNames = ["N", "E", "S", "W"];
     const openedChests = new Set();
     const clearedMonsters = new Set();
+    const triggeredTraps = new Set();
+    const disabledTraps = new Set();
 
     function dungeonRandomChoice(list) {
       return list[Math.floor(Math.random() * list.length)];
@@ -1912,6 +2013,21 @@
       }
     }
 
+
+
+    function preloadFloorThemeImages() {
+      const theme = currentFloorTheme || "c";
+      const roomTypes = [
+        "chestroom", "door", "openroom", "room3way", "roomfl", "roomfr",
+        "roomleft", "roomlr", "roomright", "shrine"
+      ];
+
+      roomTypes.forEach(type => {
+        const img = new Image();
+        img.src = `assets/rooms/${type}${theme}1.png`;
+      });
+    }
+
     function startNewFloor() {
       // Starting or reloading a floor is a safe rest point.
       player.hp = player.maxHp;
@@ -1943,7 +2059,10 @@
       facingHistory = [];
       openedChests.clear();
       clearedMonsters.clear();
+      triggeredTraps.clear();
+      disabledTraps.clear();
 
+      preloadFloorThemeImages();
       updateRoomView();
       updateTopHud();
       updateBars();
@@ -2121,6 +2240,9 @@
         if (!save || typeof save !== "object") return false;
 
         if (save.player && typeof save.player === "object") {
+          // Replace the default starter player with the saved player instead of deep-merging into it.
+          // This prevents re-granting starter gear/consumables after they were sold or used.
+          Object.keys(player).forEach(key => delete player[key]);
           deepMergeMutable(player, save.player);
         }
 
@@ -2141,6 +2263,8 @@
       facingHistory = [];
         openedChests.clear();
         clearedMonsters.clear();
+        triggeredTraps.clear();
+        disabledTraps.clear();
 
         return true;
       } catch (err) {
@@ -2898,8 +3022,8 @@
     function getRoomImageName() {
       const currentTile = getTile(playerX, playerY);
 
-      // Entrance always uses the floor entrance image, regardless of side connections.
-      if (currentTile === "E") return getRoomImageNameForType("openroom");
+      // Entrance/open level uses the shrine variant. It is a limited safe/action room, not a normal corridor.
+      if (currentTile === "E") return getRoomImageNameForType("shrine");
 
       // Special rooms only display their special image when the player is standing in that room.
       if (currentTile === "C") return getRoomImageNameForType("chestroom");
@@ -2993,7 +3117,7 @@
       updateRoomView();
 
       if (tile === "E") {
-        setMessage("Entrance.");
+        setMessage("Open shrine. Use Action to rest.");
         return;
       }
 
@@ -3024,8 +3148,20 @@
       }
 
       if (tile === "T") {
+        if (triggeredTraps.has(key)) {
+          setMessage("The spent trap is quiet.");
+          return;
+        }
+
+        if (disabledTraps.has(key)) {
+          setMessage("The disabled trap is safe.");
+          return;
+        }
+
+        triggeredTraps.add(key);
         player.hp = Math.max(1, player.hp - 10);
         updateBars();
+        saveGameState();
         setMessage("A trap hits you for 10 damage.");
         return;
       }
@@ -3255,6 +3391,57 @@
       } else {
         setMessage(`Moved from Floor ${oldFloor} to Floor ${currentFloor}.`);
       }
+    }
+
+
+
+    function openLimitedShrineMenu() {
+      const help = document.getElementById("controlHelp");
+      if (help) help.classList.remove("show");
+
+      setMenuOpen(true);
+      gameMode = "shrine";
+      renderLimitedShrineHome();
+    }
+
+    function limitedShrineRest() {
+      player.hp = player.maxHp;
+      player.mp = player.maxMp;
+      updateBars();
+      saveGameState();
+      setMessage("The open shrine restores your Health and Mana.");
+      renderLimitedShrineHome();
+    }
+
+    function renderLimitedShrineHome() {
+      setOverlayTitle("Open Shrine");
+      hideInventoryTabs();
+
+      const content = document.getElementById("inventoryContent");
+      content.style.overflowY = "auto";
+
+      content.innerHTML = `
+        ${shrineHeroHtml("shrine")}
+        <div class="smallNote">This open shrine is limited for now.</div>
+        <div class="shopMenuList">
+          <button class="shopRow" onclick="limitedShrineRest()">
+            ${shopIconHtml("", "items")}
+            <div class="shopRowText">
+              <div class="shopRowName">Rest</div>
+              <div class="shopRowSub">Restore Health and Mana</div>
+            </div>
+            <div class="shopRowValue">Safe</div>
+          </button>
+          <button class="shopRow shopBackRow" onclick="closeShrineMenu()">
+            ${shopIconHtml("", "items")}
+            <div class="shopRowText">
+              <div class="shopRowName">Return</div>
+              <div class="shopRowSub">Return to the dungeon</div>
+            </div>
+            <div class="shopRowValue">Back</div>
+          </button>
+        </div>
+      `;
     }
 
     function renderShrineHome() {
@@ -4347,6 +4534,28 @@
       const currentTile = getTile(playerX, playerY);
       const key = tileKey(playerX, playerY);
 
+      if (currentTile === "T") {
+        if (triggeredTraps.has(key)) {
+          setMessage("The trap has already been sprung.");
+          return;
+        }
+
+        if (disabledTraps.has(key)) {
+          setMessage("The trap is already disabled.");
+          return;
+        }
+
+        disabledTraps.add(key);
+        saveGameState();
+        setMessage("Trap disabled.");
+        return;
+      }
+
+      if (currentTile === "E") {
+        openLimitedShrineMenu();
+        return;
+      }
+
       if (currentTile === "C") {
         if (openedChests.has(key)) {
           setMessage("The chest is already empty.");
@@ -4427,8 +4636,9 @@
     }
 
     function attackIntervalFromSpeed(speed) {
-      const interval = 2000 / (1 + Math.max(0, Number(speed) || 0) / 50);
-      return clampNumber(interval, 500, 2500);
+      // Slower base pacing, Speed still reduces delay, and there is no hard min/max cap.
+      // Extreme Speed builds are allowed to break the curve by design.
+      return 2600 / (1 + Math.max(0, Number(speed) || 0) * 0.04);
     }
 
     function meterGainForSpeed(speed) {
@@ -5147,6 +5357,381 @@
     }
 
 
+    function compactIconWithQtyHtml(image, folder, quantity = 0) {
+      const qty = Math.max(0, Number(quantity) || 0);
+      return `
+        <span class="compactIconWrap">
+          ${compactIconHtml(image, folder)}
+          ${qty > 1 ? `<span class="compactQtyBadge">${qty}</span>` : ""}
+        </span>
+      `;
+    }
+
+    function equipmentCompactIconWithQtyHtml(itemId, quantity = 0) {
+      const qty = Math.max(0, Number(quantity) || 0);
+      return `
+        <span class="compactIconWrap">
+          ${equipIconHtml(itemId).replace(/class="equipIcon/g, 'class="compactIcon')}
+          ${qty > 1 ? `<span class="compactQtyBadge">${qty}</span>` : ""}
+        </span>
+      `;
+    }
+
+    function detailBackButton(backAction) {
+      return `
+        <button class="equipSlotRow" onclick="${backAction}">
+          <span class="equipSlotLabel">Back</span>
+          <span class="equipSlotValue">List</span>
+        </button>
+      `;
+    }
+
+    function renderDetailCard(iconHtml, name, linesHtml) {
+      return `
+        <div class="equipDetailCard">
+          ${iconHtml}
+          <div>
+            <div class="equipDetailName">${name}</div>
+            ${linesHtml}
+          </div>
+        </div>
+      `;
+    }
+
+    function detailLine(label, value) {
+      return `
+        <div class="detailLine">
+          <span class="detailLabel">${label}</span>
+          <span class="detailValue">${value}</span>
+        </div>
+      `;
+    }
+
+    function detailSection(title, bodyHtml) {
+      return `
+        <div class="detailSection">
+          ${title ? `<div class="detailBlockTitle">${title}</div>` : ""}
+          ${bodyHtml}
+        </div>
+      `;
+    }
+
+    function titleCaseText(value) {
+      return String(value || "")
+        .replace(/[_-]+/g, " ")
+        .replace(/\b\w/g, c => c.toUpperCase());
+    }
+
+    function getEquipmentDetailTitle(itemId) {
+      const item = getEquipItem(itemId);
+      if (!item) return getEquipName(itemId);
+
+      const reqLevel = item.reqLevel || 1;
+      const upgradeLevel = getEquipmentLevel(itemId);
+      const upgradeText = upgradeLevel > 0 ? ` +${upgradeLevel}` : "";
+      return `${item.itemName}${upgradeText} Lv${reqLevel}`;
+    }
+
+    function getEquipmentBaseStat(item, key) {
+      if (!item) return 0;
+      return Number(item[key] || 0) || 0;
+    }
+
+    function getEquipmentTotalStat(itemId, key) {
+      const stats = getEquipStats(itemId);
+      return Number(stats[key] || 0) || 0;
+    }
+
+    function equipmentBreakdownLine(label, item, itemId, key, suffix = "") {
+      const base = getEquipmentBaseStat(item, key);
+      const total = getEquipmentTotalStat(itemId, key);
+      if (!base && !total) return "";
+
+      const bonus = total - base;
+      const bonusText = bonus >= 0 ? `+ ${bonus}` : `- ${Math.abs(bonus)}`;
+      return detailLine(label, `${base}${suffix} ${bonusText}${suffix} = ${total}${suffix}`);
+    }
+
+    function renderEquipmentStatBreakdown(itemId) {
+      const item = getEquipItem(itemId);
+      if (!item) return detailLine("Stats", "No stats");
+
+      const rows = [
+        equipmentBreakdownLine("Atk", item, itemId, "atk"),
+        equipmentBreakdownLine("Mag", item, itemId, "mag"),
+        equipmentBreakdownLine("Def", item, itemId, "def"),
+        equipmentBreakdownLine("MDef", item, itemId, "mdef"),
+        equipmentBreakdownLine("HP", item, itemId, "hp"),
+        equipmentBreakdownLine("MP", item, itemId, "mp"),
+        equipmentBreakdownLine("Speed", item, itemId, "speed"),
+        equipmentBreakdownLine("Crit", item, itemId, "crit", "%"),
+        equipmentBreakdownLine("Dodge", item, itemId, "dodge", "%")
+      ].filter(Boolean).join("");
+
+      return rows || detailLine("Stats", "No stats");
+    }
+
+    function renderEquipmentSocketDetail(itemId) {
+      const item = getEquipItem(itemId);
+      const record = getOwnedEquipmentRecord(itemId);
+
+      if (!item || !item.maxSockets) {
+        return detailSection("Sockets", detailLine("Sockets", "None"));
+      }
+
+      if (record) normalizeEquipmentSockets(itemId);
+
+      const current = record ? (record.socketsUnlocked || 0) : 0;
+      const max = item.maxSockets || 0;
+
+      return detailSection("Sockets", detailLine("Current / Max", `${current} / ${max}`));
+    }
+
+    function renderEquipmentRunesDetail(itemId) {
+      const item = getEquipItem(itemId);
+      const record = getOwnedEquipmentRecord(itemId);
+
+      if (!item || !item.maxSockets) {
+        return detailSection("Runes", `<div class="smallNote">No rune sockets.</div>`);
+      }
+
+      if (record) normalizeEquipmentSockets(itemId);
+
+      const current = record ? (record.socketsUnlocked || 0) : 0;
+      const max = item.maxSockets || 0;
+      const rows = [];
+
+      for (let i = 0; i < max; i++) {
+        const socket = record && i < current ? record.sockets[i] : null;
+        let text = "Locked";
+
+        if (i < current) {
+          text = socket && socket.runeId
+            ? `${getRuneDisplayName(socket.runeId, socket.level || 0)} — ${getShortRuneStatLine(socket.runeId, socket.level || 0).replace("Attack", "Atk").replace("Defense", "Def").replace("Magic", "Mag").replace("Speed", "Spd")}`
+            : "Empty";
+        }
+
+        rows.push(`
+          <div class="detailRuneRow">
+            <span class="detailLabel">${i + 1}</span>
+            <span class="detailValue">${text}</span>
+          </div>
+        `);
+      }
+
+      return detailSection("Runes", `<div class="detailRuneList">${rows.join("")}</div>`);
+    }
+
+    function getEquipmentDescriptionText(item) {
+      if (!item) return "No description available.";
+      const direct = item.description || item.desc || item.flavorText || item.flavor;
+      if (direct) return direct;
+
+      const rarity = titleCaseText(item.rarity || "common");
+      const tier = titleCaseText(item.tier || "");
+      const slot = titleCaseText(item.slot || "equipment");
+      const owner = item.character && item.character !== "all" ? ` for ${titleCaseText(item.character)}` : "";
+      const tierText = tier ? `${tier} ` : "";
+      return `${rarity} ${tierText}${slot}${owner}.`;
+    }
+
+    function renderEquipmentDescriptionDetail(item) {
+      return detailSection("Description", `
+        <div class="detailTextBlock">${getEquipmentDescriptionText(item)}</div>
+      `);
+    }
+
+    function renderEquipmentDetailBody(itemId, slotLabel = "") {
+      const item = getEquipItem(itemId);
+      if (!item) return detailLine("Item", itemId);
+
+      return `
+        ${detailSection("", `
+          ${slotLabel ? detailLine("Slot", slotLabel) : detailLine("Type", titleCaseText(item.slot || "equipment"))}
+          ${detailLine("Rarity", titleCaseText(item.rarity || "common"))}
+          ${detailLine("Req", `Lv${item.reqLevel || 1}`)}
+          ${detailLine("Value", `${item.value || 0}g`)}
+        `)}
+        ${detailSection("Stats", renderEquipmentStatBreakdown(itemId))}
+        ${renderEquipmentSocketDetail(itemId)}
+        ${renderEquipmentRunesDetail(itemId)}
+        ${renderEquipmentDescriptionDetail(item)}
+      `;
+    }
+
+    function renderConsumableDetailBody(itemId, qty) {
+      const item = typeof getConsumable === "function" ? getConsumable(itemId) : null;
+      return `
+        ${detailSection("", `
+          ${detailLine("Type", "Consumable")}
+          ${detailLine("Quantity", qty)}
+          ${detailLine("Value", `${item ? (item.value || 0) : 0}g`)}
+        `)}
+        ${detailSection("Description", `
+          <div class="detailTextBlock">${item ? (item.description || "Consumable item.") : "Consumable item."}</div>
+        `)}
+      `;
+    }
+
+    function renderRuneDetailBody(runeId, level, qty) {
+      return `
+        ${detailSection("", `
+          ${detailLine("Type", "Rune")}
+          ${detailLine("Quantity", qty)}
+          ${detailLine("Level", Number(level || 0) + 1)}
+        `)}
+        ${detailSection("Effect", detailLine("Bonus", getShortRuneStatLine(runeId, level)))}
+        ${detailSection("Description", `
+          <div class="detailTextBlock">Socket this rune from the Rune page of an equipped weapon or armor.</div>
+        `)}
+      `;
+    }
+
+
+    function firstAvailableBeltSlot() {
+      const slots = ["belt1", "belt2", "belt3", "belt4"];
+      return slots.find(slot => !player.equipment[slot]) || slots[0];
+    }
+
+    function moveItemToBelt(itemId) {
+      const slot = firstAvailableBeltSlot();
+      player.equipment[slot] = itemId;
+      updateCombatBeltSlots();
+      saveGameState();
+      setMessage(`${getConsumableName(itemId)} assigned to ${getSlotLabel(slot)}.`);
+      renderInventoryConsumableDetail(itemId);
+    }
+
+    function findBestEquipSlotForItem(itemId) {
+      const item = getEquipItem(itemId);
+      if (!item) return "weapon";
+      if (item.slot === "ring") {
+        return ["ring1", "ring2", "ring3", "ring4"].find(slot => !player.equipment[slot]) || "ring1";
+      }
+      return item.slot || "weapon";
+    }
+
+    function equipItemFromInventory(itemId) {
+      const slot = findBestEquipSlotForItem(itemId);
+      equipSlotItem(slot, itemId);
+    }
+
+    function renderInventoryConsumableDetail(itemId) {
+      const content = document.getElementById("inventoryContent");
+      const item = typeof getConsumable === "function" ? getConsumable(itemId) : null;
+      const qty = typeof getConsumableQuantity === "function" ? getConsumableQuantity(player, itemId) : 0;
+      if (!item) { renderItemsTab(); return; }
+
+      document.getElementById("inventoryTitle").textContent = item.itemName;
+      document.getElementById("inventoryTabs").style.display = "none";
+      content.innerHTML = `
+        ${renderDetailCard(consumableIconHtml(itemId, "equipDetailIcon"), item.itemName, renderConsumableDetailBody(itemId, qty))}
+        <div class="equipDetailActions">
+          <button class="equipSlotRow" onclick="useInventoryConsumable('${itemId}')">
+            <span class="equipSlotLabel">Use</span>
+            <span class="equipSlotValue">Now</span>
+          </button>
+          <button class="equipSlotRow" onclick="moveItemToBelt('${itemId}')">
+            <span class="equipSlotLabel">Move</span>
+            <span class="equipSlotValue">Belt</span>
+          </button>
+          ${detailBackButton("renderItemsTab()")}
+        </div>
+      `;
+    }
+
+    function renderInventoryRuneDetail(runeId, level = 0) {
+      const content = document.getElementById("inventoryContent");
+      const rune = typeof getRuneById === "function" ? getRuneById(runeId) : null;
+      const displayName = typeof getRuneDisplayName === "function" ? getRuneDisplayName(runeId, level) : runeId;
+      const entry = getVisibleRuneInventoryList().find(r => r.runeId === runeId && Number(r.level || 0) === Number(level || 0));
+      const qty = entry ? entry.quantity : 0;
+      const image = entry && entry.image ? entry.image : "rune1.png";
+
+      document.getElementById("inventoryTitle").textContent = displayName;
+      document.getElementById("inventoryTabs").style.display = "none";
+      content.innerHTML = `
+        ${renderDetailCard(`<img class="equipDetailIcon" src="assets/runes/${image}" alt="">`, displayName, renderRuneDetailBody(runeId, level, qty))}
+        <div class="equipDetailActions">
+          ${detailBackButton("renderItemsTab()")}
+        </div>
+      `;
+    }
+
+    function renderInventoryEquipmentDetail(itemId) {
+      const content = document.getElementById("inventoryContent");
+      const item = getEquipItem(itemId);
+      if (!item) { renderItemsTab(); return; }
+      const allowed = canEquip(itemId);
+
+      document.getElementById("inventoryTitle").textContent = getEquipmentDetailTitle(itemId);
+      document.getElementById("inventoryTabs").style.display = "none";
+      content.innerHTML = `
+        ${renderDetailCard(equipDetailIconHtml(itemId), getEquipmentDetailTitle(itemId), renderEquipmentDetailBody(itemId))}
+        <div class="equipDetailActions">
+          <button class="equipSlotRow ${!allowed ? "locked" : ""}" ${allowed ? `onclick="equipItemFromInventory('${itemId}')"` : ""}>
+            <span class="equipSlotLabel">Equip</span>
+            <span class="equipSlotValue">${allowed ? "Ready" : "Need Lv " + (item.reqLevel || 1)}</span>
+          </button>
+          ${detailBackButton("renderItemsTab()")}
+        </div>
+      `;
+    }
+
+    function renderBasicInventoryDetail(kind, itemId) {
+      const content = document.getElementById("inventoryContent");
+      document.getElementById("inventoryTitle").textContent = itemId;
+      document.getElementById("inventoryTabs").style.display = "none";
+      content.innerHTML = `
+        <div class="smallNote">${kind}: ${itemId}</div>
+        <div class="equipDetailActions">${detailBackButton("renderItemsTab()")}</div>
+      `;
+    }
+
+    function renderEquipCandidateDetail(slot, itemId) {
+      const content = document.getElementById("inventoryContent");
+      const label = getSlotLabel(slot);
+
+      if (!itemId) {
+        equipSlotItem(slot, null);
+        return;
+      }
+
+      if (isBeltSlot(slot)) {
+        const item = typeof getConsumable === "function" ? getConsumable(itemId) : null;
+        const qty = typeof getConsumableQuantity === "function" ? getConsumableQuantity(player, itemId) : 0;
+        document.getElementById("inventoryTitle").textContent = item ? item.itemName : label;
+        content.innerHTML = `
+          ${renderDetailCard(consumableIconHtml(itemId, "equipDetailIcon"), item ? item.itemName : itemId, `
+            ${detailSection("", detailLine("Belt Slot", label))}
+            ${renderConsumableDetailBody(itemId, qty)}
+          `)}
+          <div class="equipDetailActions">
+            <button class="equipSlotRow" onclick="equipSlotItem('${slot}', '${itemId}')">
+              <span class="equipSlotLabel">Equip</span>
+              <span class="equipSlotValue">${label}</span>
+            </button>
+            ${detailBackButton(`renderChangeEquipSlot('${slot}')`)}
+          </div>
+        `;
+        return;
+      }
+
+      const item = getEquipItem(itemId);
+      const allowed = canEquip(itemId);
+      document.getElementById("inventoryTitle").textContent = getEquipmentDetailTitle(itemId);
+      content.innerHTML = `
+        ${renderDetailCard(equipDetailIconHtml(itemId), getEquipmentDetailTitle(itemId), renderEquipmentDetailBody(itemId, label))}
+        <div class="equipDetailActions">
+          <button class="equipSlotRow ${!allowed ? "locked" : ""}" ${allowed ? `onclick="equipSlotItem('${slot}', '${itemId}')"` : ""}>
+            <span class="equipSlotLabel">Equip</span>
+            <span class="equipSlotValue">${allowed ? label : "Need Lv " + ((item && item.reqLevel) || 1)}</span>
+          </button>
+          ${detailBackButton(`renderChangeEquipSlot('${slot}')`)}
+        </div>
+      `;
+    }
+
 
     function getShortRuneStatLine(entryOrRuneId, level = 0) {
       const runeId = typeof entryOrRuneId === "string"
@@ -5279,13 +5864,11 @@
           html += `<div class="smallNote">No consumables.</div>`;
         } else {
           html += visible.map(item => `
-            <button class="compactRow" onclick="useInventoryConsumable('${item.itemId}')" title="${item.description || ""}">
-              ${compactIconHtml(item.image, "items")}
+            <button class="compactRow" onclick="renderInventoryConsumableDetail('${item.itemId}')" title="${item.description || ""}">
+              ${compactIconWithQtyHtml(item.image, "items", item.quantity)}
               <div>
                 <div class="compactName">${item.itemName}</div>
-                <div class="compactSub">${item.description || "Consumable"}</div>
               </div>
-              <div class="compactQty">${item.quantity}</div>
             </button>
           `).join("");
         }
@@ -5298,14 +5881,12 @@
           html += `<div class="smallNote">No available runes.</div>`;
         } else {
           html += visible.map(entry => `
-            <div class="compactRow" title="${entry.statLine || ""}">
-              ${compactIconHtml(entry.image, "runes")}
+            <button class="compactRow" onclick="renderInventoryRuneDetail('${entry.runeId}', ${entry.level || 0})" title="${entry.statLine || ""}">
+              ${compactIconWithQtyHtml(entry.image, "runes", entry.quantity)}
               <div>
                 <div class="compactName">${entry.displayName}</div>
-                <div class="compactSub">${getShortRuneStatLine(entry)}</div>
               </div>
-              <div class="compactQty">${entry.quantity}</div>
-            </div>
+            </button>
           `).join("");
         }
         html += `</div>`;
@@ -5317,14 +5898,12 @@
           html += `<div class="smallNote">No unequipped ${ITEM_CATEGORY_LABELS[category].toLowerCase()}.</div>`;
         } else {
           html += visible.map(item => `
-            <div class="compactRow" title="${item.description || ""}">
-              ${equipIconHtml(item.itemId).replace(/class="equipIcon/g, 'class="compactIcon')}
+            <button class="compactRow" onclick="renderInventoryEquipmentDetail('${item.itemId}')" title="${item.description || ""}">
+              ${equipmentCompactIconWithQtyHtml(item.itemId)}
               <div>
                 <div class="compactName">${item.itemName}</div>
-                <div class="compactSub">${getPrimaryItemValue(item.itemId) || item.rarity || "Equipment"}</div>
               </div>
-              <div class="compactQty"></div>
-            </div>
+            </button>
           `).join("");
         }
         html += `</div>`;
@@ -5336,14 +5915,12 @@
           html += `<div class="smallNote">No fragments.</div>`;
         } else {
           html += visible.map(fragment => `
-            <div class="compactRow" title="${fragment.description}">
-              <span class="compactIcon empty"></span>
+            <button class="compactRow" onclick="renderBasicInventoryDetail('Fragment', '${fragment.itemId || fragment.fragmentId || fragment.itemName}')" title="${fragment.description}">
+              <span class="compactIconWrap"><span class="compactIcon empty"></span><span class="compactQtyBadge">${fragment.quantity}</span></span>
               <div>
                 <div class="compactName">${fragment.itemName}</div>
-                <div class="compactSub">Upgrade material</div>
               </div>
-              <div class="compactQty">${fragment.quantity}</div>
-            </div>
+            </button>
           `).join("");
         }
         html += `</div>`;
@@ -5355,14 +5932,12 @@
           html += `<div class="smallNote">No key items.</div>`;
         } else {
           html += visible.map(item => `
-            <div class="compactRow" title="${item.description || ""}">
-              ${compactIconHtml(item.image, "items")}
+            <button class="compactRow" onclick="renderBasicInventoryDetail('Key Item', '${item.itemId}')" title="${item.description || ""}">
+              ${compactIconWithQtyHtml(item.image, "items", 0)}
               <div>
                 <div class="compactName">${item.itemName}</div>
-                <div class="compactSub">${item.description || "Key item"}</div>
               </div>
-              <div class="compactQty"></div>
-            </div>
+            </button>
           `).join("");
         }
         html += `</div>`;
@@ -5389,7 +5964,7 @@
       if (gameMode !== "encounter") setMessage(result.message);
 
       if (document.getElementById("inventoryOverlay").classList.contains("show")) {
-        renderItemsTab();
+        renderInventoryConsumableDetail(itemId);
       }
     }
 
@@ -5491,7 +6066,6 @@
       if (item.rarity) parts.push(item.rarity.toUpperCase());
       if (item.tier) parts.push(String(item.tier).toUpperCase());
       if (item.reqLevel) parts.push(`Req Lv ${item.reqLevel}`);
-      if (item.reqStr) parts.push(`Req Str ${item.reqStr}`);
       if (item.maxSockets) parts.push(`${item.maxSockets} socket${item.maxSockets === 1 ? "" : "s"}`);
       return parts.join(" · ") || "Equipped item.";
     }
@@ -5679,10 +6253,9 @@
       html += visibleRows.map(item => {
         if (item.none) {
           return `
-            <button class="equipSlotRow equipItemRow" onclick="equipSlotItem('${slot}', null)">
-              <span class="equipIcon empty"></span>
+            <button class="equipSlotRow equipItemRow" onclick="renderEquipCandidateDetail('${slot}', null)">
+              <span class="compactIconWrap"><span class="equipIcon empty"></span></span>
               <span class="equipSlotLabel">None</span>
-              <span class="equipSlotValue">Clear slot</span>
             </button>
           `;
         }
@@ -5691,10 +6264,9 @@
           const itemId = item.itemId;
           const equipped = equippedId === itemId;
           return `
-            <button class="equipSlotRow ${equipped ? "equipped" : ""} equipItemRow" onclick="equipSlotItem('${slot}', '${itemId}')">
-              ${consumableIconHtml(itemId, "equipIcon")}
+            <button class="equipSlotRow ${equipped ? "equipped" : ""} equipItemRow" onclick="renderEquipCandidateDetail('${slot}', '${itemId}')">
+              ${compactIconWithQtyHtml(item.image || "", "items", item.quantity)}
               <span class="equipSlotLabel">${item.itemName}${equipped ? " *" : ""}</span>
-              <span class="equipSlotValue">x${item.quantity}</span>
             </button>
           `;
         }
@@ -5703,13 +6275,10 @@
         const equipped = equippedId === itemId;
         const allowed = canEquip(itemId);
         const rowClass = `equipSlotRow ${equipped ? "equipped" : ""} ${!allowed ? "locked" : ""}`;
-        const action = allowed ? `onclick="equipSlotItem('${slot}', '${itemId}')"` : "";
-
         return `
-          <button class="${rowClass} equipItemRow" ${action}>
-            ${equipIconHtml(itemId)}
+          <button class="${rowClass} equipItemRow" onclick="renderEquipCandidateDetail('${slot}', '${itemId}')">
+            ${equipmentCompactIconWithQtyHtml(itemId)}
             <span class="equipSlotLabel">${getEquipName(itemId)}${equipped ? " *" : ""}</span>
-            <span class="equipSlotValue">${getPrimaryItemValue(itemId)}</span>
           </button>
         `;
       }).join("");
@@ -5863,12 +6432,10 @@
 
         return `
           <button class="compactRow ${current ? "equipped" : ""} ${!available ? "locked" : ""}" ${available ? `onclick="socketRune('${slot}', ${socketIndex}, '${entry.runeId}', ${entry.level})"` : ""}>
-            ${compactIconHtml(entry.image, "runes")}
+            ${compactIconWithQtyHtml(entry.image, "runes", entry.available)}
             <div>
               <div class="compactName">${entry.displayName}${current ? " [Socketed]" : ""}</div>
-              <div class="compactSub">${getShortRuneStatLine(entry)}</div>
             </div>
-            <div class="compactQty">Free ${entry.available}</div>
           </button>
         `;
       }).join("");
