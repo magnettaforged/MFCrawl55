@@ -1939,7 +1939,7 @@
 
   <script>
     
-    const GAME_VERSION = "v0.4.3";
+    const GAME_VERSION = "v0.4.4";
 // =========================
     // MAP / FLOOR STATE
     // =========================
@@ -2693,6 +2693,98 @@
       return { gained, levelsGained };
     }
 
+    function isFloorMilestone(floor) {
+      const n = Math.max(1, Math.floor(Number(floor) || 1));
+      return n > 1 && n % 5 === 0;
+    }
+
+    function isMajorFloorMilestone(floor) {
+      const n = Math.max(1, Math.floor(Number(floor) || 1));
+      return n > 1 && n % 10 === 0;
+    }
+
+    function shouldRestrictAdvanceTwoFromFloor(floor) {
+      const n = Math.max(1, Math.floor(Number(floor) || 1));
+      return n % 5 === 4;
+    }
+
+    function getAvailableRuneIdsForReward() {
+      if (typeof getRuneById !== "function") return [];
+
+      const sources = [
+        typeof RUNES !== "undefined" ? RUNES : null,
+        typeof RUNE_DATA !== "undefined" ? RUNE_DATA : null,
+        typeof RUNE_DEFS !== "undefined" ? RUNE_DEFS : null,
+        typeof RUNE_DEFINITIONS !== "undefined" ? RUNE_DEFINITIONS : null
+      ].filter(Boolean);
+
+      for (const source of sources) {
+        const ids = Array.isArray(source)
+          ? source.map(r => r && (r.runeId || r.id)).filter(Boolean)
+          : Object.keys(source);
+
+        const valid = ids.filter(id => getRuneById(id));
+        if (valid.length) return valid;
+      }
+
+      const fallbackIds = [
+        "fehu", "uruz", "thurisaz", "ansuz", "raidho", "kenaz",
+        "gebo", "hagalaz", "isa", "eihwaz", "algiz", "sowilo"
+      ];
+
+      return fallbackIds.filter(id => getRuneById(id));
+    }
+
+    function rollFloorRewardRune(isMajor) {
+      if (typeof addRune !== "function" || typeof getRuneDisplayName !== "function") return null;
+
+      const chance = isMajor ? 60 : 25;
+      if (Math.random() * 100 >= chance) return null;
+
+      const runeIds = getAvailableRuneIdsForReward();
+      const runeId = randomFromList(runeIds);
+      if (!runeId) return null;
+
+      addRune(player, runeId, 0, 1);
+      return getRuneDisplayName(runeId, 0);
+    }
+
+    function awardFloorMilestoneReward(floor) {
+      const rewardFloor = Math.max(1, Math.floor(Number(floor) || 1));
+      if (!isFloorMilestone(rewardFloor)) return "";
+
+      const major = isMajorFloorMilestone(rewardFloor);
+      const goldBase = major
+        ? Math.round(90 + rewardFloor * 18)
+        : Math.round(40 + rewardFloor * 9);
+      const expBase = major
+        ? Math.round(55 + rewardFloor * 10)
+        : Math.round(25 + rewardFloor * 5);
+
+      const gold = applyGoldFind(goldBase);
+      player.gold += gold;
+
+      const expResult = gainExp(expBase);
+      const runeName = rollFloorRewardRune(major);
+
+      updateBars();
+      saveGameState();
+
+      const label = major ? "Major floor reward" : "Floor reward";
+      const pieces = [`${label}: ${gold} gold`, `${expResult.gained} EXP`];
+
+      if (expResult.levelsGained > 0) {
+        pieces.push(`Level +${expResult.levelsGained}`);
+      }
+
+      if (runeName) {
+        pieces.push(`Rune: ${runeName}`);
+      }
+
+      return pieces.join(" · ");
+    }
+
+
     function canEquip(itemId) {
       const item = getEquipItem(itemId);
       if (!item) return false;
@@ -3387,16 +3479,28 @@
       const downOneTarget = Math.max(1, currentFloor - 1);
       const upOneTarget = currentFloor + 1;
       const upTwoTarget = currentFloor + 2;
+      const restrictAdvanceTwo = shouldRestrictAdvanceTwoFromFloor(currentFloor);
 
       return `
-        <button class="shopRow" onclick="shrineChangeFloor(2)">
-          ${shopIconHtml("", "items")}
-          <div class="shopRowText">
-            <div class="shopRowName">Advance 2 Floors</div>
-            <div class="shopRowSub">Move from Floor ${currentFloor} to Floor ${upTwoTarget}</div>
-          </div>
-          <div class="shopRowValue">+2</div>
-        </button>
+        ${restrictAdvanceTwo ? `
+          <button class="shopRow locked">
+            ${shopIconHtml("", "items")}
+            <div class="shopRowText">
+              <div class="shopRowName">Advance 2 Floors</div>
+              <div class="shopRowSub">Disabled before a floor reward milestone.</div>
+            </div>
+            <div class="shopRowValue">Locked</div>
+          </button>
+        ` : `
+          <button class="shopRow" onclick="shrineChangeFloor(2)">
+            ${shopIconHtml("", "items")}
+            <div class="shopRowText">
+              <div class="shopRowName">Advance 2 Floors</div>
+              <div class="shopRowSub">Move from Floor ${currentFloor} to Floor ${upTwoTarget}</div>
+            </div>
+            <div class="shopRowValue">+2</div>
+          </button>
+        `}
 
         <button class="shopRow" onclick="shrineChangeFloor(1)">
           ${shopIconHtml("", "items")}
@@ -3428,8 +3532,18 @@
     }
 
     function shrineChangeFloor(delta) {
+      const requestedDelta = Number(delta) || 0;
+
+      if (requestedDelta > 1 && shouldRestrictAdvanceTwoFromFloor(currentFloor)) {
+        setMessage("Advance 2 is disabled before a floor reward milestone.");
+        renderShrineContinue();
+        return;
+      }
+
       const oldFloor = currentFloor;
-      currentFloor = Math.max(1, currentFloor + delta);
+      currentFloor = Math.max(1, currentFloor + requestedDelta);
+      const reachedFloor = currentFloor;
+      const rewardMessage = requestedDelta > 0 ? awardFloorMilestoneReward(reachedFloor) : "";
 
       setMenuOpen(false);
       gameMode = "roaming";
@@ -3437,6 +3551,8 @@
 
       if (currentFloor === oldFloor) {
         setMessage("You are already at the lowest floor.");
+      } else if (rewardMessage) {
+        setMessage(`Moved from Floor ${oldFloor} to Floor ${currentFloor}. ${rewardMessage}`);
       } else {
         setMessage(`Moved from Floor ${oldFloor} to Floor ${currentFloor}.`);
       }
