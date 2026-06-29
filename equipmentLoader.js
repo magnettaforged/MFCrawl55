@@ -68,7 +68,10 @@ function normalizeEquipmentRow(row, slot) {
     crit: equipNumber(row.Crit),
     dodge: equipNumber(row.Dodge),
 
-    value: equipNumber(row.Value)
+    value: equipNumber(row.Value),
+
+    description: row.Description || row.Desc || "",
+    flavorText: row.FlavorText || row.Flavor || ""
   };
 }
 
@@ -171,8 +174,6 @@ function getEquipmentStatLine(item, upgradeLevel = 0) {
 
   const req = [];
   if (item.reqLevel) req.push(`Lv ${item.reqLevel}`);
-  if (item.reqStr) req.push(`Str ${item.reqStr}`);
-  if (item.reqDex) req.push(`Dex ${item.reqDex}`);
 
   if (req.length) parts.push(`Req: ${req.join("/")}`);
   if (item.maxSockets) parts.push(`Sockets ${item.maxSockets}`);
@@ -217,8 +218,6 @@ function canCharacterEquipItem(player, item) {
 
   if (item.character !== "all" && item.character !== character) return false;
   if ((player.level || 1) < item.reqLevel) return false;
-  if ((player.str || 0) < item.reqStr) return false;
-  if ((player.dex || 0) < item.reqDex) return false;
 
   return true;
 }

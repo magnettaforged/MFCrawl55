@@ -17,11 +17,10 @@
 // N = not included
 //
 // Difficulty is not stored here.
-// monsterLoader.js scales selected monsters by floor.
+// monsterLoader.js can scale selected monsters by floor/difficulty.
 //
-// IMPORTANT:
-// This file uses the grouped monster IDs from monster.js.
-// Example: rat contains rat1.png / rat2.png in images[].
+// Visual variants are grouped in monster.js by images[].
+// Example: rat = rat1.png / rat2.png.
 
 const MONSTER_LOCATION_TABLE = `
 monid,c,b,f,bc,bb,bf
