@@ -1154,6 +1154,29 @@
       display: none;
     }
 
+    .versionIndicator {
+      position: absolute;
+      right: 12px;
+      bottom: 4px;
+      z-index: 65;
+      padding: 2px 6px;
+      border: 1px solid rgba(214,168,79,0.32);
+      border-radius: 999px;
+      background: rgba(0,0,0,0.42);
+      color: rgba(255,255,255,0.58);
+      font-weight: bold;
+      font-size: 9px;
+      line-height: 13px;
+      text-align: center;
+      text-shadow: 0 0 4px #000;
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    body.encounterMode .versionIndicator {
+      display: none;
+    }
+
     .exitMarker.show { display: block; }
     .exitForward { top: 88px; left: 50%; transform: translateX(-50%); }
     .exitLeft { top: 50%; left: 24px; transform: translateY(-50%); }
@@ -1818,6 +1841,7 @@
         <div class="topHudBadge floorIndicator" id="floorIndicator">Floor 1</div>
         <div class="topHudBadge shrineCompass" id="shrineCompass">Shrine ·</div>
         <div class="mapIndicator" id="mapIndicator">Map: -</div>
+        <div class="versionIndicator" id="versionIndicator">v0.4.3</div>
 
         <div class="exitMarker exitForward" id="exitForward">Exit</div>
         <div class="exitMarker exitLeft" id="exitLeft">Exit</div>
@@ -1914,7 +1938,9 @@
   <script src="runeLoader.js"></script>
 
   <script>
-    // =========================
+    
+    const GAME_VERSION = "v0.4.3";
+// =========================
     // MAP / FLOOR STATE
     // =========================
 
@@ -2011,6 +2037,9 @@
         const mapName = currentMap && currentMap.name ? currentMap.name : currentMapId || "fallback";
         mapEl.textContent = `Map: ${mapName}  |  Loc: ${getGridLocationLabel(playerX, playerY)}`;
       }
+
+      const versionEl = document.getElementById("versionIndicator");
+      if (versionEl) versionEl.textContent = GAME_VERSION;
     }
 
 
@@ -2450,7 +2479,10 @@
           mag: 0,
           def: 0,
           mdef: 0,
-          speed: 0
+          speed: 0,
+          crit: 0,
+          dodge: 0,
+          goldFind: 0
         };
       }
 
@@ -2467,7 +2499,10 @@
         mag: item.mag || 0,
         def: item.def || 0,
         mdef: item.mdef || 0,
-        speed: item.speed || 0
+        speed: item.speed || 0,
+        crit: item.crit || 0,
+        dodge: item.dodge || 0,
+        goldFind: item.goldFind || 0
       };
     }
 
@@ -2525,7 +2560,8 @@
         mag: 0,
         def: 0,
         mdef: 0,
-        speed: 0
+        speed: 0,
+        goldFind: 0
       };
 
       equippedIds.forEach(itemId => {
@@ -2538,9 +2574,22 @@
         totals.def += stats.def || 0;
         totals.mdef += stats.mdef || 0;
         totals.speed += stats.speed || 0;
+        totals.goldFind += stats.goldFind || 0;
       });
 
       return totals;
+    }
+
+    function getTotalGoldFindPct() {
+      const equipBonuses = getEquipmentBonusTotals();
+      const runeBonuses = getRuneBonusTotals();
+      return Math.max(0, (equipBonuses.goldFind || 0) + (runeBonuses.goldFindPct || 0));
+    }
+
+    function applyGoldFind(amount) {
+      const base = Math.max(0, Math.floor(Number(amount) || 0));
+      const goldFindPct = getTotalGoldFindPct();
+      return Math.max(0, Math.round(base * (1 + goldFindPct / 100)));
     }
 
     // =========================
@@ -3022,8 +3071,8 @@
     function getRoomImageName() {
       const currentTile = getTile(playerX, playerY);
 
-      // Entrance/open level uses the shrine variant. It is a limited safe/action room, not a normal corridor.
-      if (currentTile === "E") return getRoomImageNameForType("shrine");
+      // Entrance uses the original floor entrance/room view.
+      // It still has Action options, but it is not visually a shrine.
 
       // Special rooms only display their special image when the player is standing in that room.
       if (currentTile === "C") return getRoomImageNameForType("chestroom");
@@ -3117,7 +3166,7 @@
       updateRoomView();
 
       if (tile === "E") {
-        setMessage("Open shrine. Use Action to rest.");
+        setMessage("Floor entrance. Use Action for entrance options.");
         return;
       }
 
@@ -3409,20 +3458,19 @@
       player.mp = player.maxMp;
       updateBars();
       saveGameState();
-      setMessage("The open shrine restores your Health and Mana.");
+      setMessage("The floor entrance restores your Health and Mana.");
       renderLimitedShrineHome();
     }
 
     function renderLimitedShrineHome() {
-      setOverlayTitle("Open Shrine");
+      setOverlayTitle("Floor Entrance");
       hideInventoryTabs();
 
       const content = document.getElementById("inventoryContent");
       content.style.overflowY = "auto";
 
       content.innerHTML = `
-        ${shrineHeroHtml("shrine")}
-        <div class="smallNote">This open shrine is limited for now.</div>
+        <div class="smallNote">Entrance options are limited for now.</div>
         <div class="shopMenuList">
           <button class="shopRow" onclick="limitedShrineRest()">
             ${shopIconHtml("", "items")}
@@ -4483,7 +4531,8 @@
 
     function openCurrentChestLoot() {
       const messages = [];
-      const goldAmount = Math.max(5, Math.round(8 + Math.random() * 12 + currentFloor * (3 + Math.random() * 3)));
+      const baseGoldAmount = Math.max(5, Math.round(8 + Math.random() * 12 + currentFloor * (3 + Math.random() * 3)));
+      const goldAmount = applyGoldFind(baseGoldAmount);
       player.gold += goldAmount;
       messages.push(`${goldAmount} gold`);
 
@@ -5025,8 +5074,9 @@
 
       drops.forEach(drop => {
         if (drop.type === "gold") {
-          player.gold += drop.amount;
-          foundMessages.push(`${drop.amount} gold`);
+          const goldAmount = applyGoldFind(drop.amount);
+          player.gold += goldAmount;
+          foundMessages.push(`${goldAmount} gold`);
         } else {
           const result = addLootItem(drop.id);
           foundMessages.push(result && result.message ? result.message : drop.name);
@@ -5293,7 +5343,8 @@
           ["MAG", `${bonuses.mag} / ${runeBonuses.magicPct}%`],
           ["SPD", `${bonuses.speed} / ${runeBonuses.speedPct}%`],
           ["PIERCE", `${runeBonuses.piercePct}%`],
-          ["LIFE", `${runeBonuses.lifeStealPct}%`]
+          ["LIFE", `${runeBonuses.lifeStealPct}%`],
+          ["GOLD", `${getTotalGoldFindPct()}%`]
         ];
       }
 
@@ -5465,7 +5516,8 @@
         equipmentBreakdownLine("MP", item, itemId, "mp"),
         equipmentBreakdownLine("Speed", item, itemId, "speed"),
         equipmentBreakdownLine("Crit", item, itemId, "crit", "%"),
-        equipmentBreakdownLine("Dodge", item, itemId, "dodge", "%")
+        equipmentBreakdownLine("Dodge", item, itemId, "dodge", "%"),
+        equipmentBreakdownLine("Gold Find", item, itemId, "goldFind", "%")
       ].filter(Boolean).join("");
 
       return rows || detailLine("Stats", "No stats");
