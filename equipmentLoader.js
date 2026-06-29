@@ -67,8 +67,12 @@ function normalizeEquipmentRow(row, slot) {
 
     crit: equipNumber(row.Crit),
     dodge: equipNumber(row.Dodge),
+    goldFind: equipNumber(row.GoldFind || row.GoldFindPct || row.GoldFindPercent),
 
-    value: equipNumber(row.Value)
+    value: equipNumber(row.Value),
+
+    description: row.Description || row.Desc || "",
+    flavorText: row.FlavorText || row.Flavor || ""
   };
 }
 
@@ -137,7 +141,7 @@ function upgradeStat(baseValue, upgradeLevel) {
 
 function getUpgradedEquipmentStats(item, upgradeLevel = 0) {
   if (!item) {
-    return { hp: 0, mp: 0, atk: 0, mag: 0, def: 0, mdef: 0, speed: 0, crit: 0, dodge: 0 };
+    return { hp: 0, mp: 0, atk: 0, mag: 0, def: 0, mdef: 0, speed: 0, crit: 0, dodge: 0, goldFind: 0 };
   }
 
   return {
@@ -149,7 +153,8 @@ function getUpgradedEquipmentStats(item, upgradeLevel = 0) {
     mdef: upgradeStat(item.mdef, upgradeLevel),
     speed: upgradeStat(item.speed, upgradeLevel),
     crit: item.crit || 0,
-    dodge: item.dodge || 0
+    dodge: item.dodge || 0,
+    goldFind: upgradeStat(item.goldFind, upgradeLevel)
   };
 }
 
@@ -168,11 +173,10 @@ function getEquipmentStatLine(item, upgradeLevel = 0) {
   if (stats.speed) parts.push(`Speed ${stats.speed}`);
   if (stats.crit) parts.push(`Crit ${stats.crit}%`);
   if (stats.dodge) parts.push(`Dodge ${stats.dodge}%`);
+  if (stats.goldFind) parts.push(`Gold Find ${stats.goldFind}%`);
 
   const req = [];
   if (item.reqLevel) req.push(`Lv ${item.reqLevel}`);
-  if (item.reqStr) req.push(`Str ${item.reqStr}`);
-  if (item.reqDex) req.push(`Dex ${item.reqDex}`);
 
   if (req.length) parts.push(`Req: ${req.join("/")}`);
   if (item.maxSockets) parts.push(`Sockets ${item.maxSockets}`);
@@ -217,8 +221,6 @@ function canCharacterEquipItem(player, item) {
 
   if (item.character !== "all" && item.character !== character) return false;
   if ((player.level || 1) < item.reqLevel) return false;
-  if ((player.str || 0) < item.reqStr) return false;
-  if ((player.dex || 0) < item.reqDex) return false;
 
   return true;
 }
