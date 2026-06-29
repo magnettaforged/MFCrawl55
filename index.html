@@ -1827,9 +1827,9 @@
     <div class="gameBody" id="gameBody">
       <div class="dungeonStage" id="dungeonStage">
 
-        <img class="roomLayer layer-room" id="roomLayer" src="assets/rooms/room1.png" alt="">
+        <img class="roomLayer layer-room" id="roomLayer" src="assets/rooms/openroomc1.webp" alt="">
         <img class="roomLayer layer-chest" id="chestLayer" src="" alt="">
-        <img class="roomLayer layer-monster" id="monsterLayer" src="assets/monsters/skeleton1.png" alt="">
+        <img class="roomLayer layer-monster" id="monsterLayer" src="assets/monsters/skeleton1.webp" alt="">
         <div class="monsterHud" id="monsterHud">
           <div class="monsterHudTop">
             <span id="monsterNameText">Monster</span>
@@ -1957,7 +1957,7 @@
 
   <script>
     
-    const GAME_VERSION = "v0.4.7";
+    const GAME_VERSION = "v0.4.8";
 // =========================
     // MAP / FLOOR STATE
     // =========================
@@ -1981,6 +1981,29 @@
     const clearedMonsters = new Set();
     const triggeredTraps = new Set();
     const disabledTraps = new Set();
+
+
+    function forceWebpFileName(fileName) {
+      const name = String(fileName || "").trim();
+      if (!name) return "";
+      return name.replace(/\.(png|jpg|jpeg|webp)$/i, "") + ".webp";
+    }
+
+    function setImageWithPngFallback(img, webpPath, pngPath = "") {
+      if (!img || !webpPath) return;
+
+      img.onerror = () => {
+        if (!pngPath) {
+          img.onerror = null;
+          return;
+        }
+
+        img.onerror = null;
+        img.src = pngPath;
+      };
+
+      img.src = webpPath;
+    }
 
     function dungeonRandomChoice(list) {
       return list[Math.floor(Math.random() * list.length)];
@@ -2071,7 +2094,7 @@
 
       roomTypes.forEach(type => {
         const img = new Image();
-        img.src = `assets/rooms/${type}${theme}1.png`;
+        img.src = `assets/rooms/${type}${theme}1.webp`;
       });
     }
 
@@ -3037,12 +3060,19 @@
 
     function setRoomImage(roomName) {
       const img = document.getElementById("roomLayer");
+      const webpPath = `assets/rooms/${roomName}.webp`;
+      const pngPath = `assets/rooms/${roomName}.png`;
+
       img.onerror = () => {
-        img.onerror = null;
-        img.src = "assets/rooms/openroomc1.png";
-        setMessage(`Missing room image: ${roomName}.png`);
+        img.onerror = () => {
+          img.onerror = null;
+          img.src = "assets/rooms/openroomc1.webp";
+          setMessage(`Missing room image: ${roomName}.webp`);
+        };
+        img.src = pngPath;
       };
-      img.src = `assets/rooms/${roomName}.png`;
+
+      img.src = webpPath;
     }
 
     function updateBars() {
@@ -3230,7 +3260,7 @@
         hasChest: true,
         opened: isOpened,
         mimic: false,
-        image: isOpened ? "chestopen1.png" : "chestclosed1.png"
+        image: isOpened ? "chestopen1.webp" : "chestclosed1.webp"
       };
     }
 
@@ -3246,7 +3276,11 @@
         return;
       }
 
-      layer.src = `assets/chest/${state.image}`;
+      setImageWithPngFallback(
+        layer,
+        `assets/chest/${forceWebpFileName(state.image)}`,
+        `assets/chest/${String(state.image || "").replace(/\.webp$/i, ".png")}`
+      );
       layer.classList.add("show");
     }
 
@@ -3448,7 +3482,7 @@
       if (mode === "merchant") {
         return `
           <div class="shopHero">
-            <img class="shopHeroImage" src="assets/npc/ollie_shop1.png" alt="" onerror="this.style.display='none';">
+            <img class="shopHeroImage" src="assets/npc/ollie_shop1.webp" alt="" onerror="this.style.display='none';">
             <div class="shopHeroText">
               <div class="shopName">Ollie's One-Hop Shop</div>
               <div class="shopQuote">"One hop in. One shop done."</div>
@@ -3459,7 +3493,7 @@
 
       return `
         <div class="shopHero">
-          <img class="shopHeroImage" src="assets/rooms/${getRoomImageNameForType("shrine")}.png" alt="" onerror="this.style.display='none';">
+          <img class="shopHeroImage" src="assets/rooms/${getRoomImageNameForType("shrine")}.webp" alt="" onerror="this.style.display='none';">
           <div class="shopHeroText">
             <div class="shopName">Shrine</div>
             <div class="shopQuote">A quiet place to rest, repair, and trade before returning to the floor.</div>
@@ -4941,7 +4975,11 @@
       }
 
       const monsterImg = document.getElementById("monsterLayer");
-      monsterImg.src = `assets/monsters/${currentEnemy.image}`;
+      setImageWithPngFallback(
+        monsterImg,
+        `assets/monsters/${forceWebpFileName(currentEnemy.image)}`,
+        `assets/monsters/${String(currentEnemy.image || "").replace(/\.webp$/i, ".png")}`
+      );
 
       setMode("encounter");
       updateMonsterHud();

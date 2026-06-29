@@ -25,7 +25,8 @@ function randomChoice(list) {
 
 function normalizeMonsterImage(image) {
   if (!image) return "";
-  return String(image).replace(/^.*[\\/]/, "");
+  const name = String(image).replace(/^.*[\\/]/, "");
+  return name.replace(/\.(png|jpg|jpeg|webp)$/i, "") + ".webp";
 }
 
 function chooseMonsterImage(baseMonster) {

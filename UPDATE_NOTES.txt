@@ -86,3 +86,12 @@ Monster scaling + rune UI patch v0.4.7:
 - runeLoader.js supports modern object-style rune data and legacy CSV.
 - Rune inventory list is now single-column with quick effect text.
 - Inventory page size reduced to 6 rows, creating more pages but cleaner rune rows.
+
+
+WebP asset patch v0.4.8:
+- Room image loading now prefers .webp.
+- Room preload now uses .webp.
+- Chest overlay now uses .webp.
+- Monster display now forces .webp from monster image names.
+- NPC shop hero now uses .webp.
+- Room/chest/monster image loading includes a PNG fallback where practical.
