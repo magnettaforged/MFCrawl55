@@ -1,0 +1,68 @@
+Dungeon big UI/balance update bundle
+
+Replace these files in the GitHub root:
+- index.html
+- equipmentLoader.js
+- weapons.js
+- armor.js
+
+Included for safety/consistency:
+- monloc.js grouped-ID version
+- monster.js grouped monster version
+- monsterLoader.js current theme/floor loader
+- maps.js current safer directional maps
+
+Changes:
+- Equipment equip gates are level-only; STR/DEX gates are ignored by the loader and removed from display.
+- Weapon ReqStr/ReqDex values set to 0 in weapons.js.
+- Armor ReqStr values set to 0 and tier ReqLevel normalized: cloth 1, chain 3, light plate 6, full plate 10.
+- Inventory lists simplified to icon + quantity badge + item name; details move to item detail pages.
+- Equipment change lists now open detail pages before equip/swap.
+- Sell remains shop-only.
+- Combat base attack delay increased and Speed reduces delay without hard min/max caps.
+- Traps can be disabled with Action; triggered/disabled traps do not retrigger on the same floor and reset on floor change/death.
+- Entrance/open level uses shrine variant art and Action opens a limited shrine menu.
+- Room images are preloaded at floor start to reduce first-use lag.
+- Save loading now replaces the default starter player with the saved player instead of deep-merging, reducing starter item re-grant exploits.
+
+
+Detail page readability patch:
+- Equipment detail pages now show item name + required level in the title, e.g. Iron Sword Lv1.
+- Rarity, Req Lv, Sockets current/max, Value, Runes, stats, and description are separated into readable blocks.
+- Weapon/armor stats now show Base + Lv Bonus = Total.
+- Consumable and rune detail pages use the same spaced-out detail layout.
+- Equipment loader now supports future Description and FlavorText CSV columns.
+
+
+Gold armor gold-find patch:
+- Added GoldFind stat column to armor.js.
+- Gold Chain = 10% base Gold Find.
+- Gold Light Plate = 20% base Gold Find.
+- Gold Full Plate = 30% base Gold Find.
+- Gold Find scales with equipment upgrade level using the same upgrade scaling as other non-fixed stats.
+- Gold Find now applies to chest gold and monster gold drops.
+- Equipment details and status now show Gold Find.
+
+
+Entrance/version patch v0.4.3:
+- Added bottom version label for GitHub/cache tracking.
+- Floor entrance no longer uses shrine room art.
+- Action on entrance still opens limited entrance options.
+- Entrance menu text no longer calls it an open shrine.
+- Keeps gold armor Gold Find scaling update.
+
+
+Floor rewards patch v0.4.4:
+- Added minor milestone rewards every 5 floors.
+- Added major milestone rewards every 10 floors.
+- Rewards give scaled gold, EXP, and a rune chance.
+- Gold rewards use Gold Find.
+- +2 floor advance is disabled on floors 4, 9, 14, 19, etc. to prevent skipping milestones.
+
+
+Armor variant patch v0.4.5:
+- Updated Maya armor paths to the new tier pose folders.
+- Added Jade Full Plate, Black Full Plate, and White Full Plate.
+- Black and White Full Plate have 8 sockets.
+- New rare/full-plate variants are obtainable through the normal equipment table.
+- Updated armor descriptions/flavor text for the detail page.
