@@ -108,3 +108,36 @@ Sound first-pass patch v0.4.9:
 - Added fgrunt01-05 only for female player hurt sounds: Maya, Kyra, Nadia.
 - Added lifealert once when player HP drops below 25%.
 - Added skeledeath for skeleton/undead monster deaths.
+
+
+v0.5.0 map/HUD/combat-skill update:
+- Replaced maps.js with 50 loop-free tree-style maps.
+- Shrine fixed at H18.
+- Entrance varies but stays above shrine.
+- Trap rooms removed from generated maps.
+- Roughly 50% of maps have a boss room.
+- Boss room, when present, is directly before the shrine at H17.
+- Replaced shrine compass HUD with combined Floor | Room coordinate.
+- Bottom map label and bottom-right version label remain for testing.
+- Added movement coordinate helper showing open Forward/Right/Back destinations.
+- Changed movement to fixed-grid controls: Forward=south, Back=north, Left=west, Right=east. Player no longer rotates.
+- Removed Defend as a primary combat action.
+- Added equipped skill combat layout: Attack, Ultimate skill, Base Skill 1, Base Skill 2.
+- Attack and base skills share the WAIT/readiness meter.
+- Base skills cost MP.
+- Ultimate skill uses its own charge meter.
+- Skill button labels show equipped skill names.
+- Added initial test skills: Blade Rush, Armor Break, Vampiric Slash.
+
+- Base attack wait pacing set around 4600ms.
+
+
+v0.5.1 UI/inventory skill patch:
+- Movement destination coordinates now replace the existing movement label text.
+- Movement labels use format: Forward to C5, Left to B4, Right to D4, Back to C3.
+- Removed the separate floating movement-coordinate helper overlay.
+- Equipment page no longer shows character/level header, gold header, or bottom stat summary.
+- Equipment page adds a compact three-column skill row under P1-P4.
+- Skill row slots: Ultimate, Skill 1, Skill 2.
+- Added Skills category to Items.
+- Skills category shows current skills and lets them be equipped to Ultimate, Skill 1, or Skill 2.

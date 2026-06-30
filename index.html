@@ -787,6 +787,31 @@
       overflow: hidden;
     }
 
+
+    .equipSkillRow {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 7px;
+    }
+
+    .equipGridButton.skillEquipSlot {
+      min-height: 38px;
+      padding: 4px 3px;
+    }
+
+    .equipGridButton.skillEquipSlot .equipGridLabel {
+      font-size: 9.5px;
+      color: rgba(214,168,79,0.88);
+      order: 2;
+    }
+
+    .equipGridButton.skillEquipSlot .equipGridName {
+      font-size: 10.5px;
+      color: #fff;
+      order: 1;
+    }
+
     .equipGridButton.wideLeft,
     .equipGridButton.wideRight {
       min-height: 165px;
@@ -1132,16 +1157,12 @@
     }
 
     .floorIndicator {
-      left: 28px;
-    }
-
-    .shrineCompass {
       left: 50%;
       transform: translateX(-50%);
+      min-width: 118px;
     }
 
-    body.encounterMode .floorIndicator,
-    body.encounterMode .shrineCompass {
+        body.encounterMode .floorIndicator {
       display: none;
     }
 
@@ -1197,7 +1218,7 @@
 
     .soundToggle {
       position: absolute;
-      right: 12px;
+      left: 12px;
       top: 12px;
       z-index: 66;
       min-width: 34px;
@@ -1838,6 +1859,43 @@
       filter: grayscale(0.35);
     }
 
+
+    .skillButton {
+      position: relative;
+      overflow: hidden;
+      isolation: isolate;
+      min-height: 34px;
+    }
+
+    .skillButton::before {
+      content: "";
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: var(--fill, 0%);
+      background: rgba(214,168,79,0.30);
+      z-index: -1;
+      transition: width 120ms linear;
+    }
+
+    .skillButton.ultimateButton::before {
+      background: rgba(160,115,255,0.34);
+    }
+
+    .skillButton.ready {
+      border-color: rgba(255,235,140,0.92);
+    }
+
+    .skillButton.noMp {
+      color: rgba(140,190,255,0.62);
+    }
+
+    body.encounterMode .combatMainButtons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+
+
   
     .enemyAttackMiniBar {
       height: 5px;
@@ -1886,10 +1944,10 @@
 
         
 
-        <div class="topHudBadge floorIndicator" id="floorIndicator">Floor 1</div>
-        <div class="topHudBadge shrineCompass" id="shrineCompass">Shrine ·</div>
+        <div class="topHudBadge floorIndicator" id="floorIndicator">Floor 1 | A1</div>
         <div class="mapIndicator" id="mapIndicator">Map: -</div>
         <div class="versionIndicator" id="versionIndicator">v0.4.3</div>
+
         <button class="soundToggle" id="soundToggle" onclick="toggleGameSound()" aria-label="Toggle sound">🔊</button>
 
         <div class="exitMarker exitForward" id="exitForward">Exit</div>
@@ -1925,13 +1983,11 @@
           </div>
 
           <div class="combatBlock" id="combatActions">
-            <div class="attackMeterWrap">
-              <span class="attackReadyText" id="attackReadyText">Ready</span>
-              <div class="miniBar"><div class="miniBarFill" id="playerAttackMeter"></div></div>
-            </div>
             <div class="combatMainButtons">
-              <button class="uiButton" id="attackButton" onclick="playerAttack()">Attack</button>
-              <button class="uiButton" onclick="playerDefend()">Defend</button>
+              <button class="uiButton skillButton" id="attackButton" onclick="playerAttack()">Attack</button>
+              <button class="uiButton skillButton ultimateButton" id="ultimateSkillButton" onclick="useUltimateSkill()">Ultimate</button>
+              <button class="uiButton skillButton" id="baseSkill1Button" onclick="useBaseSkill('base1')">Skill 1</button>
+              <button class="uiButton skillButton" id="baseSkill2Button" onclick="useBaseSkill('base2')">Skill 2</button>
             </div>
             <div class="combatBeltColumn" id="combatBeltRow">
               <button class="uiButton beltButton empty" onclick="useBeltSlot('belt1')" aria-label="P1"></button>
@@ -1991,7 +2047,7 @@
 
   <script>
     
-    const GAME_VERSION = "v0.4.9";
+    const GAME_VERSION = "v0.5.6";
 // =========================
     // MAP / FLOOR STATE
     // =========================
@@ -2008,8 +2064,8 @@
     let playerX = 1;
     let playerY = 1;
     let playerDir = 2;
-    let moveHistory = []; // kept only for save compatibility
-    let facingHistory = []; // restores view direction after a back-step
+    let moveHistory = []; // stores prior position + facing for Back
+    let facingHistory = []; // kept for save compatibility
 
     const dirNames = ["N", "E", "S", "W"];
     const openedChests = new Set();
@@ -2126,15 +2182,12 @@
 
     function updateTopHud() {
       const floorEl = document.getElementById("floorIndicator");
-      if (floorEl) floorEl.textContent = `Floor ${currentFloor}`;
-
-      const shrineEl = document.getElementById("shrineCompass");
-      if (shrineEl) shrineEl.textContent = `Shrine ${getRelativeShrineArrow()}`;
+      if (floorEl) floorEl.textContent = `Floor ${currentFloor} | ${getGridLocationLabel(playerX, playerY)}`;
 
       const mapEl = document.getElementById("mapIndicator");
       if (mapEl) {
         const mapName = currentMap && currentMap.name ? currentMap.name : currentMapId || "fallback";
-        mapEl.textContent = `Map: ${mapName}  |  Loc: ${getGridLocationLabel(playerX, playerY)}`;
+        mapEl.textContent = `Map: ${mapName}`;
       }
 
       const versionEl = document.getElementById("versionIndicator");
@@ -2190,6 +2243,8 @@
       clearedMonsters.clear();
       triggeredTraps.clear();
       disabledTraps.clear();
+
+      resetFloorShopState();
 
       preloadFloorThemeImages();
       updateRoomView();
@@ -2977,11 +3032,11 @@
         return addEquipmentToInventory(itemId);
       }
 
-      if (typeof getConsumable === "function" && getConsumable(itemId)) {
-        addConsumable(player, itemId, 1);
+      if (itemId === "shrine_stone" || (typeof getConsumable === "function" && getConsumable(itemId))) {
+        addConsumableSafe(itemId, 1);
         return {
           ok: true,
-          message: `Found ${getItemDisplayName(itemId)}.`
+          message: `Found ${getSafeItemName(itemId)}.`
         };
       }
 
@@ -2993,17 +3048,9 @@
         };
       }
 
-      if (typeof getRuneById === "function" && getRuneById(itemId)) {
-        addRune(player, itemId, 0, 1);
-        return {
-          ok: true,
-          message: `Found ${getRuneDisplayName(itemId, 0)}.`
-        };
-      }
-
       return {
         ok: false,
-        message: `Unknown item: ${itemId}`
+        message: `Unknown loot: ${itemId}`
       };
     }
 
@@ -3163,6 +3210,7 @@
     }
 
 
+
     function updateFacingAndExits() {
       const badge = document.getElementById("facingBadge");
       if (badge) {
@@ -3182,12 +3230,11 @@
         el.classList.toggle("show", !!shouldShow);
       };
 
-      // Exit markers are fixed to the local grid.
-      // Forward = south, Back = north, Left = west, Right = east.
-      show("exitForward", canMoveTo(front.x, front.y), "Forward");
-      show("exitLeft", canMoveTo(left.x, left.y), "Left Path");
-      show("exitRight", canMoveTo(right.x, right.y), "Right Path");
-      show("exitBack", canMoveTo(back.x, back.y), "Back");
+      // Exit markers are screen-relative to the current simulated facing.
+      show("exitForward", canMoveTo(front.x, front.y), `Forward to ${getGridLocationLabel(front.x, front.y)}`);
+      show("exitLeft", canMoveTo(left.x, left.y), `Left to ${getGridLocationLabel(left.x, left.y)}`);
+      show("exitRight", canMoveTo(right.x, right.y), `Right to ${getGridLocationLabel(right.x, right.y)}`);
+      show("exitBack", moveHistory.length > 0 && canMoveTo(back.x, back.y), `Back to ${getGridLocationLabel(back.x, back.y)}`);
     }
 
     function updateDebug() {
@@ -3229,17 +3276,23 @@
     }
 
     function getRelativeTile(relativeDir) {
-      // Relative movement without a pivot step.
-      // Clicking Left/Right immediately enters that visible room and faces that way.
-      // Clicking Back steps backward, then restores the prior view direction.
+      // Simulated-turn crawler controls.
+      // Default facing is south/down.
+      // Moving left/right changes facing to that travel direction.
+      // Forward follows current facing.
+      // Back is handled by moveBack() using history so it can restore prior facing.
       let absoluteDir = playerDir;
 
-      // Screen-relative controls:
-      // Left means the visible left branch, not compass-left math.
-      // With the starting south-facing view, Left must go west and Right must go east.
-      if (relativeDir === -1) absoluteDir = (playerDir + 1) % 4;
-      else if (relativeDir === 1) absoluteDir = (playerDir + 3) % 4;
-      else if (relativeDir === 2) absoluteDir = (playerDir + 2) % 4;
+      if (relativeDir === -1) {
+        // Screen-left relative to current facing.
+        absoluteDir = (playerDir + 3) % 4;
+      } else if (relativeDir === 1) {
+        // Screen-right relative to current facing.
+        absoluteDir = (playerDir + 1) % 4;
+      } else if (relativeDir === 2) {
+        // Opposite current facing; mostly used for exit display fallback.
+        absoluteDir = (playerDir + 2) % 4;
+      }
 
       const offset = getDirOffset(absoluteDir);
 
@@ -3271,21 +3324,30 @@
     function getRoomImageName() {
       const currentTile = getTile(playerX, playerY);
 
-      // Entrance uses the original floor entrance/room view.
-      // It still has Action options, but it is not visually a shrine.
-
-      // Special rooms only display their special image when the player is standing in that room.
+      // Special rooms only display their special image when standing in that room.
       if (currentTile === "C") return getRoomImageNameForType("chestroom");
       if (currentTile === "B") return getRoomImageNameForType("door");
       if (currentTile === "S") return getRoomImageNameForType("shrine");
 
+      // Image selection is screen-relative to current simulated facing.
       const front = getRelativeTile(0);
       const left = getRelativeTile(-1);
       const right = getRelativeTile(1);
+      const back = getRelativeTile(2);
 
       const frontOpen = canMoveTo(front.x, front.y);
       const leftOpen = canMoveTo(left.x, left.y);
       const rightOpen = canMoveTo(right.x, right.y);
+      const backOpen = canMoveTo(back.x, back.y);
+
+      const exitCount =
+        Number(frontOpen) +
+        Number(leftOpen) +
+        Number(rightOpen) +
+        Number(backOpen);
+
+      // Any single-exit normal/monster/entrance room is visually a dead-end.
+      if (exitCount <= 1) return getRoomImageNameForType("door");
 
       if (frontOpen && leftOpen && rightOpen) return getRoomImageNameForType("room3way");
       if (frontOpen && leftOpen && !rightOpen) return getRoomImageNameForType("roomfl");
@@ -3295,7 +3357,8 @@
       if (!frontOpen && leftOpen && !rightOpen) return getRoomImageNameForType("roomleft");
       if (!frontOpen && !leftOpen && rightOpen) return getRoomImageNameForType("roomright");
 
-      return getRoomImageNameForType("openroom");
+      // Only the back path is open.
+      return getRoomImageNameForType("door");
     }
 
     let lastRoomImageName = "openroomc1";
@@ -3390,6 +3453,11 @@
         return;
       }
 
+      if (tile === "N") {
+        setMessage(`${getFloorNpcTitle()} found. Use Action to interact.`);
+        return;
+      }
+
       if (tile === "C") {
         if (openedChests.has(key)) {
           setMessage("The chest is empty.");
@@ -3401,21 +3469,7 @@
       }
 
       if (tile === "T") {
-        if (triggeredTraps.has(key)) {
-          setMessage("The spent trap is quiet.");
-          return;
-        }
-
-        if (disabledTraps.has(key)) {
-          setMessage("The disabled trap is safe.");
-          return;
-        }
-
-        triggeredTraps.add(key);
-        player.hp = Math.max(1, player.hp - 10);
-        updateBars();
-        saveGameState();
-        setMessage("A trap hits you for 10 damage.");
+        setMessage("Moved to room.");
         return;
       }
 
@@ -3451,15 +3505,17 @@
       moveHistory.push({
         x: playerX,
         y: playerY,
-        dir: 2
+        dir: playerDir
       });
     }
 
     function getPreviousPosition() {
       if (!Array.isArray(moveHistory) || moveHistory.length === 0) return null;
+
       const prev = moveHistory[moveHistory.length - 1];
       if (!prev || typeof prev.x !== "number" || typeof prev.y !== "number") return null;
       if (!canMoveTo(prev.x, prev.y)) return null;
+
       return prev;
     }
 
@@ -3467,7 +3523,6 @@
       if (menuIsOpen()) return;
       if (gameMode === "encounter") return;
 
-      const oldDir = playerDir;
       const next = getRelativeTile(relativeDir);
 
       if (!canMoveTo(next.x, next.y)) {
@@ -3476,25 +3531,17 @@
         return;
       }
 
+      saveCurrentPosition();
+
       if (typeof playSound === "function") playSound(getCurrentThemeWalkSoundId());
       playRoomTransition();
 
       playerX = next.x;
       playerY = next.y;
 
-      if (relativeDir === 2) {
-        // Back-step: move opposite current view, then restore the previous view.
-        // This prevents side-room backtracking from leaving the player turned around.
-        if (Array.isArray(facingHistory) && facingHistory.length > 0) {
-          playerDir = facingHistory.pop();
-        } else {
-          playerDir = oldDir;
-        }
-      } else {
-        // Forward/left/right immediately enter the visible destination room
-        // and face the direction just moved. No pivot-only step occurs.
-        if (!Array.isArray(facingHistory)) facingHistory = [];
-        facingHistory.push(oldDir);
+      // Forward keeps facing. Left/right simulate turning into that branch.
+      // Back is handled separately by moveBack().
+      if (relativeDir === -1 || relativeDir === 1) {
         playerDir = next.dir;
       }
 
@@ -3502,22 +3549,42 @@
     }
 
     function moveForward() {
-      moveToRelative(0, 2, "forward");
+      moveToRelative(0, playerDir, "forward");
     }
 
 
     function moveBack() {
-      moveToRelative(2, 2, "back");
+      if (menuIsOpen()) return;
+      if (gameMode === "encounter") return;
+
+      const previous = getPreviousPosition();
+
+      if (!previous) {
+        updateRoomView();
+        setMessage("No back path.");
+        return;
+      }
+
+      if (typeof playSound === "function") playSound(getCurrentThemeWalkSoundId());
+      playRoomTransition();
+
+      moveHistory.pop();
+
+      playerX = previous.x;
+      playerY = previous.y;
+      playerDir = Number.isInteger(previous.dir) ? previous.dir : 2;
+
+      enterTile(getTile(playerX, playerY));
     }
 
 
     function turnLeft() {
-      moveToRelative(-1, 2, "left");
+      moveToRelative(-1, (playerDir + 3) % 4, "left");
     }
 
 
     function turnRight() {
-      moveToRelative(1, 2, "right");
+      moveToRelative(1, (playerDir + 1) % 4, "right");
     }
 
 
@@ -3532,6 +3599,358 @@
 
     function showInventoryTabs() {
       document.getElementById("inventoryTabs").style.display = "grid";
+    }
+
+
+    // =========================
+    // SHOP / ITEM FEATURE HELPERS
+    // =========================
+
+    function resetFloorShopState() {
+      currentShopGearStock = { Weapons: [], Armor: [] };
+      currentShopRuneStock = [];
+      currentFloorNpcState = {};
+      shopFreeRerollUsedFloor = null;
+    }
+
+    function ensureShrineStoneData() {
+      if (typeof GAME_CONSUMABLES !== "undefined" && GAME_CONSUMABLES && !GAME_CONSUMABLES.shrine_stone) {
+        GAME_CONSUMABLES.shrine_stone = {
+          itemId: "shrine_stone",
+          itemName: "Shrine Stone",
+          image: "shrinestone1.webp",
+          value: 150,
+          price: 150,
+          description: "Teleports you directly to the shrine on the current floor."
+        };
+      }
+    }
+
+    function getSafeItemName(itemId) {
+      if (itemId === "shrine_stone") return "Shrine Stone";
+      if (typeof getItemDisplayName === "function") return getItemDisplayName(itemId);
+      const item = typeof getConsumable === "function" ? getConsumable(itemId) : null;
+      return item ? item.itemName : String(itemId || "Item");
+    }
+
+    function addConsumableSafe(itemId, qty = 1) {
+      ensureFullInventoryShape();
+      ensureShrineStoneData();
+
+      if (typeof addConsumable === "function" && addConsumable(player, itemId, qty)) {
+        return true;
+      }
+
+      player.inventory.consumables[itemId] = Number(player.inventory.consumables[itemId] || 0) + Number(qty || 1);
+      return true;
+    }
+
+    function getConsumableSafe(itemId) {
+      ensureShrineStoneData();
+      if (itemId === "shrine_stone") {
+        return {
+          itemId: "shrine_stone",
+          itemName: "Shrine Stone",
+          image: "shrinestone1.webp",
+          value: 150,
+          price: 150,
+          description: "Teleports you directly to the shrine on the current floor."
+        };
+      }
+      return typeof getConsumable === "function" ? getConsumable(itemId) : null;
+    }
+
+    function removeConsumableSafe(itemId, qty = 1) {
+      ensureFullInventoryShape();
+      const current = Number(player.inventory.consumables[itemId] || 0);
+      if (current < qty) return false;
+      player.inventory.consumables[itemId] = current - qty;
+      if (player.inventory.consumables[itemId] <= 0) delete player.inventory.consumables[itemId];
+      return true;
+    }
+
+    function confirmAction(message) {
+      return window.confirm(message);
+    }
+
+    function findCurrentShrinePosition() {
+      return findShrinePosition(testMap) || { x: 7, y: 17 };
+    }
+
+    function teleportToCurrentShrine() {
+      const shrine = findCurrentShrinePosition();
+      playerX = shrine.x;
+      playerY = shrine.y;
+      playerDir = 2;
+      moveHistory = [];
+      facingHistory = [];
+      gameMode = "roaming";
+      setMenuOpen(false);
+      updateRoomView();
+      setMessage("The Shrine Stone pulls you back to the shrine.");
+    }
+
+    function useShrineStone() {
+      if (!confirmAction("Use a Shrine Stone to teleport to the shrine on this floor?")) {
+        setMessage("Shrine Stone use cancelled.");
+        return false;
+      }
+
+      if (!removeConsumableSafe("shrine_stone", 1)) {
+        setMessage("You do not have a Shrine Stone.");
+        return false;
+      }
+
+      teleportToCurrentShrine();
+      updateBars();
+      if (typeof saveGameState === "function") saveGameState(true);
+      return true;
+    }
+
+    function useConsumableSafe(itemId) {
+      if (itemId === "shrine_stone") {
+        return { handled: true, used: useShrineStone() };
+      }
+
+      if (itemId === "smoke_bomb" && !confirmAction("Use a Smoke Bomb?")) {
+        setMessage("Smoke Bomb use cancelled.");
+        return { handled: true, used: false };
+      }
+
+      return { handled: false, used: false };
+    }
+
+    function getItemNameForConfirm(itemId) {
+      const eq = getEquipItem(itemId);
+      if (eq) return eq.itemName;
+      return getSafeItemName(itemId);
+    }
+
+    function getFloorNpcKey() {
+      return `${currentFloor}:${currentMapId}:${tileKey(playerX, playerY)}`;
+    }
+
+    function hashStringToNumber(value) {
+      const str = String(value || "");
+      let hash = 0;
+      for (let i = 0; i < str.length; i++) {
+        hash = ((hash << 5) - hash) + str.charCodeAt(i);
+        hash |= 0;
+      }
+      return Math.abs(hash);
+    }
+
+    function getFloorNpcType() {
+      const key = getFloorNpcKey();
+      const types = ["consumables", "runes", "discount_gear", "blacksmith", "campfire"];
+      return types[hashStringToNumber(key) % types.length];
+    }
+
+    function getFloorNpcTitle(type = getFloorNpcType()) {
+      if (type === "consumables") return "Field Supplier";
+      if (type === "runes") return "Rune Peddler";
+      if (type === "discount_gear") return "Discount Gear";
+      if (type === "blacksmith") return "Traveling Blacksmith";
+      if (type === "campfire") return "Safe Campfire";
+      return "Traveler";
+    }
+
+    function openFloorNpcMenu() {
+      const type = getFloorNpcType();
+      setMenuOpen(true);
+      gameMode = "shrine";
+
+      if (type === "campfire") {
+        renderFloorCampfire();
+      } else if (type === "consumables") {
+        renderFloorConsumableShop();
+      } else if (type === "runes") {
+        renderFloorRuneShop();
+      } else if (type === "discount_gear") {
+        renderFloorDiscountGearShop();
+      } else {
+        renderFloorBlacksmith();
+      }
+    }
+
+    function closeFloorNpcMenu() {
+      gameMode = "roaming";
+      setMenuOpen(false);
+      updateRoomView();
+      setMessage("You leave the traveler behind.");
+    }
+
+    function floorNpcHeroHtml(title, quote) {
+      return `
+        <div class="shopHero">
+          <img class="shopHeroImage" src="assets/rooms/${getRoomImageNameForType("door")}.webp" alt="" onerror="this.style.display='none';">
+          <div class="shopHeroText">
+            <div class="shopName">${title}</div>
+            <div class="shopQuote">${quote}</div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderFloorNpcBackRow() {
+      return `
+        <button class="shopRow shopBackRow" onclick="closeFloorNpcMenu()">
+          ${shopIconHtml("", "items")}
+          <div class="shopRowText">
+            <div class="shopRowName">Back</div>
+            <div class="shopRowSub">Return to the dungeon</div>
+          </div>
+          <div class="shopRowValue">Dungeon</div>
+        </button>
+      `;
+    }
+
+    function renderFloorCampfire() {
+      setOverlayTitle("Campfire");
+      hideInventoryTabs();
+
+      const key = getFloorNpcKey();
+      const used = !!currentFloorNpcState[key]?.used;
+      const healHp = Math.max(1, Math.floor(player.maxHp * 0.35));
+      const healMp = Math.max(1, Math.floor(player.maxMp * 0.35));
+
+      const content = document.getElementById("inventoryContent");
+      content.style.overflowY = "auto";
+      content.innerHTML = `
+        ${floorNpcHeroHtml("Safe Campfire", "A small safe flame burns here. It will not fully restore you.")}
+        <div class="shopMenuList">
+          <button class="shopRow ${used ? "locked" : ""}" ${used ? "" : `onclick="useFloorCampfire(${healHp}, ${healMp})"`}>
+            ${shopIconHtml("", "items")}
+            <div class="shopRowText">
+              <div class="shopRowName">Rest Briefly</div>
+              <div class="shopRowSub">Restore about 35% HP and MP once.</div>
+            </div>
+            <div class="shopRowValue">${used ? "Used" : "Rest"}</div>
+          </button>
+          ${renderFloorNpcBackRow()}
+        </div>
+      `;
+    }
+
+    function useFloorCampfire(healHp, healMp) {
+      const key = getFloorNpcKey();
+      currentFloorNpcState[key] = currentFloorNpcState[key] || {};
+      if (currentFloorNpcState[key].used) {
+        setMessage("The campfire has already been used.");
+        renderFloorCampfire();
+        return;
+      }
+
+      currentFloorNpcState[key].used = true;
+      player.hp = Math.min(player.maxHp, player.hp + Number(healHp || 0));
+      player.mp = Math.min(player.maxMp, player.mp + Number(healMp || 0));
+      updateBars();
+      setMessage("You rest briefly at the campfire.");
+      renderFloorCampfire();
+    }
+
+    function renderFloorConsumableShop() {
+      setOverlayTitle("Field Supplier");
+      hideInventoryTabs();
+
+      const entries = getShopPageItems("floor_consumables", "Consumables", getAllShopConsumables());
+      const content = document.getElementById("inventoryContent");
+      content.style.overflowY = "hidden";
+      content.innerHTML = `
+        ${floorNpcHeroHtml("Field Supplier", "Limited supplies inside the dungeon.")}
+        <div class="menuHeader"><span>Buy Supplies</span><span>Gold: ${player.gold}</span></div>
+        <div class="shopPagedList">
+          ${entries.map(renderShopBuySupplyRow).join("") || `<div class="smallNote">No supplies available.</div>`}
+        </div>
+        ${getShopPageControlsHtml("floor_consumables", "Consumables", getAllShopConsumables().length)}
+        <div class="shopMenuList">${renderFloorNpcBackRow()}</div>
+      `;
+    }
+
+    function renderFloorRuneShop() {
+      setOverlayTitle("Rune Peddler");
+      hideInventoryTabs();
+
+      const entries = getShopPageItems("floor_runes", "Runes", ensureShopRuneStock());
+      const content = document.getElementById("inventoryContent");
+      content.style.overflowY = "hidden";
+      content.innerHTML = `
+        ${floorNpcHeroHtml("Rune Peddler", "A few runes, no guarantees.")}
+        <div class="menuHeader"><span>Buy Runes</span><span>Gold: ${player.gold}</span></div>
+        <div class="shopPagedList">
+          ${entries.map(renderShopBuyRuneRow).join("") || `<div class="smallNote">No runes available.</div>`}
+        </div>
+        ${getShopPageControlsHtml("floor_runes", "Runes", ensureShopRuneStock().length)}
+        <div class="shopMenuList">${renderFloorNpcBackRow()}</div>
+      `;
+    }
+
+    function renderFloorDiscountGearShop() {
+      setOverlayTitle("Discount Gear");
+      hideInventoryTabs();
+
+      const entries = ensureFloorDiscountGearStock();
+      const content = document.getElementById("inventoryContent");
+      content.style.overflowY = "auto";
+      content.innerHTML = `
+        ${floorNpcHeroHtml("Discount Gear", "Cheap finds. Requirements still apply.")}
+        <div class="menuHeader"><span>Discount Gear</span><span>Gold: ${player.gold}</span></div>
+        <div class="shopMenuList">
+          ${entries.map(item => renderShopBuyEquipmentRow(item, 0.75)).join("") || `<div class="smallNote">No gear available.</div>`}
+          ${renderFloorNpcBackRow()}
+        </div>
+      `;
+    }
+
+    function ensureFloorDiscountGearStock() {
+      const key = getFloorNpcKey();
+      currentFloorNpcState[key] = currentFloorNpcState[key] || {};
+      if (!Array.isArray(currentFloorNpcState[key].gearStock)) {
+        const weapons = getRandomShopGearStock("Weapons", 2);
+        const armor = getRandomShopGearStock("Armor", 2);
+        currentFloorNpcState[key].gearStock = weapons.concat(armor).sort(() => Math.random() - 0.5).slice(0, 3);
+      }
+      return currentFloorNpcState[key].gearStock;
+    }
+
+
+    function returnFromServiceShop() {
+      if (activeShopContext === "floor_blacksmith") {
+        renderFloorBlacksmith();
+      } else {
+        renderOllieShop();
+      }
+    }
+
+    function renderFloorBlacksmith() {
+      activeShopContext = "floor_blacksmith";
+      setOverlayTitle("Blacksmith");
+      hideInventoryTabs();
+
+      const content = document.getElementById("inventoryContent");
+      content.style.overflowY = "auto";
+      content.innerHTML = `
+        ${floorNpcHeroHtml("Traveling Blacksmith", "Sockets and upgrades, for the right price.")}
+        <div class="shopMenuList">
+          <button class="shopRow" onclick="renderSocketUnlock()">
+            ${shopIconHtml("rune6.png", "runes")}
+            <div class="shopRowText">
+              <div class="shopRowName">Add Sockets</div>
+              <div class="shopRowSub">Open locked weapon and armor rune slots.</div>
+            </div>
+            <div class="shopRowValue">Gold</div>
+          </button>
+          <button class="shopRow" onclick="renderEquipmentUpgrade()">
+            ${shopIconHtml("", "items")}
+            <div class="shopRowText">
+              <div class="shopRowName">Upgrade Equipment</div>
+              <div class="shopRowSub">Improve owned weapons and armor.</div>
+            </div>
+            <div class="shopRowValue">Gold</div>
+          </button>
+          ${renderFloorNpcBackRow()}
+        </div>
+      `;
     }
 
     function shopIconHtml(image, folder = "items") {
@@ -3721,12 +4140,41 @@
       `;
     }
 
+
+    function regretDecisionAtShrine() {
+      const oldFloor = currentFloor;
+      const targetFloor = Math.max(1, currentFloor - 2);
+      const cost = Math.floor(player.gold * 0.20);
+
+      if (oldFloor === targetFloor) {
+        setMessage("There is nowhere safer to retreat.");
+        renderShrineHome();
+        return;
+      }
+
+      if (!confirmAction(`Retreat from Floor ${oldFloor} to Floor ${targetFloor} and lose ${cost} gold?`)) {
+        setMessage("You remain at the shrine.");
+        renderShrineHome();
+        return;
+      }
+
+      player.gold = Math.max(0, player.gold - cost);
+      currentFloor = targetFloor;
+      setMenuOpen(false);
+      gameMode = "roaming";
+      startNewFloor();
+      setMessage(`You retreated to Floor ${currentFloor} and lost ${cost} gold.`);
+    }
+
     function renderShrineHome() {
       setOverlayTitle("Shrine");
       hideInventoryTabs();
 
       const content = document.getElementById("inventoryContent");
       content.style.overflowY = "auto";
+
+      const regretCost = Math.floor(player.gold * 0.20);
+      const regretTarget = Math.max(1, currentFloor - 2);
 
       content.innerHTML = `
         ${shrineHeroHtml("shrine")}
@@ -3736,7 +4184,7 @@
             ${shopIconHtml("", "items")}
             <div class="shopRowText">
               <div class="shopRowName">Shop</div>
-              <div class="shopRowSub">Buy, sell, combine runes, or add sockets</div>
+              <div class="shopRowSub">Buy, sell, combine runes, or use the blacksmith.</div>
             </div>
             <div class="shopRowValue">Open</div>
           </button>
@@ -3748,6 +4196,15 @@
               <div class="shopRowSub">Travel to another floor</div>
             </div>
             <div class="shopRowValue">Floors</div>
+          </button>
+
+          <button class="shopRow" onclick="regretDecisionAtShrine()">
+            ${shopIconHtml("", "items")}
+            <div class="shopRowText">
+              <div class="shopRowName">Regret Your Decision</div>
+              <div class="shopRowSub">Retreat to Floor ${regretTarget} and lose 20% gold.</div>
+            </div>
+            <div class="shopRowValue">${regretCost}g</div>
           </button>
 
           <button class="shopRow shopBackRow" onclick="closeShrineMenu()">
@@ -3811,6 +4268,7 @@
     }
 
     function renderOllieShop() {
+      activeShopContext = "shrine";
       setOverlayTitle("Shop");
       hideInventoryTabs();
 
@@ -3825,7 +4283,7 @@
             ${shopIconHtml("hpot1.png", "items")}
             <div class="shopRowText">
               <div class="shopRowName">Buy</div>
-              <div class="shopRowSub">Potions, antidotes, weapons, and armor</div>
+              <div class="shopRowSub">Consumables, runes, weapons, armor, and keys.</div>
             </div>
             <div class="shopRowValue">Shop</div>
           </button>
@@ -3834,7 +4292,7 @@
             ${shopIconHtml("", "items")}
             <div class="shopRowText">
               <div class="shopRowName">Sell</div>
-              <div class="shopRowSub">Sell supplies and unequipped gear</div>
+              <div class="shopRowSub">Sell supplies and unequipped gear.</div>
             </div>
             <div class="shopRowValue">Gold</div>
           </button>
@@ -3843,16 +4301,16 @@
             ${shopIconHtml("rune1.png", "runes")}
             <div class="shopRowText">
               <div class="shopRowName">Combine Runes</div>
-              <div class="shopRowSub">Three matching runes become one higher rune</div>
+              <div class="shopRowSub">Two matching runes become one higher rune.</div>
             </div>
-            <div class="shopRowValue">3 → 1</div>
+            <div class="shopRowValue">2 → 1</div>
           </button>
 
           <button class="shopRow" onclick="renderSocketUnlock()">
             ${shopIconHtml("rune6.png", "runes")}
             <div class="shopRowText">
               <div class="shopRowName">Add Sockets</div>
-              <div class="shopRowSub">Open locked weapon and armor rune slots</div>
+              <div class="shopRowSub">Open locked weapon and armor rune slots.</div>
             </div>
             <div class="shopRowValue">Gold</div>
           </button>
@@ -3861,7 +4319,7 @@
             ${shopIconHtml("", "items")}
             <div class="shopRowText">
               <div class="shopRowName">Upgrade Equipment</div>
-              <div class="shopRowSub">Improve owned weapons and armor with gold</div>
+              <div class="shopRowSub">Improve owned weapons and armor with gold.</div>
             </div>
             <div class="shopRowValue">Gold</div>
           </button>
@@ -3884,8 +4342,18 @@
     ];
 
     function getAllShopConsumables() {
+      ensureShrineStoneData();
+
       if (typeof GAME_CONSUMABLES !== "undefined") {
-        return Object.values(GAME_CONSUMABLES).filter(Boolean).map(item => ({ itemId: item.itemId }));
+        const entries = Object.values(GAME_CONSUMABLES)
+          .filter(Boolean)
+          .map(item => ({ itemId: item.itemId }));
+
+        if (!entries.some(entry => entry.itemId === "shrine_stone")) {
+          entries.push({ itemId: "shrine_stone" });
+        }
+
+        return entries;
       }
 
       return [
@@ -3899,22 +4367,37 @@
         { itemId: "gold_mana_potion" },
         { itemId: "antidote" },
         { itemId: "smoke_bomb" },
+        { itemId: "shrine_stone" },
         { itemId: "rejuvenation_potion" }
       ];
     }
 
-    let currentShopGearStock = [];
+    let currentShopGearStock = { Weapons: [], Armor: [] };
     let currentShopGearIndex = 0;
+    let currentShopRuneStock = [];
+    let currentFloorNpcState = {};
+    let shopFreeRerollUsedFloor = null;
+    let activeShopContext = "shrine";
 
-    const SHOP_CATEGORIES = ["Consumables", "Equipment", "Keys"];
-    const SHOP_PAGE_SIZE = 4;
+    const SHOP_BUY_CATEGORIES = ["Consumables", "Runes", "Weapons", "Armor", "Keys"];
+    const SHOP_SELL_CATEGORIES = ["Consumables", "Equipment", "Keys"];
+    const SHOP_PAGE_SIZE = 3;
+    const SHOP_RUNE_IDS = ["fehu", "uruz", "thurisaz", "ansuz", "raidho", "kenaz", "gebo", "hagalaz", "isa", "eihwaz", "algiz", "sowilo"];
+
     let shopBuyCategoryIndex = 0;
     let shopSellCategoryIndex = 0;
     let shopBuyPages = {};
     let shopSellPages = {};
+    let shopFloorPages = {};
+
+    function getShopCategories(mode) {
+      if (mode === "sell") return SHOP_SELL_CATEGORIES;
+      return SHOP_BUY_CATEGORIES;
+    }
 
     function getShopCategoryCycleHtml(mode, currentIndex) {
-      const label = SHOP_CATEGORIES[currentIndex] || SHOP_CATEGORIES[0];
+      const categories = getShopCategories(mode);
+      const label = categories[currentIndex] || categories[0];
       return `
         <div class="itemCategoryCycle">
           <button class="statusCycleButton" onclick="cycleShopCategory('${mode}', -1)">‹</button>
@@ -3925,7 +4408,8 @@
     }
 
     function cycleShopCategory(mode, delta) {
-      const total = SHOP_CATEGORIES.length;
+      const categories = getShopCategories(mode);
+      const total = categories.length;
 
       if (mode === "buy") {
         shopBuyCategoryIndex = (shopBuyCategoryIndex + delta + total) % total;
@@ -3939,32 +4423,42 @@
       }
     }
 
-    function getShopCategoryKey(index) {
-      return SHOP_CATEGORIES[index] || SHOP_CATEGORIES[0];
+    function getShopCategoryKey(index, mode = "buy") {
+      const categories = getShopCategories(mode);
+      return categories[index] || categories[0];
     }
 
     function getShopPageStore(mode) {
-      return mode === "buy" ? shopBuyPages : shopSellPages;
+      if (String(mode).startsWith("floor_")) return shopFloorPages;
+      return mode === "sell" ? shopSellPages : shopBuyPages;
     }
 
     function getShopPage(mode, category, itemCount) {
       const store = getShopPageStore(mode);
+      const key = `${mode}:${category}`;
       const maxPage = Math.max(0, Math.ceil(Math.max(0, itemCount) / SHOP_PAGE_SIZE) - 1);
-      const current = Math.max(0, Math.min(Number(store[category] || 0), maxPage));
-      store[category] = current;
+      const current = Math.max(0, Math.min(Number(store[key] || 0), maxPage));
+      store[key] = current;
       return current;
     }
 
     function setShopPage(mode, delta) {
-      const categoryIndex = mode === "buy" ? shopBuyCategoryIndex : shopSellCategoryIndex;
-      const category = getShopCategoryKey(categoryIndex);
+      const categoryIndex = mode === "sell" ? shopSellCategoryIndex : shopBuyCategoryIndex;
+      const category = String(mode).startsWith("floor_")
+        ? (mode === "floor_runes" ? "Runes" : "Consumables")
+        : getShopCategoryKey(categoryIndex, mode);
       const store = getShopPageStore(mode);
-      store[category] = Math.max(0, Number(store[category] || 0) + delta);
+      const key = `${mode}:${category}`;
+      store[key] = Math.max(0, Number(store[key] || 0) + delta);
 
       if (mode === "buy") {
         renderShrineBuy();
-      } else {
+      } else if (mode === "sell") {
         renderShrineSell();
+      } else if (mode === "floor_runes") {
+        renderFloorRuneShop();
+      } else if (mode === "floor_consumables") {
+        renderFloorConsumableShop();
       }
     }
 
@@ -3991,7 +4485,9 @@
     }
 
     function getItemBaseValue(itemId) {
-      const consumable = typeof getConsumable === "function" ? getConsumable(itemId) : null;
+      if (itemId === "shrine_stone") return 150;
+
+      const consumable = getConsumableSafe(itemId);
       if (consumable && Number(consumable.value || consumable.price || consumable.goldValue)) {
         return Number(consumable.value || consumable.price || consumable.goldValue);
       }
@@ -4025,17 +4521,26 @@
       return `<img class="shopIcon" src="${finalPath}" alt="" onerror="this.style.display='none';">`;
     }
 
-    function getRandomShopGearStock(count = 4) {
+    function isSpecialRestrictedGear(item) {
+      const text = `${item?.itemId || ""} ${item?.itemName || ""}`.toLowerCase();
+      return text.includes("jade") || text.includes("black") || text.includes("white");
+    }
+
+    function getShopGearCandidates(category = "Weapons") {
       const allEquipment = typeof getAllEquipment === "function" ? getAllEquipment() : [];
+      const slot = category === "Armor" ? "armor" : "weapon";
       const allowedCharacters = ["all", player.character].filter(Boolean);
 
-      const candidates = allEquipment.filter(item => {
-        if (!item || (item.slot !== "weapon" && item.slot !== "armor")) return false;
+      return allEquipment.filter(item => {
+        if (!item || item.slot !== slot) return false;
+        if (isSpecialRestrictedGear(item)) return false;
         if (item.character && !allowedCharacters.includes(String(item.character).toLowerCase())) return false;
         return true;
       });
+    }
 
-      const pool = candidates.slice();
+    function getRandomShopGearStock(category = "Weapons", count = 9) {
+      const pool = getShopGearCandidates(category).slice();
       const picks = [];
 
       while (pool.length && picks.length < count) {
@@ -4046,22 +4551,33 @@
       return picks;
     }
 
-    function ensureShopGearStock() {
-      if (!Array.isArray(currentShopGearStock) || currentShopGearStock.length < 4) {
-        currentShopGearStock = getRandomShopGearStock(4);
+    function ensureShopGearStock(category = "Weapons") {
+      const key = category === "Armor" ? "Armor" : "Weapons";
+      if (!currentShopGearStock || Array.isArray(currentShopGearStock)) {
+        currentShopGearStock = { Weapons: [], Armor: [] };
       }
-      return currentShopGearStock;
+
+      if (!Array.isArray(currentShopGearStock[key]) || currentShopGearStock[key].length < 1) {
+        currentShopGearStock[key] = getRandomShopGearStock(key, 9);
+      }
+
+      return currentShopGearStock[key];
     }
 
-    function resetShopGearStock() {
-      currentShopGearStock = getRandomShopGearStock(4);
+    function resetShopGearStock(category = "") {
+      if (!currentShopGearStock || Array.isArray(currentShopGearStock)) {
+        currentShopGearStock = { Weapons: [], Armor: [] };
+      }
+
+      if (!category || category === "Weapons") currentShopGearStock.Weapons = getRandomShopGearStock("Weapons", 9);
+      if (!category || category === "Armor") currentShopGearStock.Armor = getRandomShopGearStock("Armor", 9);
       currentShopGearIndex = 0;
     }
 
     function renderShopBuySupplyRow(entry) {
-      const item = typeof getConsumable === "function" ? getConsumable(entry.itemId) : null;
+      const item = getConsumableSafe(entry.itemId);
       if (!item) return "";
-      const name = entry.label || item.itemName;
+      const name = entry.label || item.itemName || getSafeItemName(entry.itemId);
       const image = item.image || "";
       const price = getBuyPrice(entry.itemId);
 
@@ -4093,86 +4609,157 @@
       `;
     }
 
-    function renderShopBuyEquipmentRow(item) {
-      const price = getBuyPrice(item.itemId);
+    function renderShopBuyEquipmentRow(item, priceMultiplier = 1) {
+      if (!item) return "";
       const owned = ownsEquipment(item.itemId);
+      const price = Math.max(1, Math.floor(getBuyPrice(item.itemId) * Number(priceMultiplier || 1)));
+      const discountText = priceMultiplier < 1 ? " · Discount" : "";
 
       return `
         <button class="shopRow" onclick="buyShopEquipment('${item.itemId}', ${price})">
           ${getEquipmentShopIconHtml(item)}
           <div class="shopRowText">
             <div class="shopRowName">${item.itemName}</div>
-            <div class="shopRowSub">${item.slot.toUpperCase()} · Req Lv ${item.reqLevel || 1} · ${owned ? "Owned" : "New"}</div>
+            <div class="shopRowSub">${item.slot.toUpperCase()} · Req Lv ${item.reqLevel || 1} · ${owned ? "Owned" : "New"}${discountText}</div>
           </div>
           <div class="shopRowValue">${price}g</div>
         </button>
       `;
     }
     function renderShopBuyEquipmentSelector(gearStock) {
-      if (!Array.isArray(gearStock) || !gearStock.length) {
-        return `<div class="smallNote">No equipment offers available.</div>`;
-      }
-
-      currentShopGearIndex = Math.max(0, Math.min(currentShopGearIndex, gearStock.length - 1));
-      const item = gearStock[currentShopGearIndex];
-
-      return `
-        <div class="shopGearPager">
-          <button class="uiButton shopGearArrow" onclick="shopGearPrev()" aria-label="Previous shop gear">‹</button>
-          ${renderShopBuyEquipmentRow(item)}
-          <button class="uiButton shopGearArrow" onclick="shopGearNext()" aria-label="Next shop gear">›</button>
-        </div>
-        <div class="shopGearCounter">Offer ${currentShopGearIndex + 1} / ${gearStock.length}</div>
-      `;
+      const stock = Array.isArray(gearStock) ? gearStock : [];
+      if (!stock.length) return `<div class="smallNote">No equipment offers available.</div>`;
+      return stock.map(item => renderShopBuyEquipmentRow(item)).join("");
     }
 
-    function renderShopRerollGearRow() {
+    function renderShopRerollGearRow(category) {
+      const freeUsed = shopFreeRerollUsedFloor === currentFloor;
+      const cost = Math.max(10, currentFloor * 25);
+
       return `
-        <button class="shopRow shopBackRow" onclick="resetShopGearStock(); renderShrineBuy();">
+        <button class="shopRow shopBackRow" onclick="rerollShopGear('${category}')">
           ${shopIconHtml("", "items")}
           <div class="shopRowText">
-            <div class="shopRowName">Reroll Gear</div>
-            <div class="shopRowSub">Refresh the four random weapon/armor offers</div>
+            <div class="shopRowName">Reroll ${category}</div>
+            <div class="shopRowSub">${freeUsed ? "Free reroll used this floor." : "First reroll is free once per floor."}</div>
           </div>
-          <div class="shopRowValue">Free</div>
+          <div class="shopRowValue">${freeUsed ? cost + "g" : "Free"}</div>
         </button>
       `;
     }
 
     function renderShopBuyEquipmentEntry(entry) {
       if (!entry) return "";
-      if (entry.type === "reroll") return renderShopRerollGearRow();
       return renderShopBuyEquipmentRow(entry);
     }
 
     function shopGearPrev() {
-      const stock = ensureShopGearStock();
-      if (!stock.length) return;
-      currentShopGearIndex = (currentShopGearIndex - 1 + stock.length) % stock.length;
-      renderShrineBuy();
+      setShopPage("buy", -1);
     }
 
     function shopGearNext() {
-      const stock = ensureShopGearStock();
-      if (!stock.length) return;
-      currentShopGearIndex = (currentShopGearIndex + 1) % stock.length;
-      renderShrineBuy();
+      setShopPage("buy", 1);
     }
 
+
+
+    function ensureShopRuneStock() {
+      if (!Array.isArray(currentShopRuneStock) || currentShopRuneStock.length < 1) {
+        const pool = SHOP_RUNE_IDS
+          .filter(id => typeof getRuneById !== "function" || getRuneById(id))
+          .map(runeId => ({ runeId, level: Math.random() < 0.10 && currentFloor >= 10 ? 1 : 0 }));
+
+        const picks = [];
+        while (pool.length && picks.length < 6) {
+          const index = Math.floor(Math.random() * pool.length);
+          picks.push(pool.splice(index, 1)[0]);
+        }
+        currentShopRuneStock = picks;
+      }
+
+      return currentShopRuneStock;
+    }
+
+    function getRuneBuyPrice(entry) {
+      const level = Number(entry.level || 0);
+      return Math.max(25, Math.round(40 + currentFloor * 4 + level * 120));
+    }
+
+    function renderShopBuyRuneRow(entry) {
+      const rune = typeof getRuneById === "function" ? getRuneById(entry.runeId) : null;
+      const image = rune && rune.image ? rune.image : "rune1.png";
+      const name = typeof getRuneDisplayName === "function" ? getRuneDisplayName(entry.runeId, entry.level || 0) : entry.runeId;
+      const price = getRuneBuyPrice(entry);
+
+      return `
+        <button class="shopRow" onclick="buyShopRune('${entry.runeId}', ${Number(entry.level || 0)}, ${price})">
+          ${shopIconHtml(image, "runes")}
+          <div class="shopRowText">
+            <div class="shopRowName">${name}</div>
+            <div class="shopRowSub">Random rune stock</div>
+          </div>
+          <div class="shopRowValue">${price}g</div>
+        </button>
+      `;
+    }
+
+    function buyShopRune(runeId, level, price) {
+      if (player.gold < price) {
+        setMessage("Not enough gold.");
+        return;
+      }
+
+      if (typeof addRune !== "function") {
+        setMessage("Rune loader not found.");
+        return;
+      }
+
+      player.gold -= price;
+      addRune(player, runeId, level, 1);
+      setMessage(`Bought ${typeof getRuneDisplayName === "function" ? getRuneDisplayName(runeId, level) : runeId}.`);
+
+      if (gameMode === "shrine") {
+        if (document.getElementById("inventoryTitle")?.textContent === "Rune Peddler") renderFloorRuneShop();
+        else renderShrineBuy();
+      }
+    }
+
+    function rerollShopGear(category) {
+      const key = category === "Armor" ? "Armor" : "Weapons";
+      const freeUsed = shopFreeRerollUsedFloor === currentFloor;
+      const cost = Math.max(10, currentFloor * 25);
+
+      if (freeUsed) {
+        if (player.gold < cost) {
+          setMessage("Not enough gold to reroll.");
+          return;
+        }
+        player.gold -= cost;
+      } else {
+        shopFreeRerollUsedFloor = currentFloor;
+      }
+
+      currentShopGearStock[key] = getRandomShopGearStock(key, 9);
+      shopBuyPages[`buy:${key}`] = 0;
+      setMessage(`${key} offers rerolled${freeUsed ? ` for ${cost} gold` : " for free"}.`);
+      renderShrineBuy();
+    }
 
     function renderShrineBuy() {
       setOverlayTitle("Buy");
       hideInventoryTabs();
+      ensureShrineStoneData();
 
       const content = document.getElementById("inventoryContent");
       content.style.overflowY = "hidden";
 
-      const gearStock = ensureShopGearStock();
       const consumables = getAllShopConsumables();
-      const category = getShopCategoryKey(shopBuyCategoryIndex);
+      const runes = ensureShopRuneStock();
+      const category = getShopCategoryKey(shopBuyCategoryIndex, "buy");
 
       let entries = [];
       let categoryHtml = "";
+      let afterPageHtml = "";
 
       if (category === "Consumables") {
         entries = consumables;
@@ -4180,12 +4767,19 @@
         categoryHtml = visible.length
           ? visible.map(renderShopBuySupplyRow).join("")
           : `<div class="smallNote">No consumables available.</div>`;
-      } else if (category === "Equipment") {
-        entries = gearStock.concat([{ type: "reroll" }]);
+      } else if (category === "Runes") {
+        entries = runes;
+        const visible = getShopPageItems("buy", category, entries);
+        categoryHtml = visible.length
+          ? visible.map(renderShopBuyRuneRow).join("")
+          : `<div class="smallNote">No runes available.</div>`;
+      } else if (category === "Weapons" || category === "Armor") {
+        entries = ensureShopGearStock(category);
         const visible = getShopPageItems("buy", category, entries);
         categoryHtml = visible.length
           ? visible.map(renderShopBuyEquipmentEntry).join("")
-          : `<div class="smallNote">No equipment offers available.</div>`;
+          : `<div class="smallNote">No ${category.toLowerCase()} offers available.</div>`;
+        afterPageHtml = renderShopRerollGearRow(category);
       } else if (category === "Keys") {
         entries = SHOP_KEY_ITEMS;
         const visible = getShopPageItems("buy", category, entries);
@@ -4206,6 +4800,7 @@
         </div>
         ${getShopPageControlsHtml("buy", category, entries.length)}
         <div class="shopMenuList">
+          ${afterPageHtml}
           <button class="shopRow shopBackRow" onclick="renderOllieShop()">
             ${shopIconHtml("", "items")}
             <div class="shopRowText">
@@ -4226,14 +4821,17 @@
         return;
       }
 
-      if (typeof addConsumable !== "function" || !addConsumable(player, itemId, 1)) {
+      if (!addConsumableSafe(itemId, 1)) {
         setMessage("That item is not available.");
         return;
       }
 
       player.gold -= price;
-      setMessage(`Bought ${getItemDisplayName(itemId)} for ${price} gold.`);
-      renderShrineBuy();
+      setMessage(`Bought ${getSafeItemName(itemId)} for ${price} gold.`);
+
+      const title = document.getElementById("inventoryTitle")?.textContent || "";
+      if (title === "Field Supplier") renderFloorConsumableShop();
+      else renderShrineBuy();
     }
 
     function buyShopKeyItem(itemId, price) {
@@ -4305,7 +4903,7 @@
     }
 
     function renderSellConsumableRow(entry) {
-      const item = typeof getConsumable === "function" ? getConsumable(entry.itemId) : null;
+      const item = getConsumableSafe(entry.itemId);
       const name = item ? item.itemName : entry.itemId;
       const image = item ? item.image : "";
       const price = getSellPrice(entry.itemId);
@@ -4368,7 +4966,7 @@
       const consumables = getSellableConsumableEntries();
       const equipment = getSellableEquipmentEntries();
       const keys = getSellableKeyEntries();
-      const category = getShopCategoryKey(shopSellCategoryIndex);
+      const category = getShopCategoryKey(shopSellCategoryIndex, "sell");
 
       let entries = [];
       let categoryHtml = "";
@@ -4429,11 +5027,17 @@
         return;
       }
 
+      if (!confirmAction(`Sell ${getSafeItemName(itemId)} for ${price} gold?`)) {
+        setMessage("Sale cancelled.");
+        renderShrineSell();
+        return;
+      }
+
       player.inventory.consumables[itemId] = quantity - 1;
       if (player.inventory.consumables[itemId] <= 0) delete player.inventory.consumables[itemId];
 
       player.gold += price;
-      setMessage(`Sold ${getItemDisplayName(itemId)} for ${price} gold.`);
+      setMessage(`Sold ${getSafeItemName(itemId)} for ${price} gold.`);
       renderShrineSell();
     }
 
@@ -4446,9 +5050,15 @@
         return;
       }
 
+      if (!confirmAction(`Sell ${getSafeItemName(itemId)} for ${price} gold?`)) {
+        setMessage("Sale cancelled.");
+        renderShrineSell();
+        return;
+      }
+
       delete player.inventory.keyitems[itemId];
       player.gold += price;
-      setMessage(`Sold ${getItemDisplayName(itemId)} for ${price} gold.`);
+      setMessage(`Sold ${getSafeItemName(itemId)} for ${price} gold.`);
       renderShrineSell();
     }
 
@@ -4468,6 +5078,12 @@
         return;
       }
 
+      if (!confirmAction(`Sell ${getEquipName(itemId)} for ${price} gold?`)) {
+        setMessage("Sale cancelled.");
+        renderShrineSell();
+        return;
+      }
+
       delete player.inventory.equipment[itemId];
       player.gold += price;
       setMessage(`Sold ${getEquipName(itemId)} for ${price} gold.`);
@@ -4479,7 +5095,7 @@
 
       return getRuneInventoryList(player)
         .map(normalizeVisibleRuneEntry)
-        .filter(entry => entry.level < 3 && entry.available >= 3);
+        .filter(entry => entry.level < 3 && entry.available >= 2);
     }
 
     function renderRuneCombine() {
@@ -4494,7 +5110,7 @@
         ${shrineHeroHtml("merchant")}
         <div class="menuHeader">
           <span>Rune Combining</span>
-          <span>3 matching → +1</span>
+          <span>2 matching → +1</span>
         </div>
         <div class="shopMenuList">
       `;
@@ -4537,13 +5153,19 @@
         return;
       }
 
-      if (getRuneQuantity(player, runeId, level) < 3) {
-        setMessage("You need three matching runes.");
+      if (getRuneQuantity(player, runeId, level) < 2) {
+        setMessage("You need two matching runes.");
         renderRuneCombine();
         return;
       }
 
-      removeRune(player, runeId, level, 3);
+      if (!confirmAction(`Combine 2 matching runes into ${getRuneDisplayName(runeId, level + 1)}?`)) {
+        setMessage("Rune combine cancelled.");
+        renderRuneCombine();
+        return;
+      }
+
+      removeRune(player, runeId, level, 2);
       addRune(player, runeId, level + 1, 1);
 
       setMessage(`Combined into ${getRuneDisplayName(runeId, level + 1)}.`);
@@ -4601,7 +5223,7 @@
       html += `
         </div>
         <div class="shopMenuList">
-          <button class="shopRow shopBackRow" onclick="renderOllieShop()">
+          <button class="shopRow shopBackRow" onclick="returnFromServiceShop()">
             ${shopIconHtml("", "items")}
             <div class="shopRowText">
               <div class="shopRowName">Back</div>
@@ -4689,7 +5311,7 @@
       }
 
       html += `
-          <button class="shopRow shopBackRow" onclick="renderOllieShop()">
+          <button class="shopRow shopBackRow" onclick="returnFromServiceShop()">
             ${shopIconHtml("", "items")}
             <div class="shopRowText">
               <div class="shopRowName">Back</div>
@@ -4744,8 +5366,9 @@
     function getChestConsumablePool() {
       const ids = ["potion", "copper_potion", "mana_potion", "copper_mana_potion", "antidote"];
       if (currentFloor >= 4) ids.push("silver_potion", "silver_mana_potion", "smoke_bomb");
+      if (currentFloor >= 6) ids.push("shrine_stone");
       if (currentFloor >= 8) ids.push("gold_potion", "gold_mana_potion", "rejuvenation_potion");
-      return ids.filter(id => typeof getConsumable === "function" && getConsumable(id));
+      return ids.filter(id => id === "shrine_stone" || (typeof getConsumable === "function" && getConsumable(id)));
     }
 
     function getChestEquipmentPool() {
@@ -4766,9 +5389,9 @@
       messages.push(`${goldAmount} gold`);
 
       const consumableId = randomFromList(getChestConsumablePool());
-      if (consumableId && typeof addConsumable === "function") {
-        addConsumable(player, consumableId, 1);
-        messages.push(getItemDisplayName(consumableId));
+      if (consumableId) {
+        addConsumableSafe(consumableId, 1);
+        messages.push(getSafeItemName(consumableId));
       }
 
       if (Math.random() < 0.20) {
@@ -4812,23 +5435,6 @@
       const currentTile = getTile(playerX, playerY);
       const key = tileKey(playerX, playerY);
 
-      if (currentTile === "T") {
-        if (triggeredTraps.has(key)) {
-          setMessage("The trap has already been sprung.");
-          return;
-        }
-
-        if (disabledTraps.has(key)) {
-          setMessage("The trap is already disabled.");
-          return;
-        }
-
-        disabledTraps.add(key);
-        saveGameState();
-        setMessage("Trap disabled.");
-        return;
-      }
-
       if (currentTile === "E") {
         if (typeof playSound === "function") playSound("ui_click");
         openLimitedShrineMenu();
@@ -4857,6 +5463,12 @@
         return;
       }
 
+      if (currentTile === "N") {
+        if (typeof playSound === "function") playSound("ui_click");
+        openFloorNpcMenu();
+        return;
+      }
+
       const front = getRelativeTile(0);
 
       if (front.tile === "#") {
@@ -4871,6 +5483,179 @@
     // ENCOUNTER TEST
     // =========================
 
+
+
+    const SKILL_DATA = {
+      blade_rush: {
+        name: "Blade Rush",
+        mpCost: 10,
+        baseMultiplier: 1.55,
+        ultimateMultiplier: 3.25,
+        piercePct: 20,
+        ultimatePiercePct: 55
+      },
+      armor_break: {
+        name: "Armor Break",
+        mpCost: 8,
+        baseMultiplier: 1.25,
+        ultimateMultiplier: 2.35,
+        piercePct: 45,
+        ultimatePiercePct: 80
+      },
+      vampiric_slash: {
+        name: "Vampiric Slash",
+        mpCost: 12,
+        baseMultiplier: 1.15,
+        ultimateMultiplier: 2.25,
+        piercePct: 10,
+        ultimatePiercePct: 30,
+        lifeStealPct: 35,
+        ultimateLifeStealPct: 75
+      }
+    };
+
+    function ensurePlayerSkills() {
+      if (!player.skills || typeof player.skills !== "object") player.skills = {};
+
+      if (!player.skills.ultimate) player.skills.ultimate = "blade_rush";
+      if (!player.skills.base1) player.skills.base1 = "armor_break";
+      if (!player.skills.base2) player.skills.base2 = "vampiric_slash";
+      if (!Number.isFinite(Number(player.skills.ultimateCharge))) player.skills.ultimateCharge = 0;
+
+      player.skills.ultimateCharge = clampNumber(Number(player.skills.ultimateCharge) || 0, 0, 100);
+    }
+
+    function getEquippedSkillId(slot) {
+      ensurePlayerSkills();
+      return player.skills[slot] || "blade_rush";
+    }
+
+    function getSkillData(skillId) {
+      return SKILL_DATA[skillId] || SKILL_DATA.blade_rush;
+    }
+
+    function getSkillNameForSlot(slot) {
+      return getSkillData(getEquippedSkillId(slot)).name;
+    }
+
+    function getSkillMpCost(slot) {
+      const data = getSkillData(getEquippedSkillId(slot));
+      return Math.max(0, Number(data.mpCost || 0));
+    }
+
+    function gainUltimateCharge(amount) {
+      ensurePlayerSkills();
+      player.skills.ultimateCharge = clampNumber((Number(player.skills.ultimateCharge) || 0) + Number(amount || 0), 0, 100);
+      updateCombatMetersUI();
+    }
+
+    function calculateSkillDamage(monster, slot, ultimate = false) {
+      const data = getSkillData(getEquippedSkillId(slot));
+      const base = calculateAttackDamage(monster);
+      const piercePct = ultimate ? Number(data.ultimatePiercePct ?? data.piercePct ?? 0) : Number(data.piercePct ?? 0);
+      const multiplier = ultimate ? Number(data.ultimateMultiplier || 2.5) : Number(data.baseMultiplier || 1.25);
+
+      const enemyDefense = monster.defense || monster.MonDef || 0;
+      const effectiveDefense = Math.floor(enemyDefense * (1 - piercePct / 100));
+      const rawAttack = getPlayerAttackValue();
+      const physical = Math.max(1, Math.floor((rawAttack - effectiveDefense) * multiplier));
+
+      const fire = ultimate ? Math.floor(base.fire * 1.5) : base.fire;
+      const shock = ultimate ? Math.floor(base.shock * 1.5) : base.shock;
+      const typeBonus = ultimate ? Math.floor(base.typeBonus * 1.5) : base.typeBonus;
+      const total = Math.max(1, physical + fire + shock + typeBonus);
+
+      const stealPct = ultimate
+        ? Number(data.ultimateLifeStealPct ?? data.lifeStealPct ?? 0)
+        : Number(data.lifeStealPct ?? 0);
+
+      return {
+        physical,
+        fire,
+        shock,
+        typeBonus,
+        total,
+        lifeSteal: Math.floor(total * stealPct / 100)
+      };
+    }
+
+    function applyPlayerDamageToEnemy(damage, chargeGain = 0) {
+      if (!currentEnemy || !damage) return;
+
+      currentEnemy.currentHp -= damage.total;
+
+      if (typeof playPlayerAttackSound === "function") playPlayerAttackSound(player);
+      if (damage.fire > 0 && typeof playSound === "function") playSound("fire_attack");
+
+      playCombatEffect(getAttackEffectType(damage), String(damage.total));
+      playMonsterHit();
+
+      if (damage.lifeSteal > 0) {
+        player.hp = Math.min(player.maxHp, player.hp + damage.lifeSteal);
+        updateBars();
+      }
+
+      if (chargeGain > 0) gainUltimateCharge(chargeGain);
+
+      updateMonsterHud();
+      updateCombatMetersUI();
+
+      if (currentEnemy.currentHp <= 0) {
+        defeatEnemy();
+      }
+    }
+
+    function useBaseSkill(slot) {
+      if (!currentEnemy) return;
+
+      if (playerAttackMeter < 100) {
+        updateCombatMetersUI();
+        return;
+      }
+
+      ensurePlayerSkills();
+      const cost = getSkillMpCost(slot);
+
+      if (player.mp < cost) {
+        setMessage(`Not enough MP for ${getSkillNameForSlot(slot)}.`);
+        updateCombatMetersUI();
+        return;
+      }
+
+      player.mp -= cost;
+      playerAttackMeter = 0;
+
+      const damage = calculateSkillDamage(currentEnemy, slot, false);
+      applyPlayerDamageToEnemy(damage, 9);
+      updateBars();
+    }
+
+    function useUltimateSkill() {
+      if (!currentEnemy) return;
+
+      ensurePlayerSkills();
+
+      if (player.skills.ultimateCharge < 100) {
+        updateCombatMetersUI();
+        return;
+      }
+
+      player.skills.ultimateCharge = 0;
+
+      const damage = calculateSkillDamage(currentEnemy, "ultimate", true);
+      applyPlayerDamageToEnemy(damage, 0);
+      updateBars();
+    }
+
+    function setMeterButton(button, label, fillPct, ready = true, noMp = false) {
+      if (!button) return;
+      const pct = clampNumber(fillPct, 0, 100);
+      button.style.setProperty("--fill", `${pct}%`);
+      button.classList.toggle("ready", ready);
+      button.classList.toggle("notReady", !ready);
+      button.classList.toggle("noMp", !!noMp);
+      button.innerHTML = `<span>${label}</span>`;
+    }
 
     const COMBAT_TICK_MS = 250;
     let combatTimer = null;
@@ -4917,9 +5702,9 @@
     }
 
     function attackIntervalFromSpeed(speed) {
-      // Slower base pacing, Speed still reduces delay, and there is no hard min/max cap.
+      // Slower base pacing, Speed still reduces delay, and there is no hard min/max cap. Base wait is about 4600ms.
       // Extreme Speed builds are allowed to break the curve by design.
-      return 4500 / (1 + Math.max(0, Number(speed) || 0) * 0.04);
+      return 4600 / (1 + Math.max(0, Number(speed) || 0) * 0.04);
     }
 
     function meterGainForSpeed(speed) {
@@ -4952,21 +5737,28 @@
     }
 
     function updateCombatMetersUI() {
-      const meter = document.getElementById("playerAttackMeter");
-      const readyText = document.getElementById("attackReadyText");
+      ensurePlayerSkills();
+
       const attackButton = document.getElementById("attackButton");
+      const ultimateButton = document.getElementById("ultimateSkillButton");
+      const base1Button = document.getElementById("baseSkill1Button");
+      const base2Button = document.getElementById("baseSkill2Button");
       const enemyMeter = document.getElementById("monsterAttackMeter");
       const enemyAttackText = document.getElementById("monsterAttackText");
 
-      const ready = playerAttackMeter >= 100;
+      const waitPct = clampNumber(playerAttackMeter, 0, 100);
+      const ready = waitPct >= 100;
       const enemyReadyPct = clampNumber(enemyAttackMeter, 0, 100);
 
-      if (meter) meter.style.width = `${clampNumber(playerAttackMeter, 0, 100)}%`;
-      if (readyText) readyText.textContent = ready ? "Ready" : "Wait";
-      if (attackButton) {
-        attackButton.classList.toggle("notReady", !ready);
-        attackButton.textContent = ready ? "Attack" : "Wait";
-      }
+      setMeterButton(attackButton, "Attack", waitPct, ready, false);
+
+      const base1Cost = getSkillMpCost("base1");
+      const base2Cost = getSkillMpCost("base2");
+      setMeterButton(base1Button, getSkillNameForSlot("base1"), waitPct, ready && player.mp >= base1Cost, player.mp < base1Cost);
+      setMeterButton(base2Button, getSkillNameForSlot("base2"), waitPct, ready && player.mp >= base2Cost, player.mp < base2Cost);
+
+      const ultimateReady = player.skills.ultimateCharge >= 100;
+      setMeterButton(ultimateButton, getSkillNameForSlot("ultimate"), player.skills.ultimateCharge, ultimateReady, false);
 
       if (enemyMeter) enemyMeter.style.width = `${enemyReadyPct}%`;
       if (enemyAttackText) enemyAttackText.textContent = `Attack ${Math.floor(enemyReadyPct)}%`;
@@ -5209,33 +6001,13 @@
       playerAttackMeter = 0;
 
       const damage = calculateAttackDamage(currentEnemy);
-      currentEnemy.currentHp -= damage.total;
-
-      if (typeof playPlayerAttackSound === "function") playPlayerAttackSound(player);
-      if (damage.fire > 0 && typeof playSound === "function") playSound("fire_attack");
-
-      playCombatEffect(getAttackEffectType(damage), String(damage.total));
-      playMonsterHit();
-
-      if (damage.lifeSteal > 0) {
-        player.hp = Math.min(player.maxHp, player.hp + damage.lifeSteal);
-        updateBars();
-      }
-
-      updateMonsterHud();
-      updateCombatMetersUI();
-
-      if (currentEnemy.currentHp <= 0) {
-        defeatEnemy();
-        return;
-      }
+      applyPlayerDamageToEnemy(damage, 7);
 
       // Hit feedback is handled by the damage number/effect layer during encounters.
     }
 
     function playerDefend() {
-      if (!currentEnemy) return;
-      playerAttackMeter = Math.min(100, playerAttackMeter + 35);
+      // Defend was replaced by the equipped skill system.
       updateCombatMetersUI();
     }
 
@@ -5284,6 +6056,7 @@
 
       const damage = Math.max(1, currentEnemy.attack - getPlayerDefenseValue());
       player.hp -= damage;
+      gainUltimateCharge(Math.max(4, Math.min(14, Math.floor(damage / 3))));
 
       if (typeof playFemalePlayerHurtSound === "function") playFemalePlayerHurtSound(player);
 
@@ -5339,6 +6112,7 @@
         ? ` Level up! Now level ${player.level}.`
         : "";
 
+      gainUltimateCharge(15);
       if (typeof playMonsterDeathSound === "function") playMonsterDeathSound(currentEnemy);
 
       stopCombatTimer();
@@ -5415,16 +6189,18 @@
       runes: 0,
       weapons: 0,
       armor: 0,
+      skills: 0,
       fragments: 0,
       keyitems: 0
     };
 
-    const ITEM_CATEGORIES = ["consumables", "runes", "weapons", "armor", "fragments", "keyitems"];
+    const ITEM_CATEGORIES = ["consumables", "runes", "weapons", "armor", "skills", "fragments", "keyitems"];
     const ITEM_CATEGORY_LABELS = {
       consumables: "Consumables",
       runes: "Runes",
       weapons: "Weapons",
       armor: "Armor",
+      skills: "Skills",
       fragments: "Fragments",
       keyitems: "Key Items"
     };
@@ -5866,7 +6642,7 @@
     }
 
     function renderConsumableDetailBody(itemId, qty) {
-      const item = typeof getConsumable === "function" ? getConsumable(itemId) : null;
+      const item = getConsumableSafe(itemId);
       return `
         ${detailSection("", `
           ${detailLine("Type", "Consumable")}
@@ -5924,8 +6700,11 @@
 
     function renderInventoryConsumableDetail(itemId) {
       const content = document.getElementById("inventoryContent");
-      const item = typeof getConsumable === "function" ? getConsumable(itemId) : null;
-      const qty = typeof getConsumableQuantity === "function" ? getConsumableQuantity(player, itemId) : 0;
+      const item = getConsumableSafe(itemId);
+      const qty = typeof getConsumableQuantity === "function"
+        ? getConsumableQuantity(player, itemId)
+        : Number(player.inventory?.consumables?.[itemId] || 0);
+
       if (!item) { renderItemsTab(); return; }
 
       document.getElementById("inventoryTitle").textContent = item.itemName;
@@ -6004,8 +6783,11 @@
       }
 
       if (isBeltSlot(slot)) {
-        const item = typeof getConsumable === "function" ? getConsumable(itemId) : null;
-        const qty = typeof getConsumableQuantity === "function" ? getConsumableQuantity(player, itemId) : 0;
+        const item = getConsumableSafe(itemId);
+        const qty = typeof getConsumableQuantity === "function"
+          ? getConsumableQuantity(player, itemId)
+          : Number(player.inventory?.consumables?.[itemId] || 0);
+
         document.getElementById("inventoryTitle").textContent = item ? item.itemName : label;
         content.innerHTML = `
           ${renderDetailCard(consumableIconHtml(itemId, "equipDetailIcon"), item ? item.itemName : itemId, `
@@ -6173,6 +6955,7 @@
         runes: getVisibleRuneInventoryList(),
         weapons: getAvailableEquipmentInventoryList("weapon"),
         armor: getAvailableEquipmentInventoryList("armor"),
+        skills: getSkillList(),
         fragments: getFragmentInventoryList(),
         keyitems: typeof getKeyItemInventoryList === "function" ? getKeyItemInventoryList(player) : []
       };
@@ -6240,6 +7023,25 @@
         html += `</div>`;
       }
 
+
+      if (category === "skills") {
+        html += `<div class="oneColList">`;
+        if (!list.length) {
+          html += `<div class="smallNote">No skills unlocked.</div>`;
+        } else {
+          html += visible.map(skill => `
+            <button class="compactRow" onclick="renderSkillDetail('${skill.skillId}')" title="${skill.name}">
+              <span class="compactIconWrap"><span class="compactIcon empty"></span></span>
+              <div>
+                <div class="compactName">${skill.name}</div>
+                <span class="compactSub">${skill.mpCost} MP · ${skill.baseMultiplier.toFixed(2)}x base · ${skill.ultimateMultiplier.toFixed(2)}x ultimate</span>
+              </div>
+            </button>
+          `).join("");
+        }
+        html += `</div>`;
+      }
+
       if (category === "fragments") {
         html += `<div class="twoColList">`;
         if (!list.length) {
@@ -6279,6 +7081,16 @@
     }
 
     function useInventoryConsumable(itemId) {
+      const special = useConsumableSafe(itemId);
+      if (special.handled) {
+        updateBars();
+        updateCombatBeltSlots();
+        if (document.getElementById("inventoryOverlay").classList.contains("show") && gameMode !== "roaming") {
+          renderInventoryConsumableDetail(itemId);
+        }
+        return;
+      }
+
       if (typeof useConsumable !== "function") {
         setMessage("Item loader not found.");
         return;
@@ -6348,20 +7160,20 @@
     }
 
     function getConsumableName(itemId) {
-      if (!itemId || typeof getConsumable !== "function") return "None";
-      const item = getConsumable(itemId);
-      return item ? item.itemName : itemId;
+      const item = getConsumableSafe(itemId);
+      return item ? item.itemName : String(itemId || "Item");
     }
 
     function getConsumableQuantityForSlot(slot) {
       const itemId = player.equipment[slot];
-      if (!itemId || typeof getConsumableQuantity !== "function") return 0;
-      return getConsumableQuantity(player, itemId);
+      if (!itemId) return 0;
+      if (typeof getConsumableQuantity === "function") return getConsumableQuantity(player, itemId);
+      return Number(player.inventory?.consumables?.[itemId] || 0);
     }
 
     function consumableIconHtml(itemId, className = "equipIcon") {
-      if (!itemId || typeof getConsumable !== "function") return `<span class="${className} empty"></span>`;
-      const item = getConsumable(itemId);
+      if (!itemId) return `<span class="${className} empty"></span>`;
+      const item = getConsumableSafe(itemId);
       if (!item || !item.image) return `<span class="${className} empty"></span>`;
       return `<img class="${className}" src="assets/items/${item.image}" alt="" onerror="this.style.display='none'; this.insertAdjacentHTML('afterend','<span class=&quot;${className} empty&quot;></span>');">`;
     }
@@ -6369,7 +7181,7 @@
     function equipGridIconHtml(slot, itemId) {
       if (isBeltSlot(slot)) {
         if (!itemId || getConsumableQuantityForSlot(slot) <= 0) return `<span class="equipGridIcon empty"></span>`;
-        const item = getConsumable(itemId);
+        const item = getConsumableSafe(itemId);
         if (!item || !item.image) return `<span class="equipGridIcon empty"></span>`;
         return `<img class="equipGridIcon" src="assets/items/${item.image}" alt="">`;
       }
@@ -6401,10 +7213,192 @@
       return parts.join(" · ") || "Equipped item.";
     }
 
+
+    function isSkillSlot(slot) {
+      return ["ultimate", "base1", "base2"].includes(slot);
+    }
+
+    function getSkillSlotLabel(slot) {
+      const labels = {
+        ultimate: "Ultimate",
+        base1: "Skill 1",
+        base2: "Skill 2"
+      };
+      return labels[slot] || slot;
+    }
+
+    function getSkillList() {
+      if (typeof SKILL_DATA === "undefined") return [];
+      return Object.entries(SKILL_DATA).map(([skillId, skill]) => ({
+        skillId,
+        name: skill.name || skillId,
+        mpCost: Number(skill.mpCost || 0),
+        baseMultiplier: Number(skill.baseMultiplier || 1),
+        ultimateMultiplier: Number(skill.ultimateMultiplier || 1),
+        piercePct: Number(skill.piercePct || 0),
+        ultimatePiercePct: Number(skill.ultimatePiercePct ?? skill.piercePct ?? 0),
+        lifeStealPct: Number(skill.lifeStealPct || 0),
+        ultimateLifeStealPct: Number(skill.ultimateLifeStealPct ?? skill.lifeStealPct ?? 0)
+      }));
+    }
+
+    function renderSkillEffectLines(skillId) {
+      const skill = getSkillData(skillId);
+      if (!skill) return detailLine("Skill", skillId);
+
+      const baseParts = [
+        `${Number(skill.baseMultiplier || 1).toFixed(2)}x damage`,
+        `${Number(skill.mpCost || 0)} MP`
+      ];
+      if (Number(skill.piercePct || 0) > 0) baseParts.push(`${Number(skill.piercePct)}% pierce`);
+      if (Number(skill.lifeStealPct || 0) > 0) baseParts.push(`${Number(skill.lifeStealPct)}% life steal`);
+
+      const ultParts = [
+        `${Number(skill.ultimateMultiplier || 1).toFixed(2)}x damage`,
+        `full charge`
+      ];
+      if (Number(skill.ultimatePiercePct ?? skill.piercePct ?? 0) > 0) ultParts.push(`${Number(skill.ultimatePiercePct ?? skill.piercePct)}% pierce`);
+      if (Number(skill.ultimateLifeStealPct ?? skill.lifeStealPct ?? 0) > 0) ultParts.push(`${Number(skill.ultimateLifeStealPct ?? skill.lifeStealPct)}% life steal`);
+
+      return `
+        ${detailSection("Base Skill", detailLine("Effect", baseParts.join(" · ")))}
+        ${detailSection("Ultimate Variant", detailLine("Effect", ultParts.join(" · ")))}
+      `;
+    }
+
+    function skillDetailIconHtml() {
+      return `<span class="equipDetailIcon empty"></span>`;
+    }
+
+    function getSkillSlotDisplayName(slot) {
+      ensurePlayerSkills();
+      return getSkillNameForSlot(slot);
+    }
+
+    function equipSkillToSlot(slot, skillId) {
+      ensurePlayerSkills();
+      if (!isSkillSlot(slot) || !SKILL_DATA[skillId]) return;
+
+      player.skills[slot] = skillId;
+      saveGameState();
+      updateCombatMetersUI();
+      renderEquipOverview();
+      setMessage(`${getSkillData(skillId).name} equipped to ${getSkillSlotLabel(slot)}.`);
+    }
+
+    function renderSkillDetail(skillId, backAction = "renderItemsTab()") {
+      const content = document.getElementById("inventoryContent");
+      const skill = getSkillData(skillId);
+      if (!skill) { renderItemsTab(); return; }
+
+      document.getElementById("inventoryTitle").textContent = skill.name;
+      document.getElementById("inventoryTabs").style.display = "none";
+
+      content.innerHTML = `
+        ${renderDetailCard(skillDetailIconHtml(), skill.name, `
+          ${detailSection("", detailLine("Type", "Skill"))}
+          ${renderSkillEffectLines(skillId)}
+          ${detailSection("Equip", `
+            <button class="equipSlotRow" onclick="equipSkillToSlot('ultimate', '${skillId}')">
+              <span class="equipSlotLabel">Ultimate</span>
+              <span class="equipSlotValue">Equip as ultimate variant</span>
+            </button>
+            <button class="equipSlotRow" onclick="equipSkillToSlot('base1', '${skillId}')">
+              <span class="equipSlotLabel">Skill 1</span>
+              <span class="equipSlotValue">Equip as base skill</span>
+            </button>
+            <button class="equipSlotRow" onclick="equipSkillToSlot('base2', '${skillId}')">
+              <span class="equipSlotLabel">Skill 2</span>
+              <span class="equipSlotValue">Equip as base skill</span>
+            </button>
+          `)}
+        `)}
+        <div class="equipDetailActions">
+          ${detailBackButton(backAction)}
+        </div>
+      `;
+    }
+
+    function renderSkillSlot(slot) {
+      const content = document.getElementById("inventoryContent");
+      const skillId = getEquippedSkillId(slot);
+      const skill = getSkillData(skillId);
+      const label = getSkillSlotLabel(slot);
+
+      document.getElementById("inventoryTitle").textContent = label;
+      document.getElementById("inventoryTabs").style.display = "none";
+
+      content.innerHTML = `
+        ${renderDetailCard(skillDetailIconHtml(), skill.name, `
+          ${detailSection("", detailLine("Slot", label))}
+          ${renderSkillEffectLines(skillId)}
+        `)}
+        <div class="equipDetailActions">
+          <button class="equipSlotRow" onclick="renderChangeSkillSlot('${slot}')">
+            <span class="equipSlotLabel">Change</span>
+            <span class="equipSlotValue">${label}</span>
+          </button>
+          ${detailBackButton("renderEquipOverview()")}
+        </div>
+      `;
+    }
+
+    function renderChangeSkillSlot(slot) {
+      const content = document.getElementById("inventoryContent");
+      const label = getSkillSlotLabel(slot);
+      const equippedId = getEquippedSkillId(slot);
+      const skills = getSkillList();
+
+      document.getElementById("inventoryTitle").textContent = `Change ${label}`;
+      document.getElementById("inventoryTabs").style.display = "none";
+
+      content.innerHTML = `
+        <button class="equipSlotRow" onclick="renderSkillSlot('${slot}')">
+          <span class="equipSlotLabel">Back</span>
+          <span class="equipSlotValue">${label}</span>
+        </button>
+        <div class="equipCompactList" style="margin-top:6px;">
+          ${skills.map(skill => `
+            <button class="equipSlotRow ${equippedId === skill.skillId ? "equipped" : ""}" onclick="renderSkillCandidateDetail('${slot}', '${skill.skillId}')">
+              <span class="equipSlotLabel">${skill.name}${equippedId === skill.skillId ? " *" : ""}</span>
+              <span class="equipSlotValue">${skill.mpCost} MP · ${skill.baseMultiplier.toFixed(2)}x</span>
+            </button>
+          `).join("")}
+        </div>
+      `;
+    }
+
+    function renderSkillCandidateDetail(slot, skillId) {
+      const skill = getSkillData(skillId);
+      if (!skill) { renderChangeSkillSlot(slot); return; }
+
+      const content = document.getElementById("inventoryContent");
+      const label = getSkillSlotLabel(slot);
+
+      document.getElementById("inventoryTitle").textContent = skill.name;
+      document.getElementById("inventoryTabs").style.display = "none";
+
+      content.innerHTML = `
+        ${renderDetailCard(skillDetailIconHtml(), skill.name, `
+          ${detailSection("", detailLine("Slot", label))}
+          ${renderSkillEffectLines(skillId)}
+        `)}
+        <div class="equipDetailActions">
+          <button class="equipSlotRow" onclick="equipSkillToSlot('${slot}', '${skillId}')">
+            <span class="equipSlotLabel">Equip</span>
+            <span class="equipSlotValue">${label}</span>
+          </button>
+          ${detailBackButton(`renderChangeSkillSlot('${slot}')`)}
+        </div>
+      `;
+    }
+
+
     function renderEquipOverview() {
       const content = document.getElementById("inventoryContent");
       document.getElementById("inventoryTitle").textContent = "Equipment";
       document.getElementById("inventoryTabs").style.display = "grid";
+      ensurePlayerSkills();
 
       const gridSlots = [
         ["weapon", "Weapon", player.equipment.weapon, "wideLeft"],
@@ -6419,13 +7413,7 @@
         ["belt4", "P4", player.equipment.belt4, ""]
       ];
 
-      let html = `
-        <div class="menuHeader">
-          <span>${player.name} · Lv ${player.level}</span>
-          <span>Gold: ${player.gold}</span>
-        </div>
-        <div class="equipGrid">
-      `;
+      let html = `<div class="equipGrid">`;
 
       html += gridSlots.map(([slot, label, itemId, extraClass]) => `
         <button class="equipGridButton ${extraClass} ${slot}Slot" onclick="renderEquipSlot('${slot}')">
@@ -6436,8 +7424,21 @@
       `).join("");
 
       html += `
+          <div class="equipSkillRow">
+            <button class="equipGridButton skillEquipSlot" onclick="renderSkillSlot('ultimate')">
+              <div class="equipGridName">${getSkillSlotDisplayName("ultimate")}</div>
+              <div class="equipGridLabel">Ultimate</div>
+            </button>
+            <button class="equipGridButton skillEquipSlot" onclick="renderSkillSlot('base1')">
+              <div class="equipGridName">${getSkillSlotDisplayName("base1")}</div>
+              <div class="equipGridLabel">Skill 1</div>
+            </button>
+            <button class="equipGridButton skillEquipSlot" onclick="renderSkillSlot('base2')">
+              <div class="equipGridName">${getSkillSlotDisplayName("base2")}</div>
+              <div class="equipGridLabel">Skill 2</div>
+            </button>
+          </div>
         </div>
-        <div class="smallNote">Atk ${getPlayerAttackValue()} · Def ${getPlayerDefenseValue()} · HP ${player.hp}/${player.maxHp} · MP ${player.mp}/${player.maxMp}</div>
       `;
 
       content.innerHTML = html;
@@ -6461,7 +7462,10 @@
         belt1: "P1",
         belt2: "P2",
         belt3: "P3",
-        belt4: "P4"
+        belt4: "P4",
+        ultimate: "Ultimate",
+        base1: "Skill 1",
+        base2: "Skill 2"
       };
 
       return labels[slot] || slot;
@@ -6484,6 +7488,11 @@
     }
 
     function renderEquipSlot(slot) {
+      if (isSkillSlot(slot)) {
+        renderSkillSlot(slot);
+        return;
+      }
+
       const content = document.getElementById("inventoryContent");
       const label = getSlotLabel(slot);
       const equippedId = player.equipment[slot];
@@ -6492,7 +7501,7 @@
       document.getElementById("inventoryTabs").style.display = "none";
 
       if (isBeltSlot(slot)) {
-        const item = equippedId && typeof getConsumable === "function" ? getConsumable(equippedId) : null;
+        const item = equippedId ? getConsumableSafe(equippedId) : null;
         const qty = getConsumableQuantityForSlot(slot);
         const desc = item ? (item.description || `${item.itemName} x${qty}`) : "No consumable assigned.";
 
@@ -6868,7 +7877,7 @@
         return;
       }
 
-      const item = typeof getConsumable === "function" ? getConsumable(itemId) : null;
+      const item = getConsumableSafe(itemId);
       const icon = item && item.image
         ? `<img class="beltItemIcon" src="assets/items/${item.image}" alt="">`
         : "";
@@ -6883,6 +7892,13 @@
     function useBeltSlot(slot) {
       const itemId = player.equipment[slot];
       if (!itemId || getConsumableQuantityForSlot(slot) <= 0) {
+        updateCombatBeltSlots();
+        return;
+      }
+
+      const special = useConsumableSafe(itemId);
+      if (special.handled) {
+        updateBars();
         updateCombatBeltSlots();
         return;
       }
@@ -6908,8 +7924,10 @@
     // =========================
 
     ensureFullInventoryShape();
+    ensurePlayerSkills();
     const loadedLocalSave = loadGameState();
     ensureFullInventoryShape();
+    ensurePlayerSkills();
 
     Object.keys(player.inventory.equipment).forEach(itemId => {
       const item = getEquipItem(itemId);

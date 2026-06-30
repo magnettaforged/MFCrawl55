@@ -44,9 +44,7 @@ const ARMOR_DATA = {
           "poses": [
               "p01",
               "p02",
-              "p03",
-              "p04",
-              "p05"
+              "p03"
           ],
           "defaultPose": "p01"
       },
@@ -84,9 +82,7 @@ const ARMOR_DATA = {
           "poses": [
               "p01",
               "p02",
-              "p03",
-              "p04",
-              "p05"
+              "p03"
           ],
           "defaultPose": "p01"
       },
@@ -120,9 +116,7 @@ const ARMOR_DATA = {
           "poses": [
               "p01",
               "p02",
-              "p03",
-              "p04",
-              "p05"
+              "p03"
           ],
           "defaultPose": "p01"
       },
@@ -156,9 +150,7 @@ const ARMOR_DATA = {
           "poses": [
               "p01",
               "p02",
-              "p03",
-              "p04",
-              "p05"
+              "p03"
           ],
           "defaultPose": "p01"
       },
@@ -196,9 +188,7 @@ const ARMOR_DATA = {
           "poses": [
               "p01",
               "p02",
-              "p03",
-              "p04",
-              "p05"
+              "p03"
           ],
           "defaultPose": "p01"
       },
@@ -232,9 +222,7 @@ const ARMOR_DATA = {
           "poses": [
               "p01",
               "p02",
-              "p03",
-              "p04",
-              "p05"
+              "p03"
           ],
           "defaultPose": "p01"
       },
@@ -268,9 +256,7 @@ const ARMOR_DATA = {
           "poses": [
               "p01",
               "p02",
-              "p03",
-              "p04",
-              "p05"
+              "p03"
           ],
           "defaultPose": "p01"
       },
@@ -308,9 +294,7 @@ const ARMOR_DATA = {
           "poses": [
               "p01",
               "p02",
-              "p03",
-              "p04",
-              "p05"
+              "p03"
           ],
           "defaultPose": "p01"
       },
@@ -344,9 +328,7 @@ const ARMOR_DATA = {
           "poses": [
               "p01",
               "p02",
-              "p03",
-              "p04",
-              "p05"
+              "p03"
           ],
           "defaultPose": "p01"
       },
@@ -380,9 +362,7 @@ const ARMOR_DATA = {
           "poses": [
               "p01",
               "p02",
-              "p03",
-              "p04",
-              "p05"
+              "p03"
           ],
           "defaultPose": "p01"
       },
@@ -416,9 +396,7 @@ const ARMOR_DATA = {
           "poses": [
               "p01",
               "p02",
-              "p03",
-              "p04",
-              "p05"
+              "p03"
           ],
           "defaultPose": "p01"
       },
@@ -438,12 +416,12 @@ const ARMOR_DATA = {
       "maxSockets": 8,
       "value": 2500,
       "stats": {
-          "def": 40,
+          "def": 34,
           "mdef": 10,
-          "speed": 2,
-          "crit": 5,
-          "dodge": 5,
-          "goldFind": 500
+          "speed": -6,
+          "crit": 4,
+          "dodge": 0,
+          "goldFind": 0
       },
       "assets": {
           "icon": "assets/armor/maya/mt4fullplate/mbfullplateicon.png",
@@ -452,9 +430,7 @@ const ARMOR_DATA = {
           "poses": [
               "p01",
               "p02",
-              "p03",
-              "p04",
-              "p05"
+              "p03"
           ],
           "defaultPose": "p01"
       },
@@ -474,12 +450,12 @@ const ARMOR_DATA = {
       "maxSockets": 8,
       "value": 2600,
       "stats": {
-          "def": 35,
+          "def": 32,
           "mdef": 16,
-          "speed": 4,
-          "crit": 10,
-          "dodge": 5,
-          "goldFind": 15
+          "speed": -4,
+          "crit": 2,
+          "dodge": 2,
+          "goldFind": 10
       },
       "assets": {
           "icon": "assets/armor/maya/mt4fullplate/mwfullplateicon.png",
@@ -488,9 +464,7 @@ const ARMOR_DATA = {
           "poses": [
               "p01",
               "p02",
-              "p03",
-              "p04",
-              "p05"
+              "p03"
           ],
           "defaultPose": "p01"
       },
