@@ -416,12 +416,12 @@ const ARMOR_DATA = {
       "maxSockets": 8,
       "value": 2500,
       "stats": {
-          "def": 34,
+          "def": 40,
           "mdef": 10,
-          "speed": -6,
-          "crit": 4,
-          "dodge": 0,
-          "goldFind": 0
+          "speed": 2,
+          "crit": 5,
+          "dodge": 5,
+          "goldFind": 15
       },
       "assets": {
           "icon": "assets/armor/maya/mt4fullplate/mbfullplateicon.png",
@@ -450,12 +450,12 @@ const ARMOR_DATA = {
       "maxSockets": 8,
       "value": 2600,
       "stats": {
-          "def": 32,
+          "def": 35,
           "mdef": 16,
-          "speed": -4,
-          "crit": 2,
-          "dodge": 2,
-          "goldFind": 10
+          "speed": 4,
+          "crit": 10,
+          "dodge": 5,
+          "goldFind": 15
       },
       "assets": {
           "icon": "assets/armor/maya/mt4fullplate/mwfullplateicon.png",

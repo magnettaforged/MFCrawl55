@@ -1195,6 +1195,36 @@
       display: none;
     }
 
+    .soundToggle {
+      position: absolute;
+      right: 12px;
+      top: 12px;
+      z-index: 66;
+      min-width: 34px;
+      min-height: 26px;
+      padding: 3px 7px;
+      border: 1px solid rgba(214,168,79,0.72);
+      border-radius: 8px;
+      background: rgba(0,0,0,0.52);
+      color: var(--accent);
+      font-weight: bold;
+      font-size: 12px;
+      line-height: 16px;
+      text-align: center;
+      text-shadow: 0 0 4px #000;
+      cursor: pointer;
+      pointer-events: auto;
+    }
+
+    .soundToggle.muted {
+      color: rgba(255,255,255,0.52);
+      border-color: rgba(255,255,255,0.24);
+    }
+
+    body.encounterMode .soundToggle {
+      display: none;
+    }
+
     .exitMarker.show { display: block; }
     .exitForward { top: 88px; left: 50%; transform: translateX(-50%); }
     .exitLeft { top: 50%; left: 24px; transform: translateY(-50%); }
@@ -1860,6 +1890,7 @@
         <div class="topHudBadge shrineCompass" id="shrineCompass">Shrine ·</div>
         <div class="mapIndicator" id="mapIndicator">Map: -</div>
         <div class="versionIndicator" id="versionIndicator">v0.4.3</div>
+        <button class="soundToggle" id="soundToggle" onclick="toggleGameSound()" aria-label="Toggle sound">🔊</button>
 
         <div class="exitMarker exitForward" id="exitForward">Exit</div>
         <div class="exitMarker exitLeft" id="exitLeft">Exit</div>
@@ -1955,9 +1986,12 @@
   <script src="runes.js"></script>
   <script src="runeLoader.js"></script>
 
+  <!-- Sound data / audio manager. -->
+  <script src="sounds.js"></script>
+
   <script>
     
-    const GAME_VERSION = "v0.4.8";
+    const GAME_VERSION = "v0.4.9";
 // =========================
     // MAP / FLOOR STATE
     // =========================
@@ -1969,6 +2003,7 @@
     let currentMap = null;
     let currentFloorTheme = "c";
     let testMap = [];
+    let lowHpAlertPlayed = false;
 
     let playerX = 1;
     let playerY = 1;
@@ -2003,6 +2038,29 @@
       };
 
       img.src = webpPath;
+    }
+
+
+    function syncSoundToggleButton() {
+      const btn = document.getElementById("soundToggle");
+      if (!btn) return;
+
+      const muted = typeof isGameSoundMuted === "function" ? isGameSoundMuted() : false;
+      btn.textContent = muted ? "🔇" : "🔊";
+      btn.classList.toggle("muted", muted);
+    }
+
+    function toggleGameSound() {
+      if (typeof toggleSoundMute === "function") {
+        toggleSoundMute();
+      }
+      syncSoundToggleButton();
+    }
+
+    function getCurrentThemeWalkSoundId() {
+      if (currentFloorTheme === "b") return "walk_beach";
+      if (currentFloorTheme === "f") return "walk_forest";
+      return "walk_castle";
     }
 
     function dungeonRandomChoice(list) {
@@ -2102,6 +2160,7 @@
       // Starting or reloading a floor is a safe rest point.
       player.hp = player.maxHp;
       player.mp = player.maxMp;
+      lowHpAlertPlayed = false;
 
       if (typeof MAPS === "undefined") {
         console.warn("MAPS is missing. Check maps.js load order.");
@@ -2136,6 +2195,7 @@
       updateRoomView();
       updateTopHud();
       updateBars();
+      syncSoundToggleButton();
 
       const themeName = currentFloorTheme === "c" ? "Castle" : currentFloorTheme === "b" ? "Beach" : "Forest";
       setMessage(`${themeName} floor ${currentFloor} loaded.`);
@@ -3416,6 +3476,7 @@
         return;
       }
 
+      if (typeof playSound === "function") playSound(getCurrentThemeWalkSoundId());
       playRoomTransition();
 
       playerX = next.x;
@@ -4769,6 +4830,7 @@
       }
 
       if (currentTile === "E") {
+        if (typeof playSound === "function") playSound("ui_click");
         openLimitedShrineMenu();
         return;
       }
@@ -4784,11 +4846,13 @@
         const lootMessages = openCurrentChestLoot();
 
         updateRoomView();
+        if (typeof playSound === "function") playSound("chest_open");
         playChestOpened();
         setMessage(`You opened the chest. Found ${lootMessages.join(", ")}.`);
         return;
       }
       if (currentTile === "S") {
+        if (typeof playSound === "function") playSound("ui_click");
         openShrineMenu();
         return;
       }
@@ -5147,6 +5211,9 @@
       const damage = calculateAttackDamage(currentEnemy);
       currentEnemy.currentHp -= damage.total;
 
+      if (typeof playPlayerAttackSound === "function") playPlayerAttackSound(player);
+      if (damage.fire > 0 && typeof playSound === "function") playSound("fire_attack");
+
       playCombatEffect(getAttackEffectType(damage), String(damage.total));
       playMonsterHit();
 
@@ -5200,6 +5267,7 @@
 
       player.hp = player.maxHp;
       player.mp = player.maxMp;
+      lowHpAlertPlayed = false;
 
       startNewFloor();
       updateBars();
@@ -5216,6 +5284,17 @@
 
       const damage = Math.max(1, currentEnemy.attack - getPlayerDefenseValue());
       player.hp -= damage;
+
+      if (typeof playFemalePlayerHurtSound === "function") playFemalePlayerHurtSound(player);
+
+      const hpPct = player.maxHp > 0 ? player.hp / player.maxHp : 1;
+      if (hpPct <= 0.25 && !lowHpAlertPlayed) {
+        lowHpAlertPlayed = true;
+        if (typeof playSound === "function") playSound("low_hp");
+      } else if (hpPct > 0.35) {
+        lowHpAlertPlayed = false;
+      }
+
       playPlayerHit();
       updateBars();
 
@@ -5260,6 +5339,8 @@
         ? ` Level up! Now level ${player.level}.`
         : "";
 
+      if (typeof playMonsterDeathSound === "function") playMonsterDeathSound(currentEnemy);
+
       stopCombatTimer();
       currentEnemy = null;
       currentEnemyTileKey = null;
@@ -5274,6 +5355,7 @@
     // =========================
 
     function openInventory() {
+      syncSoundToggleButton();
       const help = document.getElementById("controlHelp");
       if (help) help.classList.remove("show");
 

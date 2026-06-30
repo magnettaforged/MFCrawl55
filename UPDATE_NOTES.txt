@@ -95,3 +95,16 @@ WebP asset patch v0.4.8:
 - Monster display now forces .webp from monster image names.
 - NPC shop hero now uses .webp.
 - Room/chest/monster image loading includes a PNG fallback where practical.
+
+
+Sound first-pass patch v0.4.9:
+- Added sounds.js audio manager.
+- Added sound mute toggle button.
+- Added UI click sound through delegated button/list click handling.
+- Added theme-based walking sounds: castlewalk, beachwalk, forestwalk.
+- Added chestopen when opening a chest.
+- Added sword01-03 random pool for player attack.
+- Added fireatk when fire rune damage is present.
+- Added fgrunt01-05 only for female player hurt sounds: Maya, Kyra, Nadia.
+- Added lifealert once when player HP drops below 25%.
+- Added skeledeath for skeleton/undead monster deaths.

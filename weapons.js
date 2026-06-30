@@ -94,6 +94,27 @@ const WEAPON_DATA = {
       }
   },
 
+  white_mythic_sword: {
+      "itemName": "WhiteMythic Sword",
+      "character": "maya",
+      "tier": "mythic",
+      "rarity": "mythic",
+      "reqLevel": 18,
+      "maxSockets": 8,
+      "value": 2000,
+      "stats": {
+          "atk": 68,
+          "mag": 8,
+          "speed": 2,
+          "crit": 16,
+          "dodge": 0
+      },
+      "assets": {
+          "image": "wsword4.png",
+          "icon": "wsword4.png"
+      }
+  },
+
 
   // =========================
   // REIGN WEAPONS
