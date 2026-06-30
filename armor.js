@@ -421,7 +421,7 @@ const ARMOR_DATA = {
           "speed": -6,
           "crit": 4,
           "dodge": 0,
-          "goldFind": 0
+          "goldFind": 500
       },
       "assets": {
           "icon": "assets/armor/maya/mt4fullplate/mbfullplateicon.png",
