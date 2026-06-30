@@ -44,7 +44,9 @@ const ARMOR_DATA = {
           "poses": [
               "p01",
               "p02",
-              "p03"
+              "p03",
+              "p04",
+              "p05"
           ],
           "defaultPose": "p01"
       },
@@ -82,7 +84,9 @@ const ARMOR_DATA = {
           "poses": [
               "p01",
               "p02",
-              "p03"
+              "p03",
+              "p04",
+              "p05"
           ],
           "defaultPose": "p01"
       },
@@ -116,7 +120,9 @@ const ARMOR_DATA = {
           "poses": [
               "p01",
               "p02",
-              "p03"
+              "p03",
+              "p04",
+              "p05"
           ],
           "defaultPose": "p01"
       },
@@ -150,7 +156,9 @@ const ARMOR_DATA = {
           "poses": [
               "p01",
               "p02",
-              "p03"
+              "p03",
+              "p04",
+              "p05"
           ],
           "defaultPose": "p01"
       },
@@ -188,7 +196,9 @@ const ARMOR_DATA = {
           "poses": [
               "p01",
               "p02",
-              "p03"
+              "p03",
+              "p04",
+              "p05"
           ],
           "defaultPose": "p01"
       },
@@ -222,7 +232,9 @@ const ARMOR_DATA = {
           "poses": [
               "p01",
               "p02",
-              "p03"
+              "p03",
+              "p04",
+              "p05"
           ],
           "defaultPose": "p01"
       },
@@ -256,7 +268,9 @@ const ARMOR_DATA = {
           "poses": [
               "p01",
               "p02",
-              "p03"
+              "p03",
+              "p04",
+              "p05"
           ],
           "defaultPose": "p01"
       },
@@ -294,7 +308,9 @@ const ARMOR_DATA = {
           "poses": [
               "p01",
               "p02",
-              "p03"
+              "p03",
+              "p04",
+              "p05"
           ],
           "defaultPose": "p01"
       },
@@ -328,7 +344,9 @@ const ARMOR_DATA = {
           "poses": [
               "p01",
               "p02",
-              "p03"
+              "p03",
+              "p04",
+              "p05"
           ],
           "defaultPose": "p01"
       },
@@ -362,7 +380,9 @@ const ARMOR_DATA = {
           "poses": [
               "p01",
               "p02",
-              "p03"
+              "p03",
+              "p04",
+              "p05"
           ],
           "defaultPose": "p01"
       },
@@ -396,7 +416,9 @@ const ARMOR_DATA = {
           "poses": [
               "p01",
               "p02",
-              "p03"
+              "p03",
+              "p04",
+              "p05"
           ],
           "defaultPose": "p01"
       },
@@ -421,7 +443,7 @@ const ARMOR_DATA = {
           "speed": 2,
           "crit": 5,
           "dodge": 5,
-          "goldFind": 15
+          "goldFind": 500
       },
       "assets": {
           "icon": "assets/armor/maya/mt4fullplate/mbfullplateicon.png",
@@ -430,7 +452,9 @@ const ARMOR_DATA = {
           "poses": [
               "p01",
               "p02",
-              "p03"
+              "p03",
+              "p04",
+              "p05"
           ],
           "defaultPose": "p01"
       },
@@ -464,7 +488,9 @@ const ARMOR_DATA = {
           "poses": [
               "p01",
               "p02",
-              "p03"
+              "p03",
+              "p04",
+              "p05"
           ],
           "defaultPose": "p01"
       },

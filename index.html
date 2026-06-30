@@ -4919,7 +4919,7 @@
     function attackIntervalFromSpeed(speed) {
       // Slower base pacing, Speed still reduces delay, and there is no hard min/max cap.
       // Extreme Speed builds are allowed to break the curve by design.
-      return 2600 / (1 + Math.max(0, Number(speed) || 0) * 0.04);
+      return 4500 / (1 + Math.max(0, Number(speed) || 0) * 0.04);
     }
 
     function meterGainForSpeed(speed) {
