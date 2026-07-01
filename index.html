@@ -2167,7 +2167,7 @@
 
   <script>
     
-    const GAME_VERSION = "v0.6.5";
+    const GAME_VERSION = "v0.6.6";
 // =========================
     // MAP / FLOOR STATE
     // =========================
@@ -2771,6 +2771,7 @@
           atk: item.atk || item.stats?.atk || 0,
           mag: item.mag || item.stats?.mag || 0,
           pdef: item.pdef ?? item.stats?.pdef ?? item.def ?? item.stats?.def ?? 0,
+          mdef: item.mdef ?? item.stats?.mdef ?? 0,
           fireRes: item.fireRes ?? item.stats?.fireRes ?? 0,
           iceRes: item.iceRes ?? item.stats?.iceRes ?? 0,
           shockRes: item.shockRes ?? item.stats?.shockRes ?? 0,
@@ -2782,16 +2783,20 @@
         };
       }
 
+      const explicitResists = [rawStats.fireRes, rawStats.iceRes, rawStats.shockRes, rawStats.darkRes]
+        .some(value => Number(value || 0) !== 0);
+      const convertedMdefRes = explicitResists ? 0 : Math.floor(Number(rawStats.mdef || rawStats.magicDefense || 0) / 4);
+
       return {
         hp: Number(rawStats.hp || 0),
         mp: Number(rawStats.mp || 0),
         atk: Number(rawStats.atk || 0),
         mag: Number(rawStats.mag || 0),
         pdef: Number(rawStats.pdef ?? rawStats.def ?? 0),
-        fireRes: Number(rawStats.fireRes || 0),
-        iceRes: Number(rawStats.iceRes || 0),
-        shockRes: Number(rawStats.shockRes || 0),
-        darkRes: Number(rawStats.darkRes || 0),
+        fireRes: Number(rawStats.fireRes ?? convertedMdefRes),
+        iceRes: Number(rawStats.iceRes ?? convertedMdefRes),
+        shockRes: Number(rawStats.shockRes ?? convertedMdefRes),
+        darkRes: Number(rawStats.darkRes ?? convertedMdefRes),
         speed: Number(rawStats.speed || 0),
         crit: Number(rawStats.crit || 0),
         dodge: Number(rawStats.dodge || 0),
@@ -5982,7 +5987,7 @@
       const hits = ultimate ? Number(data.ultimateHits || data.hits || 1) : Number(data.hits || 1);
       const rawAttack = getPlayerAttackValue();
       const perHitPhysical = applyMitigation(Math.floor(rawAttack * multiplier), getPhysicalMitigationValue(monster, piercePct));
-      const physical = Math.max(1, perHitPhysical * Math.max(1, hits));
+      const physical = perHitPhysical * Math.max(1, hits);
       let fire = ultimate ? Math.floor(base.fire * 1.5) : base.fire;
       let shock = ultimate ? Math.floor(base.shock * 1.5) : base.shock;
       let ice = ultimate ? Math.floor((base.ice || 0) * 1.5) : (base.ice || 0);
@@ -5999,21 +6004,29 @@
       }
       const total = physical + fire + shock + ice + holy + dark + typeBonus;
       const stealPct = ultimate ? Number(data.ultimateLifeStealPct ?? data.lifeStealPct ?? 0) : Number(data.lifeStealPct ?? 0);
-      return { physical, fire, shock, ice, holy, dark, typeBonus, total, lifeSteal: Math.floor(total * stealPct / 100) };
+      return { physical, fire, shock, ice, holy, dark, typeBonus, total, lifeSteal: Math.floor(Math.max(0, total) * stealPct / 100) };
     }
 
     function applyPlayerDamageToEnemy(damage, chargeGain = 0) {
       if (!currentEnemy || !damage) return;
 
-      currentEnemy.currentHp -= damage.total;
+      const total = Math.floor(Number(damage.total || 0));
 
       if (typeof playPlayerAttackSound === "function") playPlayerAttackSound(player);
       if (damage.fire > 0 && typeof playSound === "function") playSound("fire_attack");
 
-      playCombatEffect(getAttackEffectType(damage), String(damage.total));
-      playMonsterHit();
+      if (total < 0) {
+        const absorbed = Math.abs(total);
+        currentEnemy.currentHp = Math.min(getMonsterMaxHpValue(currentEnemy), getMonsterCurrentHpValue(currentEnemy) + absorbed);
+        playCombatEffect(getAttackEffectType(damage), `Absorb +${absorbed}`);
+        playMonsterHit();
+      } else {
+        currentEnemy.currentHp -= total;
+        playCombatEffect(getAttackEffectType(damage), total > 0 ? String(total) : "Block");
+        playMonsterHit();
+      }
 
-      if (damage.lifeSteal > 0) {
+      if (damage.lifeSteal > 0 && total > 0) {
         player.hp = Math.min(player.maxHp, player.hp + damage.lifeSteal);
         updateBars();
       }
@@ -6085,12 +6098,13 @@
     }
 
     function getPlayerSpeedValue() {
-      const bonuses = typeof getEquipmentBonusTotals === "function" ? getEquipmentBonusTotals() : {};
+      // player.speed is already recalculated from base + level + equipment.
+      // Do not add equipment speed again here. Apply rune/skill multipliers once.
+      const runeBonuses = getRuneBonusTotals();
       const base = Number(player.speed || player.spd || 0);
-      const bonus = Number(bonuses.speed || bonuses.spd || 0);
       const haste = getActiveSkillEffect("haste");
-      const speedPct = haste ? Number(haste.speedPct || 0) : 0;
-      return Math.max(0, Math.floor((base + bonus) * (1 + speedPct / 100)));
+      const speedPct = Number(runeBonuses.speedPct || 0) + (haste ? Number(haste.speedPct || 0) : 0);
+      return Math.max(0, Math.floor(base * (1 + speedPct / 100)));
     }
 
     function getPlayerDodgeValue() {
@@ -6290,7 +6304,7 @@
       const ironSkin = getActiveSkillEffect("ironSkin");
       const skillDefensePct = ironSkin ? Number(ironSkin.defensePct || 0) : 0;
       const base = (Number(bonuses.pdef || 0) + Math.floor((player.vitality || 0) / 8));
-      return clampPct(base * (1 + (runeBonuses.defensePct + skillDefensePct) / 100), 0, 95);
+      return Math.floor(base * (1 + (runeBonuses.defensePct + skillDefensePct) / 100));
     }
 
     function getPlayerDefenseValue() {
@@ -6319,16 +6333,26 @@
       return Math.max(min, Math.min(max, n));
     }
 
-    function applyMitigation(amount, mitigationPct) {
+    function pctNumber(value) {
+      const n = Number(value);
+      return Number.isFinite(n) ? n : 0;
+    }
+
+    function applyPercentReduction(amount, pct) {
       const base = Math.max(0, Number(amount) || 0);
-      const pct = clampPct(mitigationPct, -95, 95);
-      return Math.max(1, Math.floor(base * (1 - pct / 100)));
+      const reduced = base * (1 - pctNumber(pct) / 100);
+      return Math.floor(reduced);
+    }
+
+    function applyMitigation(amount, mitigationPct) {
+      // 0-100 reduces damage, negative amplifies damage, >100 returns negative damage for absorb/heal.
+      return applyPercentReduction(amount, mitigationPct);
     }
 
     function getPhysicalMitigationValue(source, piercePct = 0) {
-      const raw = Number(source?.pdef ?? source?.defense ?? source?.def ?? source?.pDef ?? 0) || 0;
-      const pierced = raw * (1 - clampPct(piercePct, 0, 100) / 100);
-      return clampPct(pierced, -95, 95);
+      const raw = pctNumber(source?.pdef ?? source?.defense ?? source?.def ?? source?.pDef ?? 0);
+      const pierce = Math.max(0, Math.min(100, pctNumber(piercePct)));
+      return raw * (1 - pierce / 100);
     }
 
     function getResistanceValue(source, element) {
@@ -6336,14 +6360,15 @@
       const key = `${element}Res`;
       const legacyKey = `${element}Resist`;
       const weaknessKey = `${element}Weakness`;
-      if (source[key] !== undefined) return clampPct(source[key], -95, 95);
-      if (source[legacyKey] !== undefined) return clampPct(source[legacyKey], -95, 95);
-      if (source[weaknessKey] !== undefined) return -Math.abs(clampPct(source[weaknessKey], 0, 95));
+      if (source[key] !== undefined) return pctNumber(source[key]);
+      if (source[legacyKey] !== undefined) return pctNumber(source[legacyKey]);
+      if (source[weaknessKey] !== undefined) return -Math.abs(pctNumber(source[weaknessKey]));
       return 0;
     }
 
     function applyElementMitigation(amount, target, element) {
-      return Math.max(0, Math.floor(Math.max(0, Number(amount) || 0) * (1 - getResistanceValue(target, element) / 100)));
+      // 0-100 reduces damage, negative amplifies damage, >100 returns negative damage for absorb/heal.
+      return applyPercentReduction(amount, getResistanceValue(target, element));
     }
 
     function getAveragePlayerResistanceValue() {
@@ -6398,9 +6423,7 @@
     }
 
     function getAttacksPerSecondFromSpeed(speed) {
-      const baseSeconds = 4.6;
-      const spd = Math.max(0, Number(speed) || 0);
-      return (1 + spd / 100) / baseSeconds;
+      return 1000 / attackIntervalFromSpeed(speed);
     }
 
     function formatThreatNumber(value) {
@@ -6420,14 +6443,14 @@
       const attack = Math.max(0, Number(unit?.attack ?? unit?.atk ?? 0) || 0);
       const speed = Math.max(0, Number(unit?.speed ?? unit?.spd ?? 0) || 0);
       const lifeStealPct = Math.max(0, Number(unit?.lifeStealPct ?? unit?.lifeSteal ?? 0) || 0) / 100;
-      const dodgePct = clampPct(unit?.dodgeChance ?? unit?.dodge ?? 0, 0, 95) / 100;
+      const dodgePct = Math.max(0, Math.min(100, pctNumber(unit?.dodgeChance ?? unit?.dodge ?? 0))) / 100;
 
       const attacksPerSecond = getAttacksPerSecondFromSpeed(speed);
       const sustain = attack * attacksPerSecond * lifeStealPct * battleSeconds;
       const basePool = hp + sustain;
 
-      const pdef = Math.max(-0.95, (Number(getPhysicalMitigationValue(unit)) || 0) / 100);
-      const avgRes = Math.max(-0.95, (Number(unit?.averageRes ?? 0) || 0) / 100);
+      const pdef = pctNumber(getPhysicalMitigationValue(unit)) / 100;
+      const avgRes = pctNumber(unit?.averageRes ?? 0) / 100;
 
       // Hardiness uses live stats and a fixed expected-damage window.
       // Defense is counted per expected incoming hit, then added across the battle window.
@@ -6464,7 +6487,7 @@
     }
 
     function getMonsterExpectedHitAgainstPlayer(monster) {
-      const physical = applyMitigation(Number(monster?.attack || 0), getPlayerPdefValue());
+      const physical = Math.max(0, applyMitigation(Number(monster?.attack || 0), getPlayerPdefValue()));
       let expected = physical;
 
       if (monster?.spell) {
@@ -6477,7 +6500,7 @@
 
       if (monster?.ranged) {
         const chance = clampPct(monster.ranged.chance ?? 0, 0, 100) / 100;
-        const rangedDamage = applyMitigation(Number(monster.ranged.damage || 0), getPlayerPdefValue());
+        const rangedDamage = Math.max(0, applyMitigation(Number(monster.ranged.damage || 0), getPlayerPdefValue()));
         expected += chance * rangedDamage;
       }
 
@@ -6628,7 +6651,7 @@
       const typeBonusBase = (monsterType === "undead" ? runeBonuses.undeadBonusPct : 0) + (monsterType === "light" ? runeBonuses.lightBonusPct : 0);
       const typeBonus = Math.floor(weaponAttack * typeBonusBase / 100);
       const total = physical + fire + shock + ice + holy + dark + typeBonus;
-      return { physical, fire, shock, ice, holy, dark, typeBonus, total, lifeSteal: Math.floor(total * runeBonuses.lifeStealPct / 100) };
+      return { physical, fire, shock, ice, holy, dark, typeBonus, total, lifeSteal: Math.floor(Math.max(0, total) * runeBonuses.lifeStealPct / 100) };
     }
 
 
@@ -6792,6 +6815,25 @@
       playMonsterAttack();
 
       const damage = applyMitigation(currentEnemy.attack, getPlayerPdefValue());
+
+      if (damage < 0) {
+        const absorbed = Math.abs(damage);
+        player.hp = Math.min(player.maxHp, player.hp + absorbed);
+        playPlayerHit();
+        updateBars();
+        showDamageNumber(`Absorb +${absorbed}`);
+        setMessage(`${prefix || currentEnemy.monName} struck your armor. You absorbed ${absorbed}.`);
+        return;
+      }
+
+      if (damage === 0) {
+        playPlayerHit();
+        updateBars();
+        showDamageNumber("Block");
+        setMessage(`${prefix || currentEnemy.monName} could not pierce your defense.`);
+        return;
+      }
+
       player.hp -= damage;
       gainUltimateCharge(Math.max(4, Math.min(14, Math.floor(damage / 3))));
 

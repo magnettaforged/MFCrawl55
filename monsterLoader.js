@@ -271,7 +271,7 @@ function scaleMonster(monster, floor = 1, options = {}) {
 
   const maxHp = Math.max(1, Math.round(tierBaseHp + (scaleLevel * hpGrowth)));
   const maxMp = Math.max(0, Math.round(tierBaseMp + (scaleLevel * mpGrowth)));
-  const livePdef = Math.max(0, Math.min(85, Math.round(tierBasePdef + (scaleLevel * pdefGrowth))));
+  const livePdef = Math.round(tierBasePdef + (scaleLevel * pdefGrowth));
 
   const spell = monster.spell
     ? {
