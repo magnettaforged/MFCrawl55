@@ -1,17 +1,12 @@
 // =========================
 // monster.js
-// Alphabetical grouped monster stats
+// v0.6.0
+// Alphabetical grouped monster stats.
+// PDEF / resistance compatible.
 // =========================
-//
-// Monster identity is separate from visual variants.
-// images[] contains the paired monster art:
-// 1/2 = first visual pair, 3/4 = second visual pair, 5/6 = third visual pair.
-//
-// Theme/location eligibility is handled in monloc.js.
-// Start floor, floor scaling, and random image selection are handled in monsterLoader.js.
 
 const MONSTERS = {
-  bandit: {
+  "bandit": {
     "monId": "bandit",
     "monName": "Bandit",
     "monsterType": "human",
@@ -41,10 +36,17 @@ const MONSTERS = {
         "chance": 8
       }
     ],
-    "images": ["bandit1.png", "bandit2.png"]
+    "images": [
+      "bandit1.png",
+      "bandit2.png"
+    ],
+    "pdef": 3,
+    "fireRes": 0,
+    "iceRes": 0,
+    "shockRes": 0,
+    "darkRes": 0
   },
-
-  bats: {
+  "bats": {
     "monId": "bats",
     "monName": "Bat Swarm",
     "monsterType": "swarm",
@@ -78,10 +80,17 @@ const MONSTERS = {
         "chance": 8
       }
     ],
-    "images": ["bats1.png", "bats2.png"]
+    "images": [
+      "bats1.png",
+      "bats2.png"
+    ],
+    "pdef": 1,
+    "fireRes": 0,
+    "iceRes": 0,
+    "shockRes": 0,
+    "darkRes": 0
   },
-
-  bcrab: {
+  "bcrab": {
     "monId": "bcrab",
     "monName": "Armored Crab",
     "monsterType": "boss",
@@ -111,18 +120,25 @@ const MONSTERS = {
         "chance": 12
       }
     ],
-    "images": ["bcrab1.png", "bcrab2.png"]
+    "images": [
+      "bcrab1.png",
+      "bcrab2.png"
+    ],
+    "pdef": 22,
+    "fireRes": 2,
+    "iceRes": 2,
+    "shockRes": 2,
+    "darkRes": 2
   },
-
-  bdragon: {
+  "bdragon": {
     "monId": "bdragon",
     "monName": "Young Dragon",
     "monsterType": "boss",
     "behavior": "boss",
     "level": 16,
-    "hp": 850,
+    "hp": 680,
     "mp": 120,
-    "attack": 58,
+    "attack": 41,
     "defense": 24,
     "magicDefense": 24,
     "speed": 14,
@@ -135,7 +151,7 @@ const MONSTERS = {
     "spell": {
       "element": "fire",
       "chance": 40,
-      "damage": 60
+      "damage": 42
     },
     "drops": [
       {
@@ -151,10 +167,17 @@ const MONSTERS = {
         "chance": 12
       }
     ],
-    "images": ["bdragon1.png", "bdragon2.png"]
+    "images": [
+      "bdragon1.png",
+      "bdragon2.png"
+    ],
+    "pdef": 24,
+    "fireRes": 50,
+    "iceRes": -15.0,
+    "shockRes": 6,
+    "darkRes": 6
   },
-
-  bgoblin: {
+  "bgoblin": {
     "monId": "bgoblin",
     "monName": "Goblin Brute",
     "monsterType": "goblin",
@@ -184,18 +207,25 @@ const MONSTERS = {
         "chance": 8
       }
     ],
-    "images": ["bgoblin1.png", "bgoblin2.png"]
+    "images": [
+      "bgoblin1.png",
+      "bgoblin2.png"
+    ],
+    "pdef": 8,
+    "fireRes": 0,
+    "iceRes": 0,
+    "shockRes": 0,
+    "darkRes": 0
   },
-
-  bkraken: {
+  "bkraken": {
     "monId": "bkraken",
     "monName": "Kraken Spawn",
     "monsterType": "boss",
     "behavior": "boss",
     "level": 14,
-    "hp": 700,
+    "hp": 630,
     "mp": 80,
-    "attack": 46,
+    "attack": 36,
     "defense": 18,
     "magicDefense": 20,
     "speed": 12,
@@ -206,7 +236,7 @@ const MONSTERS = {
     "spell": {
       "element": "water",
       "chance": 35,
-      "damage": 45
+      "damage": 35
     },
     "drops": [
       {
@@ -222,18 +252,25 @@ const MONSTERS = {
         "chance": 12
       }
     ],
-    "images": ["bkraken1.png", "bkraken2.png"]
+    "images": [
+      "bkraken1.png",
+      "bkraken2.png"
+    ],
+    "pdef": 18,
+    "fireRes": 5,
+    "iceRes": 5,
+    "shockRes": 5,
+    "darkRes": 5
   },
-
-  borc: {
+  "borc": {
     "monId": "borc",
     "monName": "Orc Warlord",
     "monsterType": "boss",
     "behavior": "boss",
     "level": 12,
-    "hp": 420,
+    "hp": 399,
     "mp": 20,
-    "attack": 44,
+    "attack": 33,
     "defense": 18,
     "magicDefense": 10,
     "speed": 12,
@@ -262,10 +299,17 @@ const MONSTERS = {
       }
     ],
     "normalAtDifficulty": 5,
-    "images": ["borc1.png", "borc2.png"]
+    "images": [
+      "borc1.png",
+      "borc2.png"
+    ],
+    "pdef": 18,
+    "fireRes": 2,
+    "iceRes": 2,
+    "shockRes": 2,
+    "darkRes": 2
   },
-
-  bpirate: {
+  "bpirate": {
     "monId": "bpirate",
     "monName": "Pistol Pirate",
     "monsterType": "boss",
@@ -299,10 +343,17 @@ const MONSTERS = {
         "chance": 8
       }
     ],
-    "images": ["bpirate1.png", "bpirate2.png"]
+    "images": [
+      "bpirate1.png",
+      "bpirate2.png"
+    ],
+    "pdef": 4,
+    "fireRes": 0,
+    "iceRes": 0,
+    "shockRes": 0,
+    "darkRes": 0
   },
-
-  bpirate_b: {
+  "bpirate_b": {
     "monId": "bpirate_b",
     "monName": "Boarding Pirate",
     "monsterType": "boss",
@@ -332,10 +383,17 @@ const MONSTERS = {
         "chance": 12
       }
     ],
-    "images": ["bpirate3.png", "bpirate4.png"]
+    "images": [
+      "bpirate3.png",
+      "bpirate4.png"
+    ],
+    "pdef": 8,
+    "fireRes": 1,
+    "iceRes": 1,
+    "shockRes": 1,
+    "darkRes": 1
   },
-
-  captain: {
+  "captain": {
     "monId": "captain",
     "monName": "Skeleton Captain",
     "monsterType": "boss",
@@ -366,10 +424,17 @@ const MONSTERS = {
         "chance": 8
       }
     ],
-    "images": ["captain1.png", "captain2.png"]
+    "images": [
+      "captain1.png",
+      "captain2.png"
+    ],
+    "pdef": 6,
+    "fireRes": 1,
+    "iceRes": 1,
+    "shockRes": 1,
+    "darkRes": 1
   },
-
-  crab: {
+  "crab": {
     "monId": "crab",
     "monName": "Cave Crab",
     "monsterType": "beast",
@@ -399,10 +464,17 @@ const MONSTERS = {
         "chance": 8
       }
     ],
-    "images": ["crab1.png", "crab2.png"]
+    "images": [
+      "crab1.png",
+      "crab2.png"
+    ],
+    "pdef": 8,
+    "fireRes": 0,
+    "iceRes": 0,
+    "shockRes": 0,
+    "darkRes": 0
   },
-
-  fbandit: {
+  "fbandit": {
     "monId": "fbandit",
     "monName": "Bandit Rogue",
     "monsterType": "human",
@@ -432,10 +504,17 @@ const MONSTERS = {
         "chance": 8
       }
     ],
-    "images": ["fbandit1.png", "fbandit2.png"]
+    "images": [
+      "fbandit1.png",
+      "fbandit2.png"
+    ],
+    "pdef": 2,
+    "fireRes": 0,
+    "iceRes": 0,
+    "shockRes": 0,
+    "darkRes": 0
   },
-
-  fbandit_b: {
+  "fbandit_b": {
     "monId": "fbandit_b",
     "monName": "Bandit Duelist",
     "monsterType": "human",
@@ -465,10 +544,17 @@ const MONSTERS = {
         "chance": 8
       }
     ],
-    "images": ["fbandit3.png", "fbandit4.png"]
+    "images": [
+      "fbandit3.png",
+      "fbandit4.png"
+    ],
+    "pdef": 6,
+    "fireRes": 0,
+    "iceRes": 0,
+    "shockRes": 0,
+    "darkRes": 0
   },
-
-  fbandit_c: {
+  "fbandit_c": {
     "monId": "fbandit_c",
     "monName": "Bandit Ambusher",
     "monsterType": "human",
@@ -476,7 +562,7 @@ const MONSTERS = {
     "level": 9,
     "hp": 178,
     "mp": 0,
-    "attack": 29,
+    "attack": 22,
     "defense": 8,
     "magicDefense": 5,
     "speed": 24,
@@ -498,10 +584,17 @@ const MONSTERS = {
         "chance": 8
       }
     ],
-    "images": ["fbandit5.png", "fbandit6.png"]
+    "images": [
+      "fbandit5.png",
+      "fbandit6.png"
+    ],
+    "pdef": 8,
+    "fireRes": 1,
+    "iceRes": 1,
+    "shockRes": 1,
+    "darkRes": 1
   },
-
-  fpirate: {
+  "fpirate": {
     "monId": "fpirate",
     "monName": "Pirate Raider",
     "monsterType": "human",
@@ -531,10 +624,17 @@ const MONSTERS = {
         "chance": 8
       }
     ],
-    "images": ["fpirate1.png", "fpirate2.png"]
+    "images": [
+      "fpirate1.png",
+      "fpirate2.png"
+    ],
+    "pdef": 3,
+    "fireRes": 0,
+    "iceRes": 0,
+    "shockRes": 0,
+    "darkRes": 0
   },
-
-  fpirate_b: {
+  "fpirate_b": {
     "monId": "fpirate_b",
     "monName": "Corsair Duelist",
     "monsterType": "human",
@@ -564,10 +664,17 @@ const MONSTERS = {
         "chance": 12
       }
     ],
-    "images": ["fpirate3.png", "fpirate4.png"]
+    "images": [
+      "fpirate3.png",
+      "fpirate4.png"
+    ],
+    "pdef": 7,
+    "fireRes": 1,
+    "iceRes": 1,
+    "shockRes": 1,
+    "darkRes": 1
   },
-
-  goblin: {
+  "goblin": {
     "monId": "goblin",
     "monName": "Goblin Raider",
     "monsterType": "goblin",
@@ -597,10 +704,17 @@ const MONSTERS = {
         "chance": 8
       }
     ],
-    "images": ["goblin1.png", "goblin2.png"]
+    "images": [
+      "goblin1.png",
+      "goblin2.png"
+    ],
+    "pdef": 3,
+    "fireRes": 0,
+    "iceRes": 0,
+    "shockRes": 0,
+    "darkRes": 0
   },
-
-  multicrab: {
+  "multicrab": {
     "monId": "multicrab",
     "monName": "Crab Pack",
     "monsterType": "swarm",
@@ -634,10 +748,17 @@ const MONSTERS = {
         "chance": 8
       }
     ],
-    "images": ["multicrab1.png", "multicrab2.png"]
+    "images": [
+      "multicrab1.png",
+      "multicrab2.png"
+    ],
+    "pdef": 7,
+    "fireRes": 0,
+    "iceRes": 0,
+    "shockRes": 0,
+    "darkRes": 0
   },
-
-  mushroom: {
+  "mushroom": {
     "monId": "mushroom",
     "monName": "Angry Mushroom",
     "monsterType": "plant",
@@ -672,10 +793,17 @@ const MONSTERS = {
         "chance": 8
       }
     ],
-    "images": ["mushroom1.png", "mushroom2.png"]
+    "images": [
+      "mushroom1.png",
+      "mushroom2.png"
+    ],
+    "pdef": 5,
+    "fireRes": 1,
+    "iceRes": 1,
+    "shockRes": 1,
+    "darkRes": 1
   },
-
-  mzombie: {
+  "mzombie": {
     "monId": "mzombie",
     "monName": "Male Zombie",
     "monsterType": "undead",
@@ -707,10 +835,17 @@ const MONSTERS = {
         "chance": 8
       }
     ],
-    "images": ["mzombie1.png", "mzombie2.png"]
+    "images": [
+      "mzombie1.png",
+      "mzombie2.png"
+    ],
+    "pdef": 2,
+    "fireRes": 0,
+    "iceRes": 0,
+    "shockRes": 0,
+    "darkRes": 0
   },
-
-  mzombie_b: {
+  "mzombie_b": {
     "monId": "mzombie_b",
     "monName": "Bloated Zombie",
     "monsterType": "undead",
@@ -747,10 +882,17 @@ const MONSTERS = {
         "chance": 8
       }
     ],
-    "images": ["mzombie3.png", "mzombie4.png"]
+    "images": [
+      "mzombie3.png",
+      "mzombie4.png"
+    ],
+    "pdef": 7,
+    "fireRes": 1,
+    "iceRes": 1,
+    "shockRes": 1,
+    "darkRes": 1
   },
-
-  octopus: {
+  "octopus": {
     "monId": "octopus",
     "monName": "Cave Octopus",
     "monsterType": "beast",
@@ -780,10 +922,17 @@ const MONSTERS = {
         "chance": 8
       }
     ],
-    "images": ["octopus1.png", "octopus2.png"]
+    "images": [
+      "octopus1.png",
+      "octopus2.png"
+    ],
+    "pdef": 5,
+    "fireRes": 1,
+    "iceRes": 1,
+    "shockRes": 1,
+    "darkRes": 1
   },
-
-  orc: {
+  "orc": {
     "monId": "orc",
     "monName": "Orc Grunt",
     "monsterType": "orc",
@@ -813,10 +962,17 @@ const MONSTERS = {
         "chance": 8
       }
     ],
-    "images": ["orc1.png", "orc2.png"]
+    "images": [
+      "orc1.png",
+      "orc2.png"
+    ],
+    "pdef": 9,
+    "fireRes": 1,
+    "iceRes": 1,
+    "shockRes": 1,
+    "darkRes": 1
   },
-
-  rat: {
+  "rat": {
     "monId": "rat",
     "monName": "Giant Rat",
     "monsterType": "beast",
@@ -846,10 +1002,17 @@ const MONSTERS = {
         "chance": 8
       }
     ],
-    "images": ["rat1.png", "rat2.png"]
+    "images": [
+      "rat1.png",
+      "rat2.png"
+    ],
+    "pdef": 1,
+    "fireRes": 0,
+    "iceRes": 0,
+    "shockRes": 0,
+    "darkRes": 0
   },
-
-  skelemage: {
+  "skelemage": {
     "monId": "skelemage",
     "monName": "Skeleton Mage",
     "monsterType": "boss",
@@ -885,10 +1048,17 @@ const MONSTERS = {
         "chance": 8
       }
     ],
-    "images": ["skelemage1.png", "skelemage2.png"]
+    "images": [
+      "skelemage1.png",
+      "skelemage2.png"
+    ],
+    "pdef": 3,
+    "fireRes": 2,
+    "iceRes": 2,
+    "shockRes": 2,
+    "darkRes": 2
   },
-
-  skelemage_b: {
+  "skelemage_b": {
     "monId": "skelemage_b",
     "monName": "Bone Warlock",
     "monsterType": "boss",
@@ -924,10 +1094,17 @@ const MONSTERS = {
         "chance": 12
       }
     ],
-    "images": ["skelemage3.png", "skelemage4.png"]
+    "images": [
+      "skelemage3.png",
+      "skelemage4.png"
+    ],
+    "pdef": 10,
+    "fireRes": 5,
+    "iceRes": 5,
+    "shockRes": 5,
+    "darkRes": 5
   },
-
-  skeleswsh: {
+  "skeleswsh": {
     "monId": "skeleswsh",
     "monName": "Skeleton Guard",
     "monsterType": "undead",
@@ -958,10 +1135,17 @@ const MONSTERS = {
         "chance": 8
       }
     ],
-    "images": ["skeleswsh1.png", "skeleswsh2.png"]
+    "images": [
+      "skeleswsh1.png",
+      "skeleswsh2.png"
+    ],
+    "pdef": 8,
+    "fireRes": 0,
+    "iceRes": 0,
+    "shockRes": 0,
+    "darkRes": 0
   },
-
-  skeleton: {
+  "skeleton": {
     "monId": "skeleton",
     "monName": "Skeleton",
     "monsterType": "undead",
@@ -992,10 +1176,17 @@ const MONSTERS = {
         "chance": 8
       }
     ],
-    "images": ["skeleton1.png", "skeleton2.png"]
+    "images": [
+      "skeleton1.png",
+      "skeleton2.png"
+    ],
+    "pdef": 3,
+    "fireRes": 0,
+    "iceRes": 0,
+    "shockRes": 0,
+    "darkRes": 0
   },
-
-  skeleton_b: {
+  "skeleton_b": {
     "monId": "skeleton_b",
     "monName": "Crypt Skeleton",
     "monsterType": "undead",
@@ -1026,10 +1217,17 @@ const MONSTERS = {
         "chance": 8
       }
     ],
-    "images": ["skeleton3.png", "skeleton4.png"]
+    "images": [
+      "skeleton3.png",
+      "skeleton4.png"
+    ],
+    "pdef": 5,
+    "fireRes": 0,
+    "iceRes": 0,
+    "shockRes": 0,
+    "darkRes": 0
   },
-
-  spider: {
+  "spider": {
     "monId": "spider",
     "monName": "Dungeon Spider",
     "monsterType": "insect",
@@ -1064,10 +1262,17 @@ const MONSTERS = {
         "chance": 8
       }
     ],
-    "images": ["spider1.png", "spider2.png"]
+    "images": [
+      "spider1.png",
+      "spider2.png"
+    ],
+    "pdef": 2,
+    "fireRes": 0,
+    "iceRes": 0,
+    "shockRes": 0,
+    "darkRes": 0
   },
-
-  spider_b: {
+  "spider_b": {
     "monId": "spider_b",
     "monName": "Venom Spider",
     "monsterType": "insect",
@@ -1102,10 +1307,17 @@ const MONSTERS = {
         "chance": 8
       }
     ],
-    "images": ["spider3.png", "spider4.png"]
+    "images": [
+      "spider3.png",
+      "spider4.png"
+    ],
+    "pdef": 6,
+    "fireRes": 1,
+    "iceRes": 1,
+    "shockRes": 1,
+    "darkRes": 1
   },
-
-  squid: {
+  "squid": {
     "monId": "squid",
     "monName": "Cave Squid",
     "monsterType": "beast",
@@ -1135,10 +1347,17 @@ const MONSTERS = {
         "chance": 8
       }
     ],
-    "images": ["squid1.png", "squid2.png"]
+    "images": [
+      "squid1.png",
+      "squid2.png"
+    ],
+    "pdef": 4,
+    "fireRes": 1,
+    "iceRes": 1,
+    "shockRes": 1,
+    "darkRes": 1
   },
-
-  wolf: {
+  "wolf": {
     "monId": "wolf",
     "monName": "Forest Wolf",
     "monsterType": "beast",
@@ -1168,10 +1387,17 @@ const MONSTERS = {
         "chance": 8
       }
     ],
-    "images": ["wolf1.png", "wolf2.png"]
+    "images": [
+      "wolf1.png",
+      "wolf2.png"
+    ],
+    "pdef": 3,
+    "fireRes": 0,
+    "iceRes": 0,
+    "shockRes": 0,
+    "darkRes": 0
   },
-
-  wraith: {
+  "wraith": {
     "monId": "wraith",
     "monName": "Wraith",
     "monsterType": "undead",
@@ -1208,10 +1434,17 @@ const MONSTERS = {
         "chance": 12
       }
     ],
-    "images": ["wraith1.png", "wraith2.png"]
+    "images": [
+      "wraith1.png",
+      "wraith2.png"
+    ],
+    "pdef": 4,
+    "fireRes": 3,
+    "iceRes": 3,
+    "shockRes": 3,
+    "darkRes": 3
   },
-
-  wraith_b: {
+  "wraith_b": {
     "monId": "wraith_b",
     "monName": "Wraith Lord",
     "monsterType": "boss",
@@ -1248,6 +1481,14 @@ const MONSTERS = {
         "chance": 12
       }
     ],
-    "images": ["wraith3.png", "wraith4.png"]
+    "images": [
+      "wraith3.png",
+      "wraith4.png"
+    ],
+    "pdef": 9,
+    "fireRes": 7,
+    "iceRes": 7,
+    "shockRes": 7,
+    "darkRes": 7
   }
 };

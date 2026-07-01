@@ -63,6 +63,9 @@ function normalizeMonster(baseMonster) {
   const hp = Number(baseMonster.hp ?? baseMonster.maxHp ?? 1);
   const mp = Number(baseMonster.mp ?? baseMonster.maxMp ?? 0);
   const startFloor = getMonsterStartFloor(baseMonster);
+  const pdef = Number(baseMonster.pdef ?? baseMonster.defense ?? baseMonster.def ?? 0);
+  const oldMdef = Number(baseMonster.magicDefense ?? baseMonster.mdef ?? 0);
+  const convertedRes = Math.floor(oldMdef / 4);
 
   return {
     ...baseMonster,
@@ -85,10 +88,17 @@ function normalizeMonster(baseMonster) {
     maxMp: mp,
     currentMp: mp,
     attack: Number(baseMonster.attack ?? 1),
-    defense: Number(baseMonster.defense ?? 0),
-    magicDefense: Number(baseMonster.magicDefense ?? 0),
-    speed: Number(baseMonster.speed ?? 0),
 
+    // PDEF is physical mitigation percentage. defense is kept as a compatibility alias.
+    pdef,
+    defense: pdef,
+
+    fireRes: Number(baseMonster.fireRes ?? baseMonster.fireResist ?? convertedRes),
+    iceRes: Number(baseMonster.iceRes ?? baseMonster.iceResist ?? (baseMonster.iceWeakness !== undefined ? -Math.abs(Number(baseMonster.iceWeakness || 0)) : convertedRes)),
+    shockRes: Number(baseMonster.shockRes ?? baseMonster.shockResist ?? convertedRes),
+    darkRes: Number(baseMonster.darkRes ?? convertedRes),
+
+    speed: Number(baseMonster.speed ?? 0),
     critChance: Number(baseMonster.critChance ?? 0),
     dodgeChance: Number(baseMonster.dodgeChance ?? 0)
   };
@@ -164,25 +174,25 @@ function scaleMonster(monster, floor = 1) {
   const liveFloor = Math.max(1, Math.floor(Number(floor) || 1));
   const startFloor = Math.max(1, Math.floor(Number(monster.startFloor ?? monster.unlockFloor ?? monster.baseLevel ?? 1) || 1));
 
-  // New rule:
   // A monster's base stats are its strength when it first enters the pool.
   // Scaling only starts after that.
-  //
-  // Example:
-  // startFloor 30, currentFloor 35 => scaleLevel 5.
   const scaleLevel = Math.max(0, liveFloor - startFloor);
   const boss = isBossMonster(monster);
 
   const hpGrowth = getMonsterGrowthValue(monster, "hp", boss ? Math.max(8, Math.round(monster.maxHp * 0.055)) : Math.max(3, Math.round(monster.maxHp * 0.075)));
   const mpGrowth = getMonsterGrowthValue(monster, "mp", boss ? 3 : 1);
   const attackGrowth = getMonsterGrowthValue(monster, "attack", boss ? Math.max(1, Math.round(monster.attack * 0.035)) : Math.max(1, Math.round(monster.attack * 0.055)));
-  const defenseGrowth = getMonsterGrowthValue(monster, "defense", boss ? Math.max(1, Math.round(monster.defense * 0.035)) : Math.max(0, Math.round(monster.defense * 0.05)));
-  const magicDefenseGrowth = getMonsterGrowthValue(monster, "magicDefense", boss ? Math.max(1, Math.round(monster.magicDefense * 0.035)) : Math.max(0, Math.round(monster.magicDefense * 0.05)));
+
+  // PDEF is mitigation percentage, so it must grow slowly.
+  const basePdef = Number(monster.pdef ?? monster.defense ?? 0);
+  const pdefGrowth = getMonsterGrowthValue(monster, "pdef", boss ? 0.08 : 0.05);
+
   const speedGrowth = getMonsterGrowthValue(monster, "speed", 0);
   const expGrowth = getMonsterGrowthValue(monster, "exp", boss ? Math.max(8, Math.round(monster.exp * 0.055)) : Math.max(3, Math.round(monster.exp * 0.075)));
 
   const maxHp = Math.max(1, Math.round(monster.maxHp + (scaleLevel * hpGrowth)));
   const maxMp = Math.max(0, Math.round(monster.maxMp + (scaleLevel * mpGrowth)));
+  const livePdef = Math.max(0, Math.min(85, Math.round(basePdef + (scaleLevel * pdefGrowth))));
 
   const spell = monster.spell
     ? {
@@ -217,8 +227,8 @@ function scaleMonster(monster, floor = 1) {
     currentMp: maxMp,
 
     attack: Math.max(1, Math.round(monster.attack + (scaleLevel * attackGrowth))),
-    defense: Math.max(0, Math.round(monster.defense + (scaleLevel * defenseGrowth))),
-    magicDefense: Math.max(0, Math.round(monster.magicDefense + (scaleLevel * magicDefenseGrowth))),
+    pdef: livePdef,
+    defense: livePdef,
     speed: Math.max(0, Math.round(monster.speed + (scaleLevel * speedGrowth))),
 
     exp: Math.max(0, Math.round(monster.exp + (scaleLevel * expGrowth))),

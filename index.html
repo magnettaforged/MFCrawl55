@@ -1945,6 +1945,75 @@
       background: linear-gradient(90deg, rgba(213,170,62,0.85), rgba(255,235,140,0.95));
     }
 
+
+    .splashOverlay {
+      position: absolute;
+      inset: 6px;
+      z-index: 120;
+      display: none;
+      padding: 12px;
+      border: 2px solid var(--accent);
+      border-radius: 12px;
+      background: rgba(0,0,0,0.94);
+      color: #fff;
+      box-shadow: 0 0 20px rgba(0,0,0,0.85);
+    }
+
+    .splashOverlay.show { display: block; }
+
+    .splashTitle {
+      color: var(--accent);
+      font-weight: bold;
+      font-size: 20px;
+      text-align: center;
+      margin: 6px 0 10px;
+    }
+
+    .splashText {
+      color: rgba(255,255,255,0.86);
+      font-size: 13px;
+      line-height: 1.38;
+      margin: 0 0 10px;
+    }
+
+    .splashList {
+      margin: 0 0 12px 18px;
+      padding: 0;
+      color: rgba(255,255,255,0.82);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .helpInfo {
+      position: absolute;
+      left: 20px;
+      right: 20px;
+      top: 118px;
+      padding: 8px 10px;
+      border: 1px solid rgba(214,168,79,0.72);
+      border-radius: 9px;
+      background: rgba(0,0,0,0.72);
+      color: rgba(255,255,255,0.88);
+      font-size: 11px;
+      line-height: 1.35;
+      text-align: left;
+    }
+
+    .hardinessBox {
+      margin: 0 0 8px;
+      padding: 7px 8px;
+      border: 1px solid rgba(214,168,79,0.34);
+      border-radius: 7px;
+      background: rgba(0,0,0,0.26);
+      color: rgba(255,255,255,0.84);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .hardinessBox b {
+      color: var(--accent);
+    }
+
   </style>
 </head>
 
@@ -2002,6 +2071,14 @@
         <div class="facingBadge" id="facingBadge">E</div>
         <button class="helpButton" id="helpButton" onclick="showControlHelp()">Help</button>
         <div class="messageBox" id="messageBox">Tutorial map loaded.</div>
+
+
+        <div class="splashOverlay" id="splashOverlay">
+          <div class="splashTitle" id="splashTitle">Dungeon</div>
+          <div class="splashText" id="splashText"></div>
+          <ul class="splashList" id="splashList"></ul>
+          <button class="uiButton" onclick="closeSplashMenu()">Continue</button>
+        </div>
 
         <div class="hud">
           <div class="statBlock">
@@ -2090,7 +2167,7 @@
 
   <script>
     
-    const GAME_VERSION = "v0.5.9";
+    const GAME_VERSION = "v0.6.1";
 // =========================
     // MAP / FLOOR STATE
     // =========================
@@ -2290,6 +2367,7 @@
       disabledTraps.clear();
 
       resetFloorShopState();
+      incrementLeaderboardStat("totalFloors", 1);
 
       preloadFloorThemeImages();
       updateRoomView();
@@ -2527,6 +2605,7 @@
       if (!player.inventory.gems) player.inventory.gems = {};
       if (!player.inventory.fragments) player.inventory.fragments = {};
       if (!player.inventory.skills) player.inventory.skills = {};
+      ensureLeaderboardStats();
     }
 
     function getOwnedEquipmentRecord(itemId) {
@@ -2668,8 +2747,11 @@
           mp: 0,
           atk: 0,
           mag: 0,
-          def: 0,
-          mdef: 0,
+          pdef: 0,
+          fireRes: 0,
+          iceRes: 0,
+          shockRes: 0,
+          darkRes: 0,
           speed: 0,
           crit: 0,
           dodge: 0,
@@ -2679,22 +2761,62 @@
 
       const level = getEquipmentLevel(itemId);
 
+      let rawStats;
       if (typeof getUpgradedEquipmentStats === "function") {
-        return getUpgradedEquipmentStats(item, level);
+        rawStats = getUpgradedEquipmentStats(item, level);
+      } else {
+        rawStats = {
+          hp: item.hp || item.stats?.hp || 0,
+          mp: item.mp || item.stats?.mp || 0,
+          atk: item.atk || item.stats?.atk || 0,
+          mag: item.mag || item.stats?.mag || 0,
+          pdef: item.pdef ?? item.stats?.pdef ?? item.def ?? item.stats?.def ?? 0,
+          fireRes: item.fireRes ?? item.stats?.fireRes ?? 0,
+          iceRes: item.iceRes ?? item.stats?.iceRes ?? 0,
+          shockRes: item.shockRes ?? item.stats?.shockRes ?? 0,
+          darkRes: item.darkRes ?? item.stats?.darkRes ?? 0,
+          speed: item.speed || item.stats?.speed || 0,
+          crit: item.crit || item.stats?.crit || 0,
+          dodge: item.dodge || item.stats?.dodge || 0,
+          goldFind: item.goldFind || item.stats?.goldFind || 0
+        };
       }
 
       return {
-        hp: item.hp || 0,
-        mp: item.mp || 0,
-        atk: item.atk || 0,
-        mag: item.mag || 0,
-        def: item.def || 0,
-        mdef: item.mdef || 0,
-        speed: item.speed || 0,
-        crit: item.crit || 0,
-        dodge: item.dodge || 0,
-        goldFind: item.goldFind || 0
+        hp: Number(rawStats.hp || 0),
+        mp: Number(rawStats.mp || 0),
+        atk: Number(rawStats.atk || 0),
+        mag: Number(rawStats.mag || 0),
+        pdef: Number(rawStats.pdef ?? rawStats.def ?? 0),
+        fireRes: Number(rawStats.fireRes || 0),
+        iceRes: Number(rawStats.iceRes || 0),
+        shockRes: Number(rawStats.shockRes || 0),
+        darkRes: Number(rawStats.darkRes || 0),
+        speed: Number(rawStats.speed || 0),
+        crit: Number(rawStats.crit || 0),
+        dodge: Number(rawStats.dodge || 0),
+        goldFind: Number(rawStats.goldFind || 0)
       };
+    }
+
+    function getResistanceSummaryLine(stats) {
+      if (!stats) return "";
+      const values = {
+        Fire: Number(stats.fireRes || 0),
+        Ice: Number(stats.iceRes || 0),
+        Shock: Number(stats.shockRes || 0),
+        Dark: Number(stats.darkRes || 0)
+      };
+
+      const active = Object.entries(values).filter(([, value]) => value !== 0);
+      if (!active.length) return "";
+
+      const unique = [...new Set(active.map(([, value]) => value))];
+      if (active.length === 4 && unique.length === 1) {
+        return `All Res ${unique[0]}%`;
+      }
+
+      return active.map(([name, value]) => `${name} Res ${value}%`).join(" · ");
     }
 
     function equipmentStatLine(itemId) {
@@ -2706,20 +2828,19 @@
 
       let line = "";
 
-      if (typeof getEquipmentStatLine === "function") {
-        line = getEquipmentStatLine(item, level);
-      } else {
-        const s = getEquipStats(itemId);
-        const parts = [];
-        if (s.atk) parts.push(`Atk ${s.atk}`);
-        if (s.mag) parts.push(`Mag ${s.mag}`);
-        if (s.def) parts.push(`Def ${s.def}`);
-        if (s.mdef) parts.push(`MDef ${s.mdef}`);
-        if (s.hp) parts.push(`HP ${s.hp}`);
-        if (s.mp) parts.push(`MP ${s.mp}`);
-        if (s.speed) parts.push(`Speed ${s.speed}`);
-        line = parts.join(" · ") || "No stats";
-      }
+      const s = getEquipStats(itemId);
+      const parts = [];
+      if (s.atk) parts.push(`Atk ${s.atk}`);
+      if (s.mag) parts.push(`Mag ${s.mag}`);
+      if (s.pdef) parts.push(`PDEF ${s.pdef}%`);
+      const resLine = getResistanceSummaryLine(s);
+      if (resLine) parts.push(resLine);
+      if (s.hp) parts.push(`HP ${s.hp}`);
+      if (s.mp) parts.push(`MP ${s.mp}`);
+      if (s.speed) parts.push(`Spd ${s.speed}`);
+      if (s.dodge) parts.push(`Dodge ${s.dodge}%`);
+      if (s.goldFind) parts.push(`Gold ${s.goldFind}%`);
+      line = parts.join(" · ") || "No stats";
 
       const socketText = getSocketSummary(itemId);
       if (socketText) {
@@ -2749,9 +2870,14 @@
         mp: 0,
         atk: 0,
         mag: 0,
-        def: 0,
-        mdef: 0,
+        pdef: 0,
+        fireRes: 0,
+        iceRes: 0,
+        shockRes: 0,
+        darkRes: 0,
         speed: 0,
+        crit: 0,
+        dodge: 0,
         goldFind: 0
       };
 
@@ -2762,9 +2888,14 @@
         totals.mp += stats.mp || 0;
         totals.atk += stats.atk || 0;
         totals.mag += stats.mag || 0;
-        totals.def += stats.def || 0;
-        totals.mdef += stats.mdef || 0;
+        totals.pdef += stats.pdef || 0;
+        totals.fireRes += stats.fireRes || 0;
+        totals.iceRes += stats.iceRes || 0;
+        totals.shockRes += stats.shockRes || 0;
+        totals.darkRes += stats.darkRes || 0;
         totals.speed += stats.speed || 0;
+        totals.crit += stats.crit || 0;
+        totals.dodge += stats.dodge || 0;
         totals.goldFind += stats.goldFind || 0;
       });
 
@@ -2865,6 +2996,7 @@
       const gained = Math.max(0, Math.round(Number(amount) || 0));
       if (!Number.isFinite(player.exp)) player.exp = 0;
       player.exp += gained;
+      addLeaderboardXp(gained);
 
       let levelsGained = 0;
 
@@ -3135,6 +3267,22 @@
       const help = document.getElementById("controlHelp");
       if (!help) return;
 
+      let info = document.getElementById("helpInfo");
+      if (!info) {
+        info = document.createElement("div");
+        info.id = "helpInfo";
+        info.className = "helpInfo";
+        help.appendChild(info);
+      }
+
+      info.innerHTML = `
+        <b>Reminders</b><br>
+        Shrine is always at H18.<br>
+        Entrance retreat: Regret Your Decision moves back 2 floors and costs 20% gold.<br>
+        Death causes a 25% gold tax but gives 10 Potions.<br>
+        Shrine Stone returns you to the current floor shrine.
+      `;
+
       updateFacingAndExits();
       help.classList.add("show");
 
@@ -3142,7 +3290,7 @@
 
       helpTimer = setTimeout(() => {
         help.classList.remove("show");
-      }, 3000);
+      }, 6000);
     }
 
     let encounterNoticeTimer = null;
@@ -3595,6 +3743,7 @@
         }
 
         roomTransitionLocked = false;
+        incrementLeaderboardStat("totalRooms", 1);
         enterTile(getTile(playerX, playerY));
       }, ROOM_TRANSITION_DELAY_MS);
     }
@@ -3629,6 +3778,7 @@
         playerDir = Number.isInteger(previous.dir) ? previous.dir : 2;
 
         roomTransitionLocked = false;
+        incrementLeaderboardStat("totalRooms", 1);
         enterTile(getTile(playerX, playerY));
       }, ROOM_TRANSITION_DELAY_MS);
     }
@@ -4068,11 +4218,12 @@
       const restrictAdvanceTwo = shouldRestrictAdvanceTwoFromFloor(currentFloor);
 
       return `
+        ${hardinessSummaryHtml()}
         ${restrictAdvanceTwo ? `
           <button class="shopRow locked">
             ${shopIconHtml("", "items")}
             <div class="shopRowText">
-              <div class="shopRowName">Advance 2 Floors</div>
+              <div class="shopRowName">Advance to Floor ${upTwoTarget}</div>
               <div class="shopRowSub">Disabled before a floor reward milestone.</div>
             </div>
             <div class="shopRowValue">Locked</div>
@@ -4081,8 +4232,8 @@
           <button class="shopRow" onclick="shrineChangeFloor(2)">
             ${shopIconHtml("", "items")}
             <div class="shopRowText">
-              <div class="shopRowName">Advance 2 Floors</div>
-              <div class="shopRowSub">Move from Floor ${currentFloor} to Floor ${upTwoTarget}</div>
+              <div class="shopRowName">Advance to Floor ${upTwoTarget}</div>
+              <div class="shopRowSub">${threatTextForFloor(upTwoTarget)}</div>
             </div>
             <div class="shopRowValue">+2</div>
           </button>
@@ -4091,8 +4242,8 @@
         <button class="shopRow" onclick="shrineChangeFloor(1)">
           ${shopIconHtml("", "items")}
           <div class="shopRowText">
-            <div class="shopRowName">Advance 1 Floor</div>
-            <div class="shopRowSub">Move from Floor ${currentFloor} to Floor ${upOneTarget}</div>
+            <div class="shopRowName">Advance to Floor ${upOneTarget}</div>
+            <div class="shopRowSub">${threatTextForFloor(upOneTarget)}</div>
           </div>
           <div class="shopRowValue">+1</div>
         </button>
@@ -4100,8 +4251,8 @@
         <button class="shopRow" onclick="shrineChangeFloor(-1)">
           ${shopIconHtml("", "items")}
           <div class="shopRowText">
-            <div class="shopRowName">Return 1 Floor</div>
-            <div class="shopRowSub">Move from Floor ${currentFloor} to Floor ${downOneTarget}</div>
+            <div class="shopRowName">Retreat to Floor ${downOneTarget}</div>
+            <div class="shopRowSub">${threatTextForFloor(downOneTarget)}</div>
           </div>
           <div class="shopRowValue">-1</div>
         </button>
@@ -4109,8 +4260,8 @@
         <button class="shopRow" onclick="shrineChangeFloor(-2)">
           ${shopIconHtml("", "items")}
           <div class="shopRowText">
-            <div class="shopRowName">Return 2 Floors</div>
-            <div class="shopRowSub">Move from Floor ${currentFloor} to Floor ${downTwoTarget}</div>
+            <div class="shopRowName">Retreat to Floor ${downTwoTarget}</div>
+            <div class="shopRowSub">${threatTextForFloor(downTwoTarget)}</div>
           </div>
           <div class="shopRowValue">-2</div>
         </button>
@@ -4176,7 +4327,8 @@
       const canRegret = currentFloor > 1 && regretTarget < currentFloor;
 
       content.innerHTML = `
-        <div class="smallNote">Entrance options are limited for now.</div>
+        ${hardinessSummaryHtml()}
+        <div class="smallNote">Entrance options are limited. Use this menu before committing deeper into the floor.</div>
         <div class="shopMenuList">
           <button class="shopRow" onclick="limitedShrineRest()">
             ${shopIconHtml("", "items")}
@@ -4191,8 +4343,8 @@
             <button class="shopRow" onclick="regretDecisionAtEntrance()">
               ${shopIconHtml("", "items")}
               <div class="shopRowText">
-                <div class="shopRowName">Regret Your Decision</div>
-                <div class="shopRowSub">Retreat to Floor ${regretTarget} and lose 20% gold.</div>
+                <div class="shopRowName">Retreat to Floor ${regretTarget}</div>
+                <div class="shopRowSub">${threatTextForFloor(regretTarget)} · Lose 20% gold.</div>
               </div>
               <div class="shopRowValue">${regretCost}g</div>
             </button>
@@ -4200,7 +4352,7 @@
             <button class="shopRow locked">
               ${shopIconHtml("", "items")}
               <div class="shopRowText">
-                <div class="shopRowName">Regret Your Decision</div>
+                <div class="shopRowName">Retreat to Floor 1</div>
                 <div class="shopRowSub">No safer floor to retreat to.</div>
               </div>
               <div class="shopRowValue">Locked</div>
@@ -5188,6 +5340,7 @@
       if (player.inventory.consumables[itemId] <= 0) delete player.inventory.consumables[itemId];
 
       player.gold += price;
+      addLeaderboardGold(price);
       setMessage(`Sold ${getSafeItemName(itemId)} for ${price} gold.`);
       renderShrineSell();
     }
@@ -5209,6 +5362,7 @@
 
       delete player.inventory.keyitems[itemId];
       player.gold += price;
+      addLeaderboardGold(price);
       setMessage(`Sold ${getSafeItemName(itemId)} for ${price} gold.`);
       renderShrineSell();
     }
@@ -5237,6 +5391,7 @@
 
       delete player.inventory.equipment[itemId];
       player.gold += price;
+      addLeaderboardGold(price);
       setMessage(`Sold ${getEquipName(itemId)} for ${price} gold.`);
       renderShrineSell();
     }
@@ -5537,6 +5692,7 @@
       const baseGoldAmount = Math.max(5, Math.round(8 + Math.random() * 12 + currentFloor * (3 + Math.random() * 3)));
       const goldAmount = applyGoldFind(baseGoldAmount);
       player.gold += goldAmount;
+      addLeaderboardGold(goldAmount);
       messages.push(`${goldAmount} gold`);
 
       const consumableId = randomFromList(getChestConsumablePool());
@@ -5561,6 +5717,7 @@
           else {
             const bonusGold = Math.max(1, getSellPrice(item.itemId));
             player.gold += bonusGold;
+            addLeaderboardGold(bonusGold);
             messages.push(`${bonusGold} bonus gold`);
           }
         }
@@ -5811,10 +5968,8 @@
       const piercePct = ultimate ? Number(data.ultimatePiercePct ?? data.piercePct ?? 0) : Number(data.piercePct ?? 0);
       const multiplier = ultimate ? Number(data.ultimateMultiplier || 2.5) : Number(data.baseMultiplier || 1.25);
       const hits = ultimate ? Number(data.ultimateHits || data.hits || 1) : Number(data.hits || 1);
-      const enemyDefense = monster.defense || monster.MonDef || 0;
-      const effectiveDefense = Math.floor(enemyDefense * (1 - piercePct / 100));
       const rawAttack = getPlayerAttackValue();
-      const perHitPhysical = Math.max(1, Math.floor((rawAttack - effectiveDefense) * multiplier));
+      const perHitPhysical = applyMitigation(Math.floor(rawAttack * multiplier), getPhysicalMitigationValue(monster, piercePct));
       const physical = Math.max(1, perHitPhysical * Math.max(1, hits));
       let fire = ultimate ? Math.floor(base.fire * 1.5) : base.fire;
       let shock = ultimate ? Math.floor(base.shock * 1.5) : base.shock;
@@ -5823,14 +5978,14 @@
       let dark = ultimate ? Math.floor((base.dark || 0) * 1.5) : (base.dark || 0);
       const typeBonus = ultimate ? Math.floor(base.typeBonus * 1.5) : base.typeBonus;
       if (data.element) {
-        const elementPower = Math.floor(getBaseAttackValue() * Number(data.elementPct || 25) / 100) * Math.max(1, hits);
-        if (data.element === "fire") fire += applyResistance(elementPower, getMonsterResistance(monster, "fireRes"));
-        else if (data.element === "shock") shock += applyResistance(elementPower, getMonsterResistance(monster, "shockRes"));
-        else if (data.element === "ice") ice += applyResistance(elementPower, getMonsterResistance(monster, "iceRes"));
-        else if (data.element === "holy") holy += applyResistance(elementPower, getMonsterResistance(monster, "holyRes"));
-        else if (data.element === "dark") dark += applyResistance(elementPower, getMonsterResistance(monster, "darkRes"));
+        const elementPower = Math.floor(getBaseAttackValue() * Number(data.elementPct || 25) / 100);
+        if (data.element === "fire") fire += applyElementMitigation(elementPower, monster, "fire");
+        if (data.element === "shock") shock += applyElementMitigation(elementPower, monster, "shock");
+        if (data.element === "ice") ice += applyElementMitigation(elementPower, monster, "ice");
+        if (data.element === "holy") holy += applyElementMitigation(elementPower, monster, "holy");
+        if (data.element === "dark") dark += applyElementMitigation(elementPower, monster, "dark");
       }
-      const total = Math.max(1, physical + fire + shock + ice + holy + dark + typeBonus);
+      const total = physical + fire + shock + ice + holy + dark + typeBonus;
       const stealPct = ultimate ? Number(data.ultimateLifeStealPct ?? data.lifeStealPct ?? 0) : Number(data.lifeStealPct ?? 0);
       return { physical, fire, shock, ice, holy, dark, typeBonus, total, lifeSteal: Math.floor(total * stealPct / 100) };
     }
@@ -6117,13 +6272,18 @@
       return Math.floor(getBaseAttackValue() * (1 + runeBonuses.attackPct / 100));
     }
 
-    function getPlayerDefenseValue() {
+    function getPlayerPdefValue() {
       const bonuses = getEquipmentBonusTotals();
       const runeBonuses = getRuneBonusTotals();
       const ironSkin = getActiveSkillEffect("ironSkin");
       const skillDefensePct = ironSkin ? Number(ironSkin.defensePct || 0) : 0;
-      const base = Math.floor((player.vitality || 0) / 4) + (bonuses.def || 0);
-      return Math.floor(base * (1 + (runeBonuses.defensePct + skillDefensePct) / 100));
+      const base = (Number(bonuses.pdef || 0) + Math.floor((player.vitality || 0) / 8));
+      return clampPct(base * (1 + (runeBonuses.defensePct + skillDefensePct) / 100), 0, 95);
+    }
+
+    function getPlayerDefenseValue() {
+      // Compatibility wrapper. PDEF is physical mitigation percentage.
+      return getPlayerPdefValue();
     }
 
     function getMonsterType(monster) {
@@ -6140,13 +6300,215 @@
       return Math.max(0, Math.floor(amount * (1 - resistancePct / 100)));
     }
 
+
+    function clampPct(value, min = -95, max = 95) {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return 0;
+      return Math.max(min, Math.min(max, n));
+    }
+
+    function applyMitigation(amount, mitigationPct) {
+      const base = Math.max(0, Number(amount) || 0);
+      const pct = clampPct(mitigationPct, -95, 95);
+      return Math.max(1, Math.floor(base * (1 - pct / 100)));
+    }
+
+    function getPhysicalMitigationValue(source, piercePct = 0) {
+      const raw = Number(source?.pdef ?? source?.defense ?? source?.def ?? source?.pDef ?? 0) || 0;
+      const pierced = raw * (1 - clampPct(piercePct, 0, 100) / 100);
+      return clampPct(pierced, -95, 95);
+    }
+
+    function getResistanceValue(source, element) {
+      if (!source || !element) return 0;
+      const key = `${element}Res`;
+      const legacyKey = `${element}Resist`;
+      const weaknessKey = `${element}Weakness`;
+      if (source[key] !== undefined) return clampPct(source[key], -95, 95);
+      if (source[legacyKey] !== undefined) return clampPct(source[legacyKey], -95, 95);
+      if (source[weaknessKey] !== undefined) return -Math.abs(clampPct(source[weaknessKey], 0, 95));
+      return 0;
+    }
+
+    function applyElementMitigation(amount, target, element) {
+      return Math.max(0, Math.floor(Math.max(0, Number(amount) || 0) * (1 - getResistanceValue(target, element) / 100)));
+    }
+
+    function getAveragePlayerResistanceValue() {
+      const bonuses = typeof getEquipmentBonusTotals === "function" ? getEquipmentBonusTotals() : {};
+      const values = [
+        Number(bonuses.fireRes || 0),
+        Number(bonuses.iceRes || 0),
+        Number(bonuses.shockRes || 0),
+        Number(bonuses.darkRes || 0)
+      ];
+      return values.reduce((a, b) => a + b, 0) / Math.max(1, values.length);
+    }
+
+    function ensureLeaderboardStats() {
+      if (!player.leaderboardStats || typeof player.leaderboardStats !== "object") {
+        player.leaderboardStats = {};
+      }
+
+      const stats = player.leaderboardStats;
+      const defaults = {
+        totalFloors: 0,
+        totalRooms: 0,
+        totalGold: 0,
+        totalXp: 0,
+        potionsUsed: 0,
+        deaths: 0,
+        kills: 0
+      };
+
+      Object.keys(defaults).forEach(key => {
+        if (!Number.isFinite(Number(stats[key]))) stats[key] = defaults[key];
+      });
+
+      return stats;
+    }
+
+    function addLeaderboardGold(amount) {
+      const n = Math.max(0, Math.floor(Number(amount) || 0));
+      if (n <= 0) return;
+      ensureLeaderboardStats().totalGold += n;
+    }
+
+    function addLeaderboardXp(amount) {
+      const n = Math.max(0, Math.floor(Number(amount) || 0));
+      if (n <= 0) return;
+      ensureLeaderboardStats().totalXp += n;
+    }
+
+    function incrementLeaderboardStat(key, amount = 1) {
+      const stats = ensureLeaderboardStats();
+      stats[key] = Math.max(0, Math.floor(Number(stats[key] || 0) + Number(amount || 0)));
+    }
+
+    function getAttacksPerSecondFromSpeed(speed) {
+      const baseSeconds = 4.6;
+      const spd = Math.max(0, Number(speed) || 0);
+      return (1 + spd / 100) / baseSeconds;
+    }
+
+    function calculateCombatantHardiness(unit, options = {}) {
+      const hp = Math.max(1, Number(unit?.maxHp ?? unit?.hp ?? 1) || 1);
+      const attack = Math.max(0, Number(unit?.attack ?? unit?.atk ?? 0) || 0);
+      const speed = Math.max(0, Number(unit?.speed ?? unit?.spd ?? 0) || 0);
+      const lifeStealPct = Math.max(0, Number(unit?.lifeStealPct ?? unit?.lifeSteal ?? 0) || 0) / 100;
+      const dodgePct = clampPct(unit?.dodgeChance ?? unit?.dodge ?? 0, 0, 95);
+
+      const attacksPerSecond = getAttacksPerSecondFromSpeed(speed);
+      const selfHealing30s = attack * attacksPerSecond * lifeStealPct * 30;
+      const estimatedPool = hp + selfHealing30s;
+
+      const pdef = getPhysicalMitigationValue(unit);
+      const avgRes = Number(unit?.averageRes ?? 0) || 0;
+
+      const pdefMultiplier = 1 / Math.max(0.05, 1 - clampPct(pdef, -95, 95) / 100);
+      const resistMultiplier = 1 / Math.max(0.05, 1 - clampPct(avgRes, -95, 95) / 100);
+      const dodgeMultiplier = 1 / Math.max(0.05, 1 - dodgePct / 100);
+
+      return Math.max(1, Math.round(estimatedPool * pdefMultiplier * resistMultiplier * dodgeMultiplier));
+    }
+
+    function getPlayerHardinessValue() {
+      const bonuses = getEquipmentBonusTotals();
+      const runeBonuses = getRuneBonusTotals();
+      return calculateCombatantHardiness({
+        maxHp: player.maxHp,
+        attack: getPlayerAttackValue(),
+        speed: getPlayerSpeedValue(),
+        pdef: getPlayerPdefValue(),
+        averageRes: getAveragePlayerResistanceValue(),
+        dodge: getPlayerDodgeValue(),
+        lifeStealPct: runeBonuses.lifeStealPct
+      });
+    }
+
+    function getMonsterAverageResistance(monster) {
+      const vals = ["fire", "ice", "shock", "dark"].map(el => getResistanceValue(monster, el));
+      return vals.reduce((a, b) => a + b, 0) / Math.max(1, vals.length);
+    }
+
+    function getMonsterHardinessValue(monster) {
+      return calculateCombatantHardiness({
+        maxHp: monster?.maxHp ?? monster?.hp,
+        attack: monster?.attack,
+        speed: monster?.speed,
+        pdef: monster?.pdef ?? monster?.defense,
+        averageRes: getMonsterAverageResistance(monster),
+        dodgeChance: monster?.dodgeChance,
+        lifeStealPct: monster?.lifeStealPct ?? monster?.lifeSteal
+      });
+    }
+
+    function getFloorThreatFor(floor, theme = currentFloorTheme) {
+      if (typeof getMonsterIdsForTheme !== "function" || typeof getMonster !== "function" || typeof normalizeMonster !== "function" || typeof scaleMonster !== "function") {
+        return null;
+      }
+
+      const floorLevel = Math.max(1, Math.floor(Number(floor) || 1));
+      const themeCode = theme || currentFloorTheme;
+
+      const ids = new Set([
+        ...getMonsterIdsForTheme(themeCode, "M", floorLevel),
+        ...getMonsterIdsForTheme(themeCode, "B", floorLevel)
+      ]);
+
+      const values = [];
+
+      ids.forEach(id => {
+        const base = getMonster(id);
+        const normalized = normalizeMonster(base);
+        const scaled = normalized ? scaleMonster(normalized, floorLevel) : null;
+        if (!scaled) return;
+        values.push({
+          id,
+          name: scaled.monName || id,
+          hardiness: getMonsterHardinessValue(scaled)
+        });
+      });
+
+      if (!values.length) return null;
+      values.sort((a, b) => a.hardiness - b.hardiness);
+
+      const min = values[0].hardiness;
+      const max = values[values.length - 1].hardiness;
+      const avg = Math.round(values.reduce((sum, item) => sum + item.hardiness, 0) / values.length);
+
+      return { min, avg, max, values };
+    }
+
+    function getCurrentFloorThreat() {
+      return getFloorThreatFor(currentFloor, currentFloorTheme);
+    }
+
+    function threatTextForFloor(floor, theme = currentFloorTheme) {
+      const threat = getFloorThreatFor(floor, theme);
+      if (!threat) return "Threat Unknown";
+      return `Threat ${threat.min}–${threat.max}`;
+    }
+
+    function getRiskLabelForThreat(playerHardiness, threat) {
+      if (!threat) return "Unknown";
+      if (playerHardiness >= threat.max) return "Safe";
+      if (playerHardiness >= threat.avg) return "Spike Danger";
+      if (playerHardiness >= threat.min) return "Risky";
+      return "Dangerous";
+    }
+
+    function hardinessSummaryHtml() {
+      const playerHardiness = getPlayerHardinessValue();
+      return `<div class="hardinessBox"><b>Player Hardiness:</b> ${playerHardiness}</div>`;
+    }
+
+
     function calculateAttackDamage(monster) {
       const runeBonuses = getRuneBonusTotals();
       const weaponAttack = getBaseAttackValue();
       const attack = getPlayerAttackValue();
-      const enemyDefense = monster.defense || monster.MonDef || 0;
-      const effectiveDefense = Math.floor(enemyDefense * (1 - runeBonuses.piercePct / 100));
-      const physical = Math.max(1, attack - effectiveDefense);
+      const physical = applyMitigation(attack, getPhysicalMitigationValue(monster, runeBonuses.piercePct));
       const enchant = getActiveSkillEffect("weaponEnchant");
       const enchantPct = enchant ? Number(enchant.elementPct || 0) : 0;
       const enchantElement = enchant ? String(enchant.element || "") : "";
@@ -6155,11 +6517,11 @@
       const iceBase = Math.floor(weaponAttack * (enchantElement === "ice" ? enchantPct : 0) / 100);
       const holyBase = Math.floor(weaponAttack * (enchantElement === "holy" ? enchantPct : 0) / 100);
       const darkBase = Math.floor(weaponAttack * (enchantElement === "dark" ? enchantPct : 0) / 100);
-      const fire = applyResistance(fireBase, getMonsterResistance(monster, "fireRes"));
-      const shock = applyResistance(shockBase, getMonsterResistance(monster, "shockRes"));
-      const ice = applyResistance(iceBase, getMonsterResistance(monster, "iceRes"));
-      const holy = applyResistance(holyBase, getMonsterResistance(monster, "holyRes"));
-      const dark = applyResistance(darkBase, getMonsterResistance(monster, "darkRes"));
+      const fire = applyElementMitigation(fireBase, monster, "fire");
+      const shock = applyElementMitigation(shockBase, monster, "shock");
+      const ice = applyElementMitigation(iceBase, monster, "ice");
+      const holy = applyElementMitigation(holyBase, monster, "holy");
+      const dark = applyElementMitigation(darkBase, monster, "dark");
       const monsterType = getMonsterType(monster);
       const typeBonusBase = (monsterType === "undead" ? runeBonuses.undeadBonusPct : 0) + (monsterType === "light" ? runeBonuses.lightBonusPct : 0);
       const typeBonus = Math.floor(weaponAttack * typeBonusBase / 100);
@@ -6293,6 +6655,8 @@
 
       ensureFullInventoryShape();
 
+      incrementLeaderboardStat("deaths", 1);
+
       const goldBefore = Math.max(0, Math.floor(Number(player.gold) || 0));
       const goldPenalty = Math.floor(goldBefore * 0.25);
       player.gold = Math.max(0, goldBefore - goldPenalty);
@@ -6325,7 +6689,7 @@
 
       playMonsterAttack();
 
-      const damage = Math.max(1, currentEnemy.attack - getPlayerDefenseValue());
+      const damage = applyMitigation(currentEnemy.attack, getPlayerPdefValue());
       player.hp -= damage;
       gainUltimateCharge(Math.max(4, Math.min(14, Math.floor(damage / 3))));
 
@@ -6352,6 +6716,7 @@
 
     function defeatEnemy() {
       const defeatedId = currentEnemy.monId;
+      incrementLeaderboardStat("kills", 1);
       const defeatedName = currentEnemy.monName;
       const exp = getMonsterExpReward(currentEnemy);
       const expResult = gainExp(exp);
@@ -6371,6 +6736,7 @@
         if (drop.type === "gold") {
           const goldAmount = applyGoldFind(drop.amount);
           player.gold += goldAmount;
+          addLeaderboardGold(goldAmount);
           foundMessages.push(`${goldAmount} gold`);
         } else {
           const result = addLootItem(drop.id);
@@ -6443,12 +6809,13 @@
       belt4: 0
     };
 
-    const STATUS_PAGES = ["core", "combat", "damage", "resist"];
+    const STATUS_PAGES = ["core", "combat", "damage", "resist", "leaderboard"];
     const STATUS_PAGE_LABELS = {
       core: "Core",
       combat: "Combat",
       damage: "Damage",
-      resist: "Resist"
+      resist: "Resist",
+      leaderboard: "Stats"
     };
 
     const EQUIPMENT_PAGE_SIZE = 8;
@@ -6622,17 +6989,19 @@
 
       if (item.slot === "armor") {
         const parts = [];
-        if (stats.def) parts.push(`Def ${stats.def}`);
-        if (stats.mdef) parts.push(`MDef ${stats.mdef}`);
+        if (stats.pdef) parts.push(`PDEF ${stats.pdef}%`);
+        const resLine = getResistanceSummaryLine(stats);
+        if (resLine) parts.push(resLine);
         if (item.maxSockets) parts.push(`${item.maxSockets}S`);
         return parts.join(" · ");
       }
 
       const parts = [];
       if (stats.atk) parts.push(`Atk ${stats.atk}`);
-      if (stats.def) parts.push(`Def ${stats.def}`);
+      if (stats.pdef) parts.push(`PDEF ${stats.pdef}%`);
       if (stats.mag) parts.push(`Mag ${stats.mag}`);
-      if (stats.mdef) parts.push(`MDef ${stats.mdef}`);
+      const resLine = getResistanceSummaryLine(stats);
+      if (resLine) parts.push(resLine);
       if (stats.hp) parts.push(`HP ${stats.hp}`);
       if (stats.mp) parts.push(`MP ${stats.mp}`);
       if (stats.speed) parts.push(`Spd ${stats.speed}`);
@@ -6657,12 +7026,12 @@
           ["HP", `${player.hp} / ${player.maxHp}`],
           ["MP", `${player.mp} / ${player.maxMp}`],
           ["ATK", getPlayerAttackValue()],
-          ["DEF", getPlayerDefenseValue()],
+          ["PDEF", `${Math.round(getPlayerPdefValue())}%`],
           ["MAG", `${bonuses.mag} / ${runeBonuses.magicPct}%`],
           ["SPD", `${bonuses.speed} / ${runeBonuses.speedPct}%`],
           ["PIERCE", `${runeBonuses.piercePct}%`],
           ["LIFE", `${runeBonuses.lifeStealPct}%`],
-          ["GOLD", `${getTotalGoldFindPct()}%`]
+          ["HARD", getPlayerHardinessValue()]
         ];
       }
 
@@ -6671,22 +7040,35 @@
           ["FIRE", `${runeBonuses.fireWeaponPct}%`],
           ["SHOCK", `${runeBonuses.shockWeaponPct}%`],
           ["ICE", "0%"],
-          ["POISON", "0%"],
           ["DARK", "0%"],
           ["HOLY", `${runeBonuses.lightBonusPct}%`],
-          ["TIME", `${runeBonuses.slowChancePct}%`]
+          ["TIME", `${runeBonuses.slowChancePct}%`],
+          ["GOLD", `${getTotalGoldFindPct()}%`]
         ];
       }
 
       if (statusPage === "resist") {
         return [
-          ["FIRE", "0%"],
-          ["SHOCK", "0%"],
-          ["ICE", "0%"],
-          ["POISON", "0%"],
-          ["DARK", "0%"],
-          ["HOLY", "0%"],
-          ["TIME", "0%"]
+          ["FIRE", `${bonuses.fireRes || 0}%`],
+          ["SHOCK", `${bonuses.shockRes || 0}%`],
+          ["ICE", `${bonuses.iceRes || 0}%`],
+          ["DARK", `${bonuses.darkRes || 0}%`],
+          ["AVG", `${Math.round(getAveragePlayerResistanceValue())}%`],
+          ["DODGE", `${getPlayerDodgeValue()}%`]
+        ];
+      }
+
+      if (statusPage === "leaderboard") {
+        const stats = ensureLeaderboardStats();
+        return [
+          ["FLOORS", stats.totalFloors],
+          ["ROOMS", stats.totalRooms],
+          ["GOLD", stats.totalGold],
+          ["XP", stats.totalXp],
+          ["POTS", stats.potionsUsed],
+          ["DEATHS", stats.deaths],
+          ["KILLS", stats.kills],
+          ["LEVEL", player.level]
         ];
       }
 
@@ -6803,7 +7185,8 @@
 
     function getEquipmentBaseStat(item, key) {
       if (!item) return 0;
-      return Number(item[key] || 0) || 0;
+      if (key === "pdef") return Number(item.pdef ?? item.def ?? item.stats?.pdef ?? item.stats?.def ?? 0) || 0;
+      return Number(item[key] ?? item.stats?.[key] ?? 0) || 0;
     }
 
     function getEquipmentTotalStat(itemId, key) {
@@ -6825,11 +7208,38 @@
       const item = getEquipItem(itemId);
       if (!item) return detailLine("Stats", "No stats");
 
+      const stats = getEquipStats(itemId);
+      const resistanceRows = [];
+
+      const resValues = {
+        "Fire Res": stats.fireRes || 0,
+        "Ice Res": stats.iceRes || 0,
+        "Shock Res": stats.shockRes || 0,
+        "Dark Res": stats.darkRes || 0
+      };
+
+      const activeRes = Object.entries(resValues).filter(([, value]) => value !== 0);
+      const uniqueRes = [...new Set(activeRes.map(([, value]) => value))];
+
+      if (activeRes.length === 4 && uniqueRes.length === 1) {
+        resistanceRows.push(equipmentBreakdownLine("All Res", item, itemId, "fireRes", "%"));
+      } else {
+        activeRes.forEach(([label, value]) => {
+          const keyMap = {
+            "Fire Res": "fireRes",
+            "Ice Res": "iceRes",
+            "Shock Res": "shockRes",
+            "Dark Res": "darkRes"
+          };
+          resistanceRows.push(equipmentBreakdownLine(label, item, itemId, keyMap[label], "%"));
+        });
+      }
+
       const rows = [
         equipmentBreakdownLine("Atk", item, itemId, "atk"),
         equipmentBreakdownLine("Mag", item, itemId, "mag"),
-        equipmentBreakdownLine("Def", item, itemId, "def"),
-        equipmentBreakdownLine("MDef", item, itemId, "mdef"),
+        equipmentBreakdownLine("PDEF", item, itemId, "pdef", "%"),
+        ...resistanceRows,
         equipmentBreakdownLine("HP", item, itemId, "hp"),
         equipmentBreakdownLine("MP", item, itemId, "mp"),
         equipmentBreakdownLine("Speed", item, itemId, "speed"),
@@ -6877,7 +7287,7 @@
 
         if (i < current) {
           text = socket && socket.runeId
-            ? `${getRuneDisplayName(socket.runeId, socket.level || 0)} — ${getShortRuneStatLine(socket.runeId, socket.level || 0).replace("Attack", "Atk").replace("Defense", "Def").replace("Magic", "Mag").replace("Speed", "Spd")}`
+            ? `${getRuneDisplayName(socket.runeId, socket.level || 0)} — ${getShortRuneStatLine(socket.runeId, socket.level || 0).replace("Attack", "Atk").replace("Defense", "PDEF").replace("Magic", "Mag").replace("Speed", "Spd")}`
             : "Empty";
         }
 
@@ -7133,7 +7543,7 @@
             case "shock_weapon_pct": return `+${v}% Shock Atk`;
             case "slow_chance_pct": return `${v}% Slow`;
             case "light_bonus_pct": return `+${v}% Light Dmg`;
-            case "defense_pct": return `+${v}% Def`;
+            case "defense_pct": return `+${v}% PDEF`;
             case "undead_bonus_pct": return `+${v}% Undead Dmg`;
             default: return rune.shortLabel || rune.description || "Passive";
           }
@@ -7144,7 +7554,7 @@
       const shortLines = {
         fehu: `+${10 * step}% Gold`,
         uruz: `+${10 * step}% Atk`,
-        thurisaz: `-${10 * step}% Enemy Def`,
+        thurisaz: `-${10 * step}% Enemy PDEF`,
         ansuz: `+${10 * step}% Mag`,
         raidho: `+${10 * step}% Spd`,
         kenaz: `+${10 * step}% Fire Atk`,
@@ -7152,7 +7562,7 @@
         hagalaz: `+${10 * step}% Shock Atk`,
         isa: `${10 * step}% Slow`,
         eihwaz: `+${10 * step}% Light Dmg`,
-        algiz: `+${10 * step}% Def`,
+        algiz: `+${10 * step}% PDEF`,
         sowilo: `+${10 * step}% Undead Dmg`
       };
 
@@ -8205,6 +8615,8 @@
 
       const result = useConsumable(itemId, player, gameMode);
 
+      if (String(itemId || "").includes("potion")) incrementLeaderboardStat("potionsUsed", 1);
+
       if (result.escape && gameMode === "encounter") {
         runAway();
       }
@@ -8213,6 +8625,43 @@
       updateCombatBeltSlots();
       if (gameMode !== "encounter") setMessage(result.message);
     }
+
+
+    function showSplashMenu(returningPlayer = false) {
+      const splash = document.getElementById("splashOverlay");
+      if (!splash) return;
+
+      const title = document.getElementById("splashTitle");
+      const text = document.getElementById("splashText");
+      const list = document.getElementById("splashList");
+
+      if (title) title.textContent = returningPlayer ? "Welcome Back" : "Enter the Dungeon";
+      if (text) {
+        text.textContent = returningPlayer
+          ? `Save loaded on Floor ${currentFloor}. Check your Hardiness before pushing deeper.`
+          : "Reach the shrine, build your gear, and decide when to push deeper or retreat.";
+      }
+
+      if (list) {
+        list.innerHTML = `
+          <li>The shrine is always at H18.</li>
+          <li>The entrance menu can retreat 2 floors for 20% gold.</li>
+          <li>Death costs 25% gold and returns you to a new floor.</li>
+          <li>Shrine Stones return you directly to the current floor shrine.</li>
+          <li>Hardiness compares your survival estimate against the current floor threat.</li>
+        `;
+      }
+
+      setMenuOpen(true);
+      splash.classList.add("show");
+    }
+
+    function closeSplashMenu() {
+      const splash = document.getElementById("splashOverlay");
+      if (splash) splash.classList.remove("show");
+      setMenuOpen(false);
+    }
+
 
     // =========================
     // INIT
@@ -8244,8 +8693,10 @@
     if (loadedLocalSave) {
       startNewFloor();
       setMessage(`Save loaded. New floor layout started on floor ${currentFloor}.`);
+      showSplashMenu(true);
     } else {
       startNewFloor();
+      showSplashMenu(false);
     }
   </script>
 </body>
