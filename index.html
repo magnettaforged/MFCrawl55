@@ -150,9 +150,19 @@
 
     .statLine {
       display: grid;
-      grid-template-columns: auto 1fr;
-      gap: 8px;
+      grid-template-columns: auto 52px minmax(0, 1fr);
+      gap: 6px;
       align-items: center;
+    }
+
+    .statValue {
+      min-width: 52px;
+      color: rgba(255,255,255,0.9);
+      font-size: 11px;
+      font-weight: bold;
+      text-align: right;
+      line-height: 1;
+      white-space: nowrap;
     }
 
     .bar {
@@ -961,11 +971,16 @@
     }
 
     body.encounterMode .statLine {
-      grid-template-columns: 34px 1fr;
-      gap: 7px;
+      grid-template-columns: 34px 54px minmax(0, 1fr);
+      gap: 6px;
       font-size: 12px;
       color: #fff;
       text-shadow: 0 0 4px #000;
+    }
+
+    body.encounterMode .statValue {
+      min-width: 54px;
+      font-size: 10.5px;
     }
 
     body.encounterMode .attackMeterWrap {
@@ -1889,6 +1904,29 @@
       color: rgba(140,190,255,0.62);
     }
 
+    .skillMpBadge {
+      position: absolute;
+      right: 3px;
+      bottom: 2px;
+      min-width: 25px;
+      padding: 0 4px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.26);
+      background: rgba(0,0,0,0.74);
+      color: #fff;
+      font-size: 8.5px;
+      line-height: 13px;
+      text-align: center;
+      font-weight: bold;
+      pointer-events: none;
+      text-shadow: 0 0 3px #000;
+    }
+
+    .skillButton.noMp .skillMpBadge {
+      color: rgba(140,190,255,0.78);
+      border-color: rgba(140,190,255,0.26);
+    }
+
     body.encounterMode .combatMainButtons {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -1969,10 +2007,12 @@
           <div class="statBlock">
             <div class="statLine">
               <span>HP</span>
+              <span class="statValue" id="hpValueText">100/100</span>
               <div class="bar"><div class="barFill" id="hpBar"></div></div>
             </div>
             <div class="statLine">
               <span>MP</span>
+              <span class="statValue" id="mpValueText">30/30</span>
               <div class="bar"><div class="barFill" id="mpBar"></div></div>
             </div>
           </div>
@@ -2050,7 +2090,7 @@
 
   <script>
     
-    const GAME_VERSION = "v0.5.8";
+    const GAME_VERSION = "v0.5.9";
 // =========================
     // MAP / FLOOR STATE
     // =========================
@@ -3178,8 +3218,21 @@
     }
 
     function updateBars() {
-      document.getElementById("hpBar").style.width = `${Math.max(0, player.hp / player.maxHp * 100)}%`;
-      document.getElementById("mpBar").style.width = `${Math.max(0, player.mp / player.maxMp * 100)}%`;
+      const hpBar = document.getElementById("hpBar");
+      const mpBar = document.getElementById("mpBar");
+      const hpText = document.getElementById("hpValueText");
+      const mpText = document.getElementById("mpValueText");
+
+      const hp = Math.max(0, Math.floor(Number(player.hp) || 0));
+      const maxHp = Math.max(1, Math.floor(Number(player.maxHp) || 1));
+      const mp = Math.max(0, Math.floor(Number(player.mp) || 0));
+      const maxMp = Math.max(1, Math.floor(Number(player.maxMp) || 1));
+
+      if (hpBar) hpBar.style.width = `${clampNumber(hp / maxHp * 100, 0, 100)}%`;
+      if (mpBar) mpBar.style.width = `${clampNumber(mp / maxMp * 100, 0, 100)}%`;
+      if (hpText) hpText.textContent = `${hp}/${maxHp}`;
+      if (mpText) mpText.textContent = `${mp}/${maxMp}`;
+
       if (gameMode === "encounter") updateCombatMetersUI();
       if (typeof updateCombatBeltSlots === "function") updateCombatBeltSlots();
     }
@@ -5839,14 +5892,20 @@
       updateCombatMetersUI();
     }
 
-    function setMeterButton(button, label, fillPct, ready = true, noMp = false) {
+    function setMeterButton(button, label, fillPct, ready = true, noMp = false, mpCost = null) {
       if (!button) return;
       const pct = clampNumber(fillPct, 0, 100);
       button.style.setProperty("--fill", `${pct}%`);
       button.classList.toggle("ready", ready);
       button.classList.toggle("notReady", !ready);
       button.classList.toggle("noMp", !!noMp);
-      button.innerHTML = `<span>${label}</span>`;
+
+      const cost = Number(mpCost);
+      const badge = Number.isFinite(cost) && cost > 0
+        ? `<span class="skillMpBadge">MP ${Math.floor(cost)}</span>`
+        : "";
+
+      button.innerHTML = `<span>${label}</span>${badge}`;
     }
 
     const COMBAT_TICK_MS = 250;
@@ -5957,8 +6016,8 @@
 
       const base1Cost = getSkillMpCost("base1");
       const base2Cost = getSkillMpCost("base2");
-      setMeterButton(base1Button, getSkillNameForSlot("base1"), waitPct, ready && player.mp >= base1Cost, player.mp < base1Cost);
-      setMeterButton(base2Button, getSkillNameForSlot("base2"), waitPct, ready && player.mp >= base2Cost, player.mp < base2Cost);
+      setMeterButton(base1Button, getSkillNameForSlot("base1"), waitPct, ready && player.mp >= base1Cost, player.mp < base1Cost, base1Cost);
+      setMeterButton(base2Button, getSkillNameForSlot("base2"), waitPct, ready && player.mp >= base2Cost, player.mp < base2Cost, base2Cost);
 
       const ultimateReady = player.skills.ultimateCharge >= 100;
       setMeterButton(ultimateButton, getSkillNameForSlot("ultimate"), player.skills.ultimateCharge, ultimateReady, false);
