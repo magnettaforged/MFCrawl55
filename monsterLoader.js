@@ -24,34 +24,32 @@ function randomChoice(list) {
 }
 
 
-// Global rarity tiers keep 100-floor scaling bounded without duplicating every monster.
-// Monsters still unlock from monster.level/startFloor, but live scaling resets at the
-// current floor tier start. Floors 71+ roll Epic/Legendary variants by weight.
+// Global floor tiers keep 100-floor scaling bounded without duplicating every monster.
+// Threat preview is deterministic: one standard tier per floor, no rarity rolls.
+// Legendary is a hidden 5% encounter modifier and is not shown in preview or names.
 const MONSTER_FLOOR_TIERS = [
-  { rarity: "normal", label: "", minFloor: 1, maxFloor: 15, weight: 100, statMult: 1.00, growthMult: 1.00, pdefMult: 1.00 },
-  { rarity: "magical", label: "Magical", minFloor: 16, maxFloor: 35, weight: 100, statMult: 1.45, growthMult: 1.05, pdefMult: 1.15 },
-  { rarity: "rare", label: "Rare", minFloor: 36, maxFloor: 70, weight: 100, statMult: 2.20, growthMult: 1.10, pdefMult: 1.30 },
-  { rarity: "epic", label: "Epic", minFloor: 71, maxFloor: 9999, weight: 75, statMult: 3.20, growthMult: 1.15, pdefMult: 1.50 },
-  { rarity: "legendary", label: "Legendary", minFloor: 71, maxFloor: 9999, weight: 25, statMult: 4.25, growthMult: 1.30, pdefMult: 1.75 }
+  { rarity: "normal", label: "", minFloor: 1, maxFloor: 15, weight: 100, statMult: 1.00, growthMult: 1.00, pdefMult: 1.00, rewardMult: 1.00 },
+  { rarity: "magical", label: "Magical", minFloor: 16, maxFloor: 35, weight: 100, statMult: 1.45, growthMult: 1.05, pdefMult: 1.15, rewardMult: 1.60 },
+  { rarity: "rare", label: "Rare", minFloor: 36, maxFloor: 70, weight: 100, statMult: 2.20, growthMult: 1.10, pdefMult: 1.30, rewardMult: 2.60 },
+  { rarity: "epic", label: "Epic", minFloor: 71, maxFloor: 9999, weight: 100, statMult: 3.20, growthMult: 1.15, pdefMult: 1.50, rewardMult: 4.00 }
 ];
+
+const HIDDEN_LEGENDARY_CHANCE_PCT = 5;
+const HIDDEN_LEGENDARY_MODIFIER = {
+  statMult: 1.45,
+  growthMult: 1.15,
+  pdefMult: 1.15,
+  rewardMult: 4.00
+};
 
 function getFloorTierOptions(floor) {
   const liveFloor = Math.max(1, Math.floor(Number(floor) || 1));
-  return MONSTER_FLOOR_TIERS.filter(tier => liveFloor >= tier.minFloor && liveFloor <= tier.maxFloor);
+  const match = MONSTER_FLOOR_TIERS.find(tier => liveFloor >= tier.minFloor && liveFloor <= tier.maxFloor);
+  return [match || MONSTER_FLOOR_TIERS[0]];
 }
 
-function chooseWeightedTier(tiers) {
-  const list = Array.isArray(tiers) && tiers.length ? tiers : [MONSTER_FLOOR_TIERS[0]];
-  const total = list.reduce((sum, tier) => sum + Math.max(0, Number(tier.weight || 0)), 0);
-  if (total <= 0) return list[0];
-
-  let roll = Math.random() * total;
-  for (const tier of list) {
-    roll -= Math.max(0, Number(tier.weight || 0));
-    if (roll <= 0) return tier;
-  }
-
-  return list[list.length - 1];
+function getStandardFloorTier(floor) {
+  return getFloorTierOptions(floor)[0] || MONSTER_FLOOR_TIERS[0];
 }
 
 function shouldUseGlobalMonsterTier(monster) {
@@ -62,16 +60,24 @@ function shouldUseGlobalMonsterTier(monster) {
 
 function getMonsterTierForFloor(monster, floor, forcedRarity = null) {
   if (!shouldUseGlobalMonsterTier(monster)) {
-    return { rarity: "base", label: "", minFloor: getMonsterStartFloor(monster), maxFloor: 9999, weight: 100, statMult: 1, growthMult: 1, pdefMult: 1 };
+    return { rarity: "base", label: "", minFloor: getMonsterStartFloor(monster), maxFloor: 9999, weight: 100, statMult: 1, growthMult: 1, pdefMult: 1, rewardMult: 1 };
   }
 
-  const options = getFloorTierOptions(floor);
+  const standard = getStandardFloorTier(floor);
   if (forcedRarity) {
-    const match = options.find(tier => tier.rarity === forcedRarity);
+    const match = MONSTER_FLOOR_TIERS.find(tier => tier.rarity === forcedRarity);
     if (match) return match;
   }
 
-  return chooseWeightedTier(options);
+  return standard;
+}
+
+function shouldApplyHiddenLegendary(monster, options = {}) {
+  if (!shouldUseGlobalMonsterTier(monster)) return false;
+  if (options.legendary === true) return true;
+  if (options.legendary === false || options.preview === true) return false;
+  const chance = Number(monster.legendaryChancePct ?? HIDDEN_LEGENDARY_CHANCE_PCT);
+  return Math.random() * 100 < Math.max(0, Math.min(100, chance));
 }
 
 function applyRarityName(monName, tier) {
@@ -232,6 +238,7 @@ function scaleMonster(monster, floor = 1, options = {}) {
   const liveFloor = Math.max(1, Math.floor(Number(floor) || 1));
   const startFloor = Math.max(1, Math.floor(Number(monster.startFloor ?? monster.unlockFloor ?? monster.baseLevel ?? 1) || 1));
   const tier = getMonsterTierForFloor(monster, liveFloor, options.rarity || options.forcedRarity || null);
+  const hiddenLegendary = shouldApplyHiddenLegendary(monster, options);
   const tierStartFloor = Math.max(startFloor, Math.max(1, Math.floor(Number(tier.minFloor || startFloor) || startFloor)));
 
   // Scaling is now constrained by the current floor tier.
@@ -239,9 +246,12 @@ function scaleMonster(monster, floor = 1, options = {}) {
   const scaleLevel = Math.max(0, liveFloor - tierStartFloor);
   const boss = isBossMonster(monster);
 
-  const statMult = Math.max(0.01, Number(tier.statMult || 1));
-  const growthMult = Math.max(0.01, Number(tier.growthMult || 1));
-  const pdefMult = Math.max(0.01, Number(tier.pdefMult || 1));
+  const legendaryMod = hiddenLegendary ? HIDDEN_LEGENDARY_MODIFIER : { statMult: 1, growthMult: 1, pdefMult: 1, rewardMult: 1 };
+  const statMult = Math.max(0.01, Number(tier.statMult || 1) * Number(legendaryMod.statMult || 1));
+  const growthMult = Math.max(0.01, Number(tier.growthMult || 1) * Number(legendaryMod.growthMult || 1));
+  const pdefMult = Math.max(0.01, Number(tier.pdefMult || 1) * Number(legendaryMod.pdefMult || 1));
+  const rewardMult = Math.max(0.01, Number(tier.rewardMult || statMult || 1) * Number(legendaryMod.rewardMult || 1));
+  const floorRewardMult = 1 + (scaleLevel * 0.03);
 
   const tierBaseHp = Math.max(1, Math.round(Number(monster.maxHp || monster.hp || 1) * statMult));
   const tierBaseMp = Math.max(0, Math.round(Number(monster.maxMp || monster.mp || 0) * statMult));
@@ -291,6 +301,9 @@ function scaleMonster(monster, floor = 1, options = {}) {
     scaleLevel,
     rarity: rarityLabel || undefined,
     rarityWeight: Number(tier.weight || 100),
+    hiddenLegendary: hiddenLegendary || undefined,
+    rewardMult: rewardMult * floorRewardMult,
+    goldRewardMult: rewardMult * floorRewardMult,
     monName: applyRarityName(monster.monName || monster.name || "Monster", tier),
 
     hp: maxHp,
@@ -321,7 +334,7 @@ function getScaledMonsterVariantsForFloor(monster, floor = 1) {
     return [scaleMonster(monster, liveFloor)];
   }
 
-  return getFloorTierOptions(liveFloor).map(tier => scaleMonster(monster, liveFloor, { rarity: tier.rarity }));
+  return getFloorTierOptions(liveFloor).map(tier => scaleMonster(monster, liveFloor, { rarity: tier.rarity, preview: true, legendary: false }));
 }
 
 function getRandomMonsterForTheme(theme = "c", tileType = "M", floor = 1) {

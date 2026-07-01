@@ -2167,7 +2167,7 @@
 
   <script>
     
-    const GAME_VERSION = "v0.6.2";
+    const GAME_VERSION = "v0.6.4";
 // =========================
     // MAP / FLOOR STATE
     // =========================
@@ -2990,6 +2990,18 @@
       const value = monster.exp ?? monster.expReward ?? 0;
       const n = Number(value);
       return Number.isFinite(n) ? Math.max(0, Math.round(n)) : 0;
+    }
+
+    function getMonsterGoldRewardMultiplier(monster) {
+      const value = monster?.goldRewardMult ?? monster?.rewardMult ?? 1;
+      const n = Number(value);
+      return Number.isFinite(n) ? Math.max(0.01, n) : 1;
+    }
+
+    function scaleMonsterGoldDropAmount(amount, monster) {
+      const base = Math.max(0, Number(amount) || 0);
+      if (base <= 0) return 0;
+      return Math.max(1, Math.round(base * getMonsterGoldRewardMultiplier(monster)));
     }
 
     function gainExp(amount) {
@@ -6398,8 +6410,12 @@
       return String(n);
     }
 
+    const HARDINESS_WINDOW_SECONDS = 60;
+    const HARDINESS_ASSUMED_INCOMING_APS = 0.5;
+    const HARDINESS_ASSUMED_INCOMING_HIT = 50;
+
     function calculateCombatantHardiness(unit, options = {}) {
-      const battleSeconds = Math.max(1, Number(options.battleSeconds ?? 60) || 60);
+      const battleSeconds = Math.max(1, Number(options.battleSeconds ?? HARDINESS_WINDOW_SECONDS) || HARDINESS_WINDOW_SECONDS);
       const hp = Math.max(1, Number(unit?.maxHp ?? unit?.hp ?? 1) || 1);
       const attack = Math.max(0, Number(unit?.attack ?? unit?.atk ?? 0) || 0);
       const speed = Math.max(0, Number(unit?.speed ?? unit?.spd ?? 0) || 0);
@@ -6413,20 +6429,19 @@
       const pdef = clampPct(getPhysicalMitigationValue(unit), -95, 95) / 100;
       const avgRes = clampPct(Number(unit?.averageRes ?? 0) || 0, -95, 95) / 100;
 
-      // Hardiness is an additive 60-second survival estimate, not HP / remaining damage.
+      // Hardiness is an additive survival estimate, not HP / remaining damage.
       const pdefAbsorption = basePool * pdef;
       const edefAbsorption = basePool * avgRes;
 
-      const incomingAttacksPerSecond = Math.max(0, Number(options.incomingAttacksPerSecond || 0) || 0);
-      const averageIncomingHit = Math.max(0, Number(options.averageIncomingHit || 0) || 0);
+      const incomingAttacksPerSecond = Math.max(0, Number(options.incomingAttacksPerSecond ?? HARDINESS_ASSUMED_INCOMING_APS) || 0);
+      const averageIncomingHit = Math.max(0, Number(options.averageIncomingHit ?? HARDINESS_ASSUMED_INCOMING_HIT) || 0);
       const dodgeAbsorption = incomingAttacksPerSecond * battleSeconds * dodgePct * averageIncomingHit;
 
       return Math.max(1, Math.round(basePool + pdefAbsorption + edefAbsorption + dodgeAbsorption));
     }
 
-    function getPlayerHardinessValue(floor = currentFloor, theme = currentFloorTheme) {
+    function getPlayerHardinessValue() {
       const runeBonuses = getRuneBonusTotals();
-      const incoming = getFloorIncomingAverages(floor, theme);
       return calculateCombatantHardiness({
         maxHp: player.maxHp,
         attack: getPlayerAttackValue(),
@@ -6436,9 +6451,9 @@
         dodge: getPlayerDodgeValue(),
         lifeStealPct: runeBonuses.lifeStealPct
       }, {
-        battleSeconds: 60,
-        incomingAttacksPerSecond: incoming.avgAps,
-        averageIncomingHit: incoming.avgHit
+        battleSeconds: HARDINESS_WINDOW_SECONDS,
+        incomingAttacksPerSecond: HARDINESS_ASSUMED_INCOMING_APS,
+        averageIncomingHit: HARDINESS_ASSUMED_INCOMING_HIT
       });
     }
 
@@ -6573,7 +6588,7 @@
     function threatTextForFloor(floor, theme = currentFloorTheme) {
       const threat = getFloorThreatFor(floor, theme);
       if (!threat) return "Threat Unknown";
-      return `Threat Avg ${formatThreatNumber(threat.avg)} / Spike ${formatThreatNumber(threat.max)}`;
+      return `Threat ${formatThreatNumber(threat.min)}-${formatThreatNumber(threat.max)}`;
     }
 
     function getRiskLabelForThreat(playerHardiness, threat) {
@@ -6820,7 +6835,8 @@
 
       drops.forEach(drop => {
         if (drop.type === "gold") {
-          const goldAmount = applyGoldFind(drop.amount);
+          const scaledGoldBase = scaleMonsterGoldDropAmount(drop.amount, currentEnemy);
+          const goldAmount = applyGoldFind(scaledGoldBase);
           player.gold += goldAmount;
           addLeaderboardGold(goldAmount);
           foundMessages.push(`${goldAmount} gold`);
@@ -8734,7 +8750,7 @@
           <li>The entrance menu can retreat 2 floors for 20% gold.</li>
           <li>Death costs 25% gold and returns you to a new floor.</li>
           <li>Shrine Stones return you directly to the current floor shrine.</li>
-          <li>Hardiness compares your survival estimate against the current floor threat.</li>
+          <li>Hardiness is a player-only survival estimate. Floor buttons show separate destination threat.</li>
         `;
       }
 

@@ -1,26 +1,23 @@
-Dungeon v0.6.0 DEF/Hardiness update
+Dungeon v0.6.4 - Clean Threat / Tier / Reward Test
 
-Replace only these files:
+Replace only:
 - index.html
-- armor.js
-- monster.js
 - monsterLoader.js
-- runes.js
 
-Do not replace skills.js; it was not changed in this update.
-
-Main changes:
-- DEF renamed in UI/combat to PDEF.
-- PDEF is physical mitigation percentage instead of flat subtraction.
-- MDEF removed from armor data.
-- Old armor MDEF converted directly into Fire/Ice/Shock/Dark resistance using floor(MDEF / 4).
-- Player Holy resistance is not used.
-- Resistance lines hide when 0.
-- Equal Fire/Ice/Shock/Dark resistance displays as All Res.
-- Hardiness added as a 30-second survival estimate.
-- Floor Threat range calculates from the actual current floor monster pool.
-- Entrance and floor travel menus show Hardiness and threat.
-- Help menu includes retreat, H18 shrine, death tax, Shrine Stone reminders.
-- Splash menu for new/returning players.
-- Local leaderboard stats object tracks floors, rooms, gold, XP, potions, deaths, kills, level.
-- First monster smoothing pass for Dragon, Kraken, Orc Warlord, and Bandit Ambusher.
+Changes:
+- Floor threat preview is deterministic again.
+- Button display restored to simple min-max: Threat X-Y.
+- Removed Legendary from normal threat preview/range calculation.
+- Main global tiers are now:
+  - Normal: Floors 1-15
+  - Magical: Floors 16-35
+  - Rare: Floors 36-70
+  - Epic: Floors 71+
+- Legendary is now a hidden 5% encounter modifier.
+  - It is not shown in floor previews.
+  - It is not added to the displayed threat range.
+  - It is not prefixed in the monster name.
+- Battle gold drops now scale from the final scaled monster through goldRewardMult/rewardMult.
+- EXP continues to use the scaled monster EXP value.
+- Player Hardiness remains player-only and uses fixed assumptions.
+- Version bumped to v0.6.4.
