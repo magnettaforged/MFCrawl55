@@ -23,6 +23,64 @@ function randomChoice(list) {
   return list[Math.floor(Math.random() * list.length)];
 }
 
+
+// Global rarity tiers keep 100-floor scaling bounded without duplicating every monster.
+// Monsters still unlock from monster.level/startFloor, but live scaling resets at the
+// current floor tier start. Floors 71+ roll Epic/Legendary variants by weight.
+const MONSTER_FLOOR_TIERS = [
+  { rarity: "normal", label: "", minFloor: 1, maxFloor: 15, weight: 100, statMult: 1.00, growthMult: 1.00, pdefMult: 1.00 },
+  { rarity: "magical", label: "Magical", minFloor: 16, maxFloor: 35, weight: 100, statMult: 1.45, growthMult: 1.05, pdefMult: 1.15 },
+  { rarity: "rare", label: "Rare", minFloor: 36, maxFloor: 70, weight: 100, statMult: 2.20, growthMult: 1.10, pdefMult: 1.30 },
+  { rarity: "epic", label: "Epic", minFloor: 71, maxFloor: 9999, weight: 75, statMult: 3.20, growthMult: 1.15, pdefMult: 1.50 },
+  { rarity: "legendary", label: "Legendary", minFloor: 71, maxFloor: 9999, weight: 25, statMult: 4.25, growthMult: 1.30, pdefMult: 1.75 }
+];
+
+function getFloorTierOptions(floor) {
+  const liveFloor = Math.max(1, Math.floor(Number(floor) || 1));
+  return MONSTER_FLOOR_TIERS.filter(tier => liveFloor >= tier.minFloor && liveFloor <= tier.maxFloor);
+}
+
+function chooseWeightedTier(tiers) {
+  const list = Array.isArray(tiers) && tiers.length ? tiers : [MONSTER_FLOOR_TIERS[0]];
+  const total = list.reduce((sum, tier) => sum + Math.max(0, Number(tier.weight || 0)), 0);
+  if (total <= 0) return list[0];
+
+  let roll = Math.random() * total;
+  for (const tier of list) {
+    roll -= Math.max(0, Number(tier.weight || 0));
+    if (roll <= 0) return tier;
+  }
+
+  return list[list.length - 1];
+}
+
+function shouldUseGlobalMonsterTier(monster) {
+  if (!monster) return true;
+  if (monster.tiered === false || monster.useGlobalTier === false) return false;
+  return true;
+}
+
+function getMonsterTierForFloor(monster, floor, forcedRarity = null) {
+  if (!shouldUseGlobalMonsterTier(monster)) {
+    return { rarity: "base", label: "", minFloor: getMonsterStartFloor(monster), maxFloor: 9999, weight: 100, statMult: 1, growthMult: 1, pdefMult: 1 };
+  }
+
+  const options = getFloorTierOptions(floor);
+  if (forcedRarity) {
+    const match = options.find(tier => tier.rarity === forcedRarity);
+    if (match) return match;
+  }
+
+  return chooseWeightedTier(options);
+}
+
+function applyRarityName(monName, tier) {
+  const label = tier && tier.label ? String(tier.label).trim() : "";
+  if (!label) return monName;
+  const name = String(monName || "Monster");
+  return name.toLowerCase().startsWith(label.toLowerCase() + " ") ? name : `${label} ${name}`;
+}
+
 function normalizeMonsterImage(image) {
   if (!image) return "";
   const name = String(image).replace(/^.*[\\/]/, "");
@@ -170,43 +228,56 @@ function isBossMonster(monster) {
   return type === "boss" || behavior === "boss";
 }
 
-function scaleMonster(monster, floor = 1) {
+function scaleMonster(monster, floor = 1, options = {}) {
   const liveFloor = Math.max(1, Math.floor(Number(floor) || 1));
   const startFloor = Math.max(1, Math.floor(Number(monster.startFloor ?? monster.unlockFloor ?? monster.baseLevel ?? 1) || 1));
+  const tier = getMonsterTierForFloor(monster, liveFloor, options.rarity || options.forcedRarity || null);
+  const tierStartFloor = Math.max(startFloor, Math.max(1, Math.floor(Number(tier.minFloor || startFloor) || startFloor)));
 
-  // A monster's base stats are its strength when it first enters the pool.
-  // Scaling only starts after that.
-  const scaleLevel = Math.max(0, liveFloor - startFloor);
+  // Scaling is now constrained by the current floor tier.
+  // Example: floor 100 Epic monster scales from floor 71, not from floor 1.
+  const scaleLevel = Math.max(0, liveFloor - tierStartFloor);
   const boss = isBossMonster(monster);
 
-  const hpGrowth = getMonsterGrowthValue(monster, "hp", boss ? Math.max(8, Math.round(monster.maxHp * 0.055)) : Math.max(3, Math.round(monster.maxHp * 0.075)));
-  const mpGrowth = getMonsterGrowthValue(monster, "mp", boss ? 3 : 1);
-  const attackGrowth = getMonsterGrowthValue(monster, "attack", boss ? Math.max(1, Math.round(monster.attack * 0.035)) : Math.max(1, Math.round(monster.attack * 0.055)));
+  const statMult = Math.max(0.01, Number(tier.statMult || 1));
+  const growthMult = Math.max(0.01, Number(tier.growthMult || 1));
+  const pdefMult = Math.max(0.01, Number(tier.pdefMult || 1));
 
-  // PDEF is mitigation percentage, so it must grow slowly.
+  const tierBaseHp = Math.max(1, Math.round(Number(monster.maxHp || monster.hp || 1) * statMult));
+  const tierBaseMp = Math.max(0, Math.round(Number(monster.maxMp || monster.mp || 0) * statMult));
+  const tierBaseAttack = Math.max(1, Math.round(Number(monster.attack || 1) * statMult));
+
+  const hpGrowth = Math.max(1, Math.round(getMonsterGrowthValue(monster, "hp", boss ? Math.max(8, Math.round(tierBaseHp * 0.055)) : Math.max(3, Math.round(tierBaseHp * 0.075))) * growthMult));
+  const mpGrowth = Math.max(0, Math.round(getMonsterGrowthValue(monster, "mp", boss ? 3 : 1) * growthMult));
+  const attackGrowth = Math.max(1, Math.round(getMonsterGrowthValue(monster, "attack", boss ? Math.max(1, Math.round(tierBaseAttack * 0.035)) : Math.max(1, Math.round(tierBaseAttack * 0.055))) * growthMult));
+
+  // PDEF is mitigation percentage, so it grows slowly and is not multiplied like HP/attack.
   const basePdef = Number(monster.pdef ?? monster.defense ?? 0);
-  const pdefGrowth = getMonsterGrowthValue(monster, "pdef", boss ? 0.08 : 0.05);
+  const tierBasePdef = Math.max(0, basePdef * pdefMult);
+  const pdefGrowth = getMonsterGrowthValue(monster, "pdef", boss ? 0.08 : 0.05) * growthMult;
 
   const speedGrowth = getMonsterGrowthValue(monster, "speed", 0);
-  const expGrowth = getMonsterGrowthValue(monster, "exp", boss ? Math.max(8, Math.round(monster.exp * 0.055)) : Math.max(3, Math.round(monster.exp * 0.075)));
+  const expGrowth = Math.max(1, Math.round(getMonsterGrowthValue(monster, "exp", boss ? Math.max(8, Math.round(monster.exp * 0.055)) : Math.max(3, Math.round(monster.exp * 0.075))) * growthMult));
 
-  const maxHp = Math.max(1, Math.round(monster.maxHp + (scaleLevel * hpGrowth)));
-  const maxMp = Math.max(0, Math.round(monster.maxMp + (scaleLevel * mpGrowth)));
-  const livePdef = Math.max(0, Math.min(85, Math.round(basePdef + (scaleLevel * pdefGrowth))));
+  const maxHp = Math.max(1, Math.round(tierBaseHp + (scaleLevel * hpGrowth)));
+  const maxMp = Math.max(0, Math.round(tierBaseMp + (scaleLevel * mpGrowth)));
+  const livePdef = Math.max(0, Math.min(85, Math.round(tierBasePdef + (scaleLevel * pdefGrowth))));
 
   const spell = monster.spell
     ? {
         ...monster.spell,
-        damage: Math.max(1, Math.round(Number(monster.spell.damage || 0) + (scaleLevel * getMonsterGrowthValue(monster, "spellDamage", boss ? 2 : 1))))
+        damage: Math.max(1, Math.round((Number(monster.spell.damage || 0) * statMult) + (scaleLevel * getMonsterGrowthValue(monster, "spellDamage", boss ? 2 : 1) * growthMult)))
       }
     : monster.spell;
 
   const ranged = monster.ranged
     ? {
         ...monster.ranged,
-        damage: Math.max(1, Math.round(Number(monster.ranged.damage || 0) + (scaleLevel * getMonsterGrowthValue(monster, "rangedDamage", boss ? 2 : 1))))
+        damage: Math.max(1, Math.round((Number(monster.ranged.damage || 0) * statMult) + (scaleLevel * getMonsterGrowthValue(monster, "rangedDamage", boss ? 2 : 1) * growthMult)))
       }
     : monster.ranged;
+
+  const rarityLabel = tier.rarity === "base" ? "" : tier.rarity;
 
   return {
     ...monster,
@@ -216,7 +287,11 @@ function scaleMonster(monster, floor = 1) {
     level: liveFloor,
     liveLevel: liveFloor,
     startFloor,
+    tierStartFloor,
     scaleLevel,
+    rarity: rarityLabel || undefined,
+    rarityWeight: Number(tier.weight || 100),
+    monName: applyRarityName(monster.monName || monster.name || "Monster", tier),
 
     hp: maxHp,
     maxHp,
@@ -226,16 +301,27 @@ function scaleMonster(monster, floor = 1) {
     maxMp,
     currentMp: maxMp,
 
-    attack: Math.max(1, Math.round(monster.attack + (scaleLevel * attackGrowth))),
+    attack: Math.max(1, Math.round(tierBaseAttack + (scaleLevel * attackGrowth))),
     pdef: livePdef,
     defense: livePdef,
     speed: Math.max(0, Math.round(monster.speed + (scaleLevel * speedGrowth))),
 
-    exp: Math.max(0, Math.round(monster.exp + (scaleLevel * expGrowth))),
+    exp: Math.max(0, Math.round((monster.exp * statMult) + (scaleLevel * expGrowth))),
 
     spell,
     ranged
   };
+}
+
+function getScaledMonsterVariantsForFloor(monster, floor = 1) {
+  if (!monster) return [];
+  const liveFloor = Math.max(1, Math.floor(Number(floor) || 1));
+
+  if (!shouldUseGlobalMonsterTier(monster)) {
+    return [scaleMonster(monster, liveFloor)];
+  }
+
+  return getFloorTierOptions(liveFloor).map(tier => scaleMonster(monster, liveFloor, { rarity: tier.rarity }));
 }
 
 function getRandomMonsterForTheme(theme = "c", tileType = "M", floor = 1) {
