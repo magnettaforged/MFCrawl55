@@ -2167,7 +2167,7 @@
 
   <script>
     
-    const GAME_VERSION = "v0.6.4";
+    const GAME_VERSION = "v0.6.5";
 // =========================
     // MAP / FLOOR STATE
     // =========================
@@ -6412,7 +6412,7 @@
 
     const HARDINESS_WINDOW_SECONDS = 60;
     const HARDINESS_ASSUMED_INCOMING_APS = 0.5;
-    const HARDINESS_ASSUMED_INCOMING_HIT = 50;
+    const HARDINESS_ASSUMED_INCOMING_HIT = 100;
 
     function calculateCombatantHardiness(unit, options = {}) {
       const battleSeconds = Math.max(1, Number(options.battleSeconds ?? HARDINESS_WINDOW_SECONDS) || HARDINESS_WINDOW_SECONDS);
@@ -6426,16 +6426,17 @@
       const sustain = attack * attacksPerSecond * lifeStealPct * battleSeconds;
       const basePool = hp + sustain;
 
-      const pdef = clampPct(getPhysicalMitigationValue(unit), -95, 95) / 100;
-      const avgRes = clampPct(Number(unit?.averageRes ?? 0) || 0, -95, 95) / 100;
+      const pdef = Math.max(-0.95, (Number(getPhysicalMitigationValue(unit)) || 0) / 100);
+      const avgRes = Math.max(-0.95, (Number(unit?.averageRes ?? 0) || 0) / 100);
 
-      // Hardiness is an additive survival estimate, not HP / remaining damage.
-      const pdefAbsorption = basePool * pdef;
-      const edefAbsorption = basePool * avgRes;
-
+      // Hardiness uses live stats and a fixed expected-damage window.
+      // Defense is counted per expected incoming hit, then added across the battle window.
       const incomingAttacksPerSecond = Math.max(0, Number(options.incomingAttacksPerSecond ?? HARDINESS_ASSUMED_INCOMING_APS) || 0);
       const averageIncomingHit = Math.max(0, Number(options.averageIncomingHit ?? HARDINESS_ASSUMED_INCOMING_HIT) || 0);
-      const dodgeAbsorption = incomingAttacksPerSecond * battleSeconds * dodgePct * averageIncomingHit;
+      const expectedIncomingDamage = incomingAttacksPerSecond * battleSeconds * averageIncomingHit;
+      const pdefAbsorption = expectedIncomingDamage * pdef;
+      const edefAbsorption = expectedIncomingDamage * avgRes;
+      const dodgeAbsorption = expectedIncomingDamage * dodgePct;
 
       return Math.max(1, Math.round(basePool + pdefAbsorption + edefAbsorption + dodgeAbsorption));
     }
