@@ -42,6 +42,56 @@ const HIDDEN_LEGENDARY_MODIFIER = {
   rewardMult: 4.00
 };
 
+// Rare Oddity: hidden Easter egg treasure encounter. Image can be added later at assets/monsters/mysterious_elusive.webp.
+function registerRareOddityMonster() {
+  if (typeof MONSTERS === "undefined" || !MONSTERS) return;
+  if (!MONSTERS.mysterious_elusive) {
+    MONSTERS.mysterious_elusive = {
+      monId: "mysterious_elusive",
+      monName: "Mysterious Elusive Monster",
+      monsterType: "oddity",
+      behavior: "treasure",
+      level: 1,
+      hp: 60,
+      mp: 0,
+      attack: 1,
+      pdef: 0,
+      defense: 0,
+      magicDefense: 0,
+      speed: 40,
+      critChance: 0,
+      dodgeChance: 98,
+      exp: 250,
+      image: "mysterious_elusive.webp",
+      images: ["mysterious_elusive.webp"],
+      legendaryChancePct: 0,
+      drops: [
+        { type: "gold", min: 250, max: 800, chance: 100 },
+        { type: "item", id: "shrine_stone", name: "Shrine Stone", chance: 8 },
+        { type: "item", id: "gold_potion", name: "Gold Potion", chance: 35 }
+      ],
+      rareOddity: true,
+      tiered: true
+    };
+  }
+  if (typeof MONSTER_LOCATIONS !== "undefined" && MONSTER_LOCATIONS && !MONSTER_LOCATIONS.mysterious_elusive) {
+    MONSTER_LOCATIONS.mysterious_elusive = { c: true, b: true, f: true, bc: false, bb: false, bf: false };
+  }
+}
+
+registerRareOddityMonster();
+
+function getRareOddityChancePct(floor) {
+  return 2; // intentionally rare; can be tuned later
+}
+
+function shouldRollRareOddity(theme, tileType, floor) {
+  if (String(tileType || "M").toUpperCase() !== "M") return false;
+  if (typeof MONSTERS === "undefined" || !MONSTERS.mysterious_elusive) return false;
+  return Math.random() * 100 < getRareOddityChancePct(floor);
+}
+
+
 function getFloorTierOptions(floor) {
   const liveFloor = Math.max(1, Math.floor(Number(floor) || 1));
   const match = MONSTER_FLOOR_TIERS.find(tier => liveFloor >= tier.minFloor && liveFloor <= tier.maxFloor);
@@ -207,7 +257,17 @@ function getMonsterIdsForTheme(theme = "c", tileType = "M", floor = 1) {
     return row && row[column] === true && getMonster(monId);
   });
 
-  const ids = allThemeIds.filter(monId => isMonsterUnlockedForFloor(monId, floorLevel));
+  let ids = allThemeIds.filter(monId => isMonsterUnlockedForFloor(monId, floorLevel));
+
+  // Accessibility: spider phobia mode removes spider encounters when another valid enemy exists.
+  if (typeof window !== "undefined" && typeof window.isSpiderPhobiaMode === "function" && window.isSpiderPhobiaMode()) {
+    const filtered = ids.filter(monId => {
+      const mon = getMonster(monId) || {};
+      const haystack = `${monId} ${mon.monId || ""} ${mon.monName || ""} ${mon.monsterType || ""}`.toLowerCase();
+      return !haystack.includes("spider");
+    });
+    if (filtered.length) ids = filtered;
+  }
 
   // Early-floor safety fallback:
   // If a map contains a boss tile before any boss is unlocked for that theme,
@@ -345,7 +405,7 @@ function getRandomMonsterForTheme(theme = "c", tileType = "M", floor = 1) {
     return null;
   }
 
-  const monsterId = randomChoice(ids);
+  const monsterId = shouldRollRareOddity(theme, tileType, floor) ? "mysterious_elusive" : randomChoice(ids);
   const monster = getMonster(monsterId);
 
   if (!monster) {

@@ -209,7 +209,7 @@
 
     .combatBeltColumn {
       display: grid;
-      grid-template-rows: repeat(4, 34px) 24px;
+      grid-template-rows: repeat(4, 34px);
       gap: 5px;
       align-self: end;
     }
@@ -2014,6 +2014,228 @@
       color: var(--accent);
     }
 
+
+    .systemMenuList {
+      display: grid;
+      gap: 7px;
+      margin-top: 8px;
+    }
+
+    .toggleRow {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      align-items: center;
+      min-height: 38px;
+      padding: 8px;
+      border: 1px solid rgba(214,168,79,0.36);
+      border-radius: 7px;
+      background: rgba(0,0,0,0.30);
+      color: #fff;
+      text-align: left;
+    }
+
+    .tinyMapGrid {
+      display: grid;
+      gap: 2px;
+      justify-content: center;
+      margin: 8px auto 10px;
+      max-width: 100%;
+      overflow: auto;
+    }
+
+    .tinyMapCell {
+      width: 13px;
+      height: 13px;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 2px;
+      background: rgba(255,255,255,0.05);
+      color: rgba(255,255,255,0.78);
+      font-size: 8px;
+      line-height: 11px;
+      text-align: center;
+      overflow: hidden;
+    }
+
+    .tinyMapCell.unknown { background: rgba(255,255,255,0.02); color: transparent; }
+    .tinyMapCell.wall { background: rgba(0,0,0,0.40); color: transparent; }
+    .tinyMapCell.current { border-color: var(--accent); color: var(--accent); box-shadow: 0 0 5px rgba(214,168,79,0.55); }
+
+    .detailGrid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      margin: 8px 0;
+    }
+
+    .detailGridCell {
+      padding: 6px;
+      border: 1px solid rgba(214,168,79,0.28);
+      border-radius: 6px;
+      background: rgba(0,0,0,0.24);
+      font-size: 12px;
+      line-height: 1.25;
+    }
+
+    .detailGridTitle {
+      color: var(--accent);
+      font-weight: bold;
+      margin-bottom: 4px;
+    }
+
+    .largeMonsterPreview {
+      width: 100%;
+      height: 190px;
+      object-fit: contain;
+      display: block;
+      margin: 4px auto 8px;
+      filter: drop-shadow(0 0 8px rgba(0,0,0,0.9));
+    }
+
+
+    .bestiaryGridList {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+
+    .bestiaryRow {
+      width: 100%;
+      min-height: 62px;
+      display: grid;
+      grid-template-columns: 48px minmax(0, 1fr);
+      gap: 6px;
+      align-items: center;
+      padding: 5px;
+      border: 1px solid rgba(214,168,79,0.35);
+      border-radius: 6px;
+      background: rgba(0,0,0,0.28);
+      color: #fff;
+      text-align: left;
+      cursor: pointer;
+      overflow: hidden;
+    }
+
+    .bestiaryRow.locked {
+      opacity: 0.45;
+      border-color: rgba(255,255,255,0.18);
+      cursor: default;
+    }
+
+    .bestiaryIcon {
+      width: 44px;
+      height: 54px;
+      object-fit: cover;
+      object-position: center center;
+      border-radius: 5px;
+      background: rgba(255,255,255,0.04);
+      filter: drop-shadow(0 0 4px rgba(0,0,0,0.9));
+    }
+
+    .bestiaryIcon.empty {
+      border: 1px solid rgba(255,255,255,0.12);
+      opacity: 0.28;
+    }
+
+    .bestiaryNumber {
+      color: var(--accent);
+      font-size: 10px;
+      font-weight: bold;
+      line-height: 1;
+      margin-bottom: 3px;
+    }
+
+    .bestiaryName {
+      color: #fff;
+      font-size: 11.5px;
+      font-weight: bold;
+      line-height: 1.1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .bestiarySub {
+      display: block;
+      color: rgba(255,255,255,0.66);
+      font-size: 10px;
+      line-height: 1.15;
+      margin-top: 3px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .bestiaryStatsTable {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      margin: 8px 0;
+      font-size: 10.5px;
+      line-height: 1.15;
+    }
+
+    .bestiaryStatsTable th,
+    .bestiaryStatsTable td {
+      border: 1px solid rgba(214,168,79,0.24);
+      padding: 5px 3px;
+      text-align: center;
+      background: rgba(0,0,0,0.22);
+      word-break: normal;
+    }
+
+    .bestiaryStatsTable th {
+      color: var(--accent);
+      font-weight: bold;
+    }
+
+    .bestiaryStatsTable th:first-child,
+    .bestiaryStatsTable td:first-child {
+      width: 50px;
+      color: rgba(255,255,255,0.78);
+      font-weight: bold;
+      text-align: left;
+      padding-left: 5px;
+    }
+
+    .collectionDetailHeader {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto auto auto;
+      gap: 5px;
+      align-items: center;
+      margin-bottom: 5px;
+    }
+
+    .collectionDetailName {
+      color: var(--accent);
+      font-size: 14px;
+      font-weight: bold;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .collectionLevelText {
+      color: #fff;
+      font-size: 12px;
+      font-weight: bold;
+      min-width: 34px;
+      text-align: right;
+    }
+
+    .collectionLevelButton {
+      min-height: 24px;
+      width: 30px;
+      padding: 0;
+      border: 1px solid rgba(214,168,79,0.58);
+      border-radius: 5px;
+      background: rgba(0,0,0,0.34);
+      color: var(--accent);
+      font-weight: bold;
+      cursor: pointer;
+    }
+
   </style>
 </head>
 
@@ -2053,9 +2275,9 @@
 
         <div class="topHudBadge floorIndicator" id="floorIndicator">Floor 1 | A1</div>
         <div class="mapIndicator" id="mapIndicator">Map: -</div>
-        <div class="versionIndicator" id="versionIndicator">v0.4.3</div>
+        <div class="versionIndicator" id="versionIndicator">v0.6.9</div>
 
-        <button class="soundToggle" id="soundToggle" onclick="toggleGameSound()" aria-label="Toggle sound">🔊</button>
+        <button class="soundToggle" id="settingsButton" onclick="openSystemOverlay()" aria-label="Settings">⚙</button>
 
         <div class="exitMarker exitForward" id="exitForward">Exit</div>
         <div class="exitMarker exitLeft" id="exitLeft">Exit</div>
@@ -2111,7 +2333,6 @@
               <button class="uiButton beltButton empty" onclick="useBeltSlot('belt2')" aria-label="P2"></button>
               <button class="uiButton beltButton empty" onclick="useBeltSlot('belt3')" aria-label="P3"></button>
               <button class="uiButton beltButton empty" onclick="useBeltSlot('belt4')" aria-label="P4"></button>
-              <button class="uiButton combatRunButton" onclick="runAway()">Run</button>
             </div>
           </div>
         </div>
@@ -2167,7 +2388,7 @@
 
   <script>
     
-    const GAME_VERSION = "v0.6.6";
+    const GAME_VERSION = "v0.6.9";
 // =========================
     // MAP / FLOOR STATE
     // =========================
@@ -2462,6 +2683,531 @@
 
 
     // =========================
+    // SYSTEM / DISCOVERY / ACCESSIBILITY
+    // =========================
+
+    const SYSTEM_COLLECTION_PAGE_SIZE = 6;
+    const BESTIARY_PAGE_SIZE = 8;
+    let bestiaryPage = 0;
+    let collectionPage = {
+      weapons: 0,
+      armor: 0,
+      jewelry: 0,
+      runes: 0,
+      consumables: 0,
+      skills: 0
+    };
+    let activeCollectionCategory = "weapons";
+    let collectionPreviewLevel = {};
+
+    const COLLECTION_CATEGORIES = ["weapons", "armor", "jewelry", "runes", "consumables", "skills"];
+    const COLLECTION_LABELS = {
+      weapons: "Weapons",
+      armor: "Armor",
+      jewelry: "Jewelry",
+      runes: "Runes",
+      consumables: "Consumables",
+      skills: "Skills"
+    };
+
+    function ensureSystemState() {
+      if (!player.settings || typeof player.settings !== "object") player.settings = {};
+      if (typeof player.settings.soundMuted !== "boolean") player.settings.soundMuted = false;
+      if (typeof player.settings.noSpiders !== "boolean") player.settings.noSpiders = false;
+      if (!player.discovery || typeof player.discovery !== "object") player.discovery = {};
+      if (!player.discovery.bestiary || typeof player.discovery.bestiary !== "object") player.discovery.bestiary = {};
+      if (!player.discovery.collection || typeof player.discovery.collection !== "object") player.discovery.collection = {};
+      if (!player.discovery.maps || typeof player.discovery.maps !== "object") player.discovery.maps = {};
+      COLLECTION_CATEGORIES.forEach(cat => {
+        if (!player.discovery.collection[cat] || typeof player.discovery.collection[cat] !== "object") {
+          player.discovery.collection[cat] = {};
+        }
+      });
+      syncCollectionDiscovery();
+      return player.settings;
+    }
+
+    window.isSpiderPhobiaMode = function () {
+      return !!(player && player.settings && player.settings.noSpiders);
+    };
+
+    function discoverBestiary(monId) {
+      if (!monId) return;
+      ensureSystemState();
+      const key = String(monId);
+      const entry = player.discovery.bestiary[key] || { kills: 0 };
+      entry.kills = Math.max(0, Number(entry.kills || 0)) + 1;
+      entry.defeated = true;
+      entry.lastFloor = currentFloor;
+      player.discovery.bestiary[key] = entry;
+    }
+
+    function discoverCollection(category, id) {
+      if (!category || !id) return;
+      ensureSystemState();
+      if (!player.discovery.collection[category]) player.discovery.collection[category] = {};
+      player.discovery.collection[category][String(id)] = true;
+    }
+
+    function syncCollectionDiscovery() {
+      if (!player.discovery || !player.discovery.collection) return;
+      Object.keys(player.inventory?.equipment || {}).forEach(itemId => {
+        const item = getEquipItem(itemId);
+        if (!item || !player.inventory.equipment[itemId]?.owned) return;
+        const cat = item.slot === "weapon" ? "weapons" : item.slot === "armor" ? "armor" : "jewelry";
+        if (player.discovery.collection[cat]) player.discovery.collection[cat][itemId] = true;
+      });
+      Object.keys(player.inventory?.consumables || {}).forEach(id => {
+        if (Number(player.inventory.consumables[id] || 0) > 0 && player.discovery.collection.consumables) player.discovery.collection.consumables[id] = true;
+      });
+      Object.keys(player.inventory?.runes || {}).forEach(id => {
+        const levels = player.inventory.runes[id] || {};
+        if (Object.values(levels).some(v => Number(v || 0) > 0) && player.discovery.collection.runes) player.discovery.collection.runes[id] = true;
+      });
+      Object.keys(player.inventory?.skills || {}).forEach(id => {
+        if (player.inventory.skills[id] && player.discovery.collection.skills) player.discovery.collection.skills[id] = true;
+      });
+    }
+
+    function markCurrentMapDiscovered() {
+      ensureSystemState();
+      const id = currentMapId || "fallback";
+      if (!player.discovery.maps[id]) player.discovery.maps[id] = {};
+      player.discovery.maps[id][tileKey(playerX, playerY)] = true;
+    }
+
+    function openSystemOverlay() {
+      ensureSystemState();
+      const help = document.getElementById("controlHelp");
+      if (help) help.classList.remove("show");
+      setMenuOpen(true);
+      renderSystemMenu();
+    }
+
+    function renderSystemMenu() {
+      setOverlayTitle("System");
+      hideInventoryTabs();
+      const muted = typeof isGameSoundMuted === "function" ? isGameSoundMuted() : false;
+      const noSpiders = !!ensureSystemState().noSpiders;
+      const content = document.getElementById("inventoryContent");
+      content.style.overflowY = "auto";
+      content.innerHTML = `
+        <div class="systemMenuList">
+          <button class="toggleRow" onclick="toggleGameSound(); renderSystemMenu();"><span>Sound</span><b>${muted ? "Off" : "On"}</b></button>
+          <button class="uiButton" onclick="renderMapPage()">Map</button>
+          <button class="uiButton" onclick="renderBestiaryPage()">Bestiary</button>
+          <button class="uiButton" onclick="renderCollectionPage()">Collection Log</button>
+          <button class="toggleRow" onclick="toggleSpiderPhobiaMode()"><span>Spider Phobia Mode</span><b>${noSpiders ? "On" : "Off"}</b></button>
+          <div class="smallNote">Spider Phobia Mode removes spider encounters from future monster rolls when another eligible enemy is available.</div>
+        </div>
+      `;
+    }
+
+    function toggleSpiderPhobiaMode() {
+      const settings = ensureSystemState();
+      settings.noSpiders = !settings.noSpiders;
+      setMessage(settings.noSpiders ? "Spider encounters disabled." : "Spider encounters enabled.");
+      saveGameState();
+      renderSystemMenu();
+    }
+
+    function backToSystemMenu() { renderSystemMenu(); }
+
+    function renderMapPage() {
+      ensureSystemState();
+      setOverlayTitle("Map");
+      hideInventoryTabs();
+      markCurrentMapDiscovered();
+      const id = currentMapId || "fallback";
+      const discovered = player.discovery.maps[id] || {};
+      const grid = testMap || [];
+      const width = Math.max(...grid.map(row => row.length), 1);
+      const cells = [];
+      for (let y = 0; y < grid.length; y++) {
+        for (let x = 0; x < width; x++) {
+          const ch = (grid[y] && grid[y][x]) || "#";
+          const key = tileKey(x, y);
+          const known = !!discovered[key] || (x === playerX && y === playerY);
+          const isCurrent = x === playerX && y === playerY;
+          const label = isCurrent ? "@" : known ? (ch === "#" ? "" : ch) : "";
+          cells.push(`<div class="tinyMapCell ${known ? (ch === "#" ? "wall" : "") : "unknown"} ${isCurrent ? "current" : ""}">${label}</div>`);
+        }
+      }
+      const content = document.getElementById("inventoryContent");
+      content.style.overflowY = "auto";
+      content.innerHTML = `
+        <div class="menuHeader"><span>${currentMap?.name || id}</span><span>Floor ${currentFloor} · ${coordinateLabel(playerX, playerY)}</span></div>
+        <div class="tinyMapGrid" style="grid-template-columns: repeat(${width}, 13px);">${cells.join("")}</div>
+        <div class="smallNote">@ = current room. E entrance, S shrine, C chest, N NPC, B boss, M monster.</div>
+        <button class="uiButton" onclick="backToSystemMenu()">Back</button>
+      `;
+    }
+
+    function getBestiaryIds() {
+      if (typeof MONSTERS === "undefined") return [];
+      return Object.keys(MONSTERS).sort((a, b) => String(MONSTERS[a].monName || a).localeCompare(String(MONSTERS[b].monName || b)));
+    }
+
+    function renderBestiaryPage() {
+      ensureSystemState();
+      setOverlayTitle("Bestiary");
+      hideInventoryTabs();
+      const ids = getBestiaryIds();
+      const maxPage = Math.max(0, Math.ceil(ids.length / BESTIARY_PAGE_SIZE) - 1);
+      bestiaryPage = Math.max(0, Math.min(bestiaryPage, maxPage));
+      const visible = ids.slice(bestiaryPage * BESTIARY_PAGE_SIZE, bestiaryPage * BESTIARY_PAGE_SIZE + BESTIARY_PAGE_SIZE);
+      const content = document.getElementById("inventoryContent");
+      content.style.overflowY = "auto";
+      content.innerHTML = `
+        <div class="menuHeader"><span>Defeated entries unlock details</span><span>${bestiaryPage + 1}/${maxPage + 1}</span></div>
+        <div class="bestiaryGridList">
+          ${visible.map((id, i) => {
+            const mon = MONSTERS[id];
+            const unlocked = !!player.discovery.bestiary[id]?.defeated;
+            const num = String(bestiaryPage * BESTIARY_PAGE_SIZE + i + 1).padStart(3, "0");
+            const icon = unlocked ? `assets/monsters/${forceWebpFileName((mon.images && mon.images[0]) || mon.image || "")}` : "";
+            return `<button class="bestiaryRow ${unlocked ? "" : "locked"}" ${unlocked ? `onclick="renderBestiaryDetail('${id}')"` : ""}>
+              ${icon ? `<img class="bestiaryIcon" src="${icon}" alt="" onerror="this.className='bestiaryIcon empty'; this.removeAttribute('src');">` : `<span class="bestiaryIcon empty"></span>`}
+              <div>
+                <div class="bestiaryNumber">#${num}</div>
+                <div class="bestiaryName">${unlocked ? mon.monName || id : "???"}</div>
+                <span class="bestiarySub">${unlocked ? `Kills ${player.discovery.bestiary[id]?.kills || 0}` : "Defeat to reveal"}</span>
+              </div>
+            </button>`;
+          }).join("")}
+        </div>
+        <div class="pageControls">
+          <button class="uiButton" onclick="bestiaryPage--; renderBestiaryPage();" ${bestiaryPage <= 0 ? "disabled" : ""}>Prev</button>
+          <div class="pageText">${bestiaryPage + 1} / ${maxPage + 1}</div>
+          <button class="uiButton" onclick="bestiaryPage++; renderBestiaryPage();" ${bestiaryPage >= maxPage ? "disabled" : ""}>Next</button>
+        </div>
+        <button class="uiButton" onclick="backToSystemMenu()">Back</button>
+      `;
+    }
+
+    function bestiaryTierPreview(base, label, floor, legendary = false) {
+      if (typeof normalizeMonster === "function" && typeof scaleMonster === "function") {
+        return scaleMonster(normalizeMonster(base), floor, { preview: true, legendary });
+      }
+      return base;
+    }
+
+    function bestiaryAverageEdef(monster) {
+      const fire = Number(monster.fireRes ?? monster.fireResist ?? 0);
+      const ice = Number(monster.iceRes ?? monster.iceResist ?? 0) - Number(monster.iceWeakness ?? 0);
+      const shock = Number(monster.shockRes ?? monster.shockResist ?? monster.magicDefense ?? 0);
+      const dark = Number(monster.darkRes ?? monster.darkResist ?? monster.magicDefense ?? 0);
+      return Math.round((fire + ice + shock + dark) / 4);
+    }
+
+    function renderBestiaryStatsGrid(monId, base) {
+      const tiers = [
+        { label: "Normal", floor: 1, legendary: false },
+        { label: "Magical", floor: 16, legendary: false },
+        { label: "Rare", floor: 36, legendary: false },
+        { label: "Epic", floor: 71, legendary: false },
+        { label: "Legendary", floor: 71, legendary: true }
+      ];
+      const values = tiers.map(t => bestiaryTierPreview(base, t.label, t.floor, t.legendary));
+      const rows = [
+        ["HP", m => Math.round(Number(m.maxHp ?? m.hp ?? 0))],
+        ["ATK", m => Math.round(Number(m.attack ?? 0))],
+        ["PDEF", m => `${Math.round(Number(m.pdef ?? m.defense ?? 0))}%`],
+        ["EDEF", m => `${bestiaryAverageEdef(m)}%`],
+        ["SPD", m => Math.round(Number(m.speed ?? 0))],
+        ["Crit", m => `${Math.round(Number(m.critChance ?? 0))}%`],
+        ["Dodge", m => `${Math.round(Number(m.dodgeChance ?? 0))}%`],
+        ["EXP", m => Math.round(Number(m.exp ?? 0))]
+      ];
+
+      return `
+        <table class="bestiaryStatsTable">
+          <thead><tr><th>${base.monName || base.name || monId}</th>${tiers.map(t => `<th>${t.label}</th>`).join("")}</tr></thead>
+          <tbody>
+            ${rows.map(([label, getter]) => `<tr><td>${label}</td>${values.map(v => `<td>${getter(v)}</td>`).join("")}</tr>`).join("")}
+          </tbody>
+        </table>
+      `;
+    }
+
+    function renderBestiaryDetail(monId) {
+      ensureSystemState();
+      const base = typeof getMonster === "function" ? getMonster(monId) : MONSTERS?.[monId];
+      if (!base) { renderBestiaryPage(); return; }
+      const img = `assets/monsters/${forceWebpFileName((base.images && base.images[0]) || base.image || "")}`;
+      setOverlayTitle(base.monName || base.name || monId);
+      const content = document.getElementById("inventoryContent");
+      content.style.overflowY = "auto";
+      content.innerHTML = `
+        <img class="largeMonsterPreview" src="${img}" alt="" onerror="this.style.display='none';">
+        <div class="menuHeader"><span>${base.monsterType || "monster"}</span><span>Kills ${player.discovery.bestiary[monId]?.kills || 0}</span></div>
+        ${renderBestiaryStatsGrid(monId, base)}
+        <button class="uiButton" onclick="renderBestiaryPage()">Back</button>
+      `;
+    }
+
+    function setCollectionCategory(direction) {
+      const i = COLLECTION_CATEGORIES.indexOf(activeCollectionCategory);
+      const next = (Math.max(0, i) + direction + COLLECTION_CATEGORIES.length) % COLLECTION_CATEGORIES.length;
+      activeCollectionCategory = COLLECTION_CATEGORIES[next];
+      renderCollectionPage();
+    }
+
+    function getCollectionEntries(category) {
+      ensureSystemState();
+      const known = player.discovery.collection[category] || {};
+      if (category === "weapons" || category === "armor" || category === "jewelry") {
+        const slotFilter = category === "weapons" ? ["weapon"] : category === "armor" ? ["armor"] : ["ring", "necklace", "cloak"];
+        const all = typeof getAllEquipment === "function" ? getAllEquipment() : [];
+        return all.filter(item => slotFilter.includes(item.slot)).filter(item => known[item.itemId]).map(item => ({ id: item.itemId, name: getEquipName(item.itemId), icon: typeof getEquipmentIconPath === "function" ? getEquipmentIconPath(item) : "", type: "equipment" }));
+      }
+      if (category === "runes") {
+        return Object.keys(known).map(id => {
+          const rune = typeof getRuneById === "function" ? getRuneById(id) : null;
+          return { id, name: typeof getRuneDisplayName === "function" ? getRuneDisplayName(id, 0) : id, icon: rune?.image ? `assets/runes/${rune.image}` : "", type: "rune" };
+        });
+      }
+      if (category === "consumables") {
+        return Object.keys(known).map(id => { const item = getConsumableSafe(id); return { id, name: item?.itemName || id, icon: item?.image ? `assets/items/${item.image}` : "", type: "consumable" }; });
+      }
+      if (category === "skills") {
+        return Object.keys(known).map(id => { const skill = getSkillData(id); return { id, name: skill?.name || id, icon: "", type: "skill" }; });
+      }
+      return [];
+    }
+
+    function renderCollectionPage() {
+      ensureSystemState();
+      setOverlayTitle("Collection Log");
+      hideInventoryTabs();
+      const category = COLLECTION_CATEGORIES.includes(activeCollectionCategory) ? activeCollectionCategory : "weapons";
+      activeCollectionCategory = category;
+      const entries = getCollectionEntries(category);
+      const maxPage = Math.max(0, Math.ceil(entries.length / SYSTEM_COLLECTION_PAGE_SIZE) - 1);
+      collectionPage[category] = Math.max(0, Math.min(collectionPage[category] || 0, maxPage));
+      const page = collectionPage[category] || 0;
+      const visible = entries.slice(page * SYSTEM_COLLECTION_PAGE_SIZE, page * SYSTEM_COLLECTION_PAGE_SIZE + SYSTEM_COLLECTION_PAGE_SIZE);
+      const content = document.getElementById("inventoryContent");
+      content.style.overflowY = "auto";
+      content.innerHTML = `
+        <div class="itemCategoryCycle">
+          <button class="statusCycleButton" onclick="setCollectionCategory(-1)">&lt;</button>
+          <div class="itemCategoryLabel">${COLLECTION_LABELS[category]}</div>
+          <button class="statusCycleButton" onclick="setCollectionCategory(1)">&gt;</button>
+        </div>
+        <div class="oneColList">
+          ${visible.length ? visible.map(e => `<button class="compactRow" onclick="renderCollectionDetail('${category}', '${e.id}')">${e.icon ? `<img class="compactIcon" src="${e.icon}" alt="" onerror="this.style.display='none';">` : `<span class="compactIcon empty"></span>`}<div><div class="compactName">${e.name}</div><span class="compactSub">Obtained</span></div></button>`).join("") : `<div class="smallNote">No discovered ${COLLECTION_LABELS[category].toLowerCase()} yet.</div>`}
+        </div>
+        <div class="pageControls">
+          <button class="uiButton" onclick="collectionPage['${category}']--; renderCollectionPage();" ${page <= 0 ? "disabled" : ""}>Prev</button>
+          <div class="pageText">${page + 1} / ${maxPage + 1}</div>
+          <button class="uiButton" onclick="collectionPage['${category}']++; renderCollectionPage();" ${page >= maxPage ? "disabled" : ""}>Next</button>
+        </div>
+        <button class="uiButton" onclick="backToSystemMenu()">Back</button>
+      `;
+    }
+
+    function getCollectionEntryIndex(category, id) {
+      const entries = getCollectionEntries(category);
+      return entries.findIndex(entry => String(entry.id) === String(id));
+    }
+
+    function renderCollectionNav(category, id) {
+      const entries = getCollectionEntries(category);
+      const index = entries.findIndex(entry => String(entry.id) === String(id));
+      const total = entries.length;
+      const hasMany = total > 1;
+      const prev = hasMany ? entries[(index - 1 + total) % total] : null;
+      const next = hasMany ? entries[(index + 1) % total] : null;
+
+      return `
+        <div class="pageControls">
+          <button class="uiButton" ${prev ? `onclick="renderCollectionDetail('${category}', '${prev.id}')"` : "disabled"}>&lt;</button>
+          <div class="pageText">${index >= 0 ? index + 1 : 0} / ${total}</div>
+          <button class="uiButton" ${next ? `onclick="renderCollectionDetail('${category}', '${next.id}')"` : "disabled"}>&gt;</button>
+        </div>
+        <button class="equipSlotRow" onclick="renderCollectionPage()">
+          <span class="equipSlotLabel">Back</span>
+          <span class="equipSlotValue">Collection Log</span>
+        </button>
+      `;
+    }
+
+    function collectionPreviewKey(category, id) {
+      return `${category}:${id}`;
+    }
+
+    function getCollectionPreviewLevel(category, id) {
+      const key = collectionPreviewKey(category, id);
+      return Math.max(0, Math.min(50, Number(collectionPreviewLevel[key] || 0)));
+    }
+
+    function changeCollectionPreviewLevel(category, id, delta) {
+      const key = collectionPreviewKey(category, id);
+      collectionPreviewLevel[key] = Math.max(0, Math.min(50, getCollectionPreviewLevel(category, id) + Number(delta || 0)));
+      renderCollectionDetail(category, id);
+    }
+
+    function getEquipmentPreviewStats(item, level = 0) {
+      if (!item) return {};
+      let rawStats;
+      if (typeof getUpgradedEquipmentStats === "function") {
+        rawStats = getUpgradedEquipmentStats(item, level);
+      } else {
+        const src = item.stats || item;
+        const multStat = key => {
+          const value = Number(src[key] ?? item[key] ?? 0);
+          if (value <= 0) return value;
+          return value + Math.floor(value * 0.2 * Number(level || 0));
+        };
+        rawStats = {
+          hp: multStat("hp"),
+          mp: multStat("mp"),
+          atk: multStat("atk"),
+          mag: multStat("mag"),
+          pdef: multStat("pdef") || multStat("def"),
+          mdef: multStat("mdef"),
+          fireRes: multStat("fireRes"),
+          iceRes: multStat("iceRes"),
+          shockRes: multStat("shockRes"),
+          darkRes: multStat("darkRes"),
+          speed: Number(src.speed ?? item.speed ?? 0),
+          crit: multStat("crit"),
+          dodge: multStat("dodge"),
+          goldFind: multStat("goldFind")
+        };
+      }
+
+      const explicitResists = [rawStats.fireRes, rawStats.iceRes, rawStats.shockRes, rawStats.darkRes]
+        .some(value => Number(value || 0) !== 0);
+      const convertedMdefRes = explicitResists ? 0 : Math.floor(Number(rawStats.mdef || rawStats.magicDefense || 0) / 4);
+
+      return {
+        hp: Number(rawStats.hp || 0),
+        mp: Number(rawStats.mp || 0),
+        atk: Number(rawStats.atk || 0),
+        mag: Number(rawStats.mag || 0),
+        pdef: Number(rawStats.pdef ?? rawStats.def ?? 0),
+        fireRes: Number(rawStats.fireRes ?? convertedMdefRes),
+        iceRes: Number(rawStats.iceRes ?? convertedMdefRes),
+        shockRes: Number(rawStats.shockRes ?? convertedMdefRes),
+        darkRes: Number(rawStats.darkRes ?? convertedMdefRes),
+        speed: Number(rawStats.speed || 0),
+        crit: Number(rawStats.crit || 0),
+        dodge: Number(rawStats.dodge || 0),
+        goldFind: Number(rawStats.goldFind || 0)
+      };
+    }
+
+    function renderCollectionLevelHeader(category, id, item, level) {
+      return `
+        <div class="collectionDetailHeader">
+          <div class="collectionDetailName">${item.itemName || getEquipName(id)}</div>
+          <div class="collectionLevelText">+${level}</div>
+          <button class="collectionLevelButton" onclick="changeCollectionPreviewLevel('${category}', '${id}', -1)">-</button>
+          <button class="collectionLevelButton" onclick="changeCollectionPreviewLevel('${category}', '${id}', 1)">+</button>
+        </div>
+      `;
+    }
+
+    function renderCollectionEquipmentStats(item, level) {
+      const s = getEquipmentPreviewStats(item, level);
+      const rows = [];
+      if (s.atk) rows.push(detailLine("ATK", s.atk));
+      if (s.mag) rows.push(detailLine("MAG", s.mag));
+      if (s.pdef) rows.push(detailLine("PDEF", `${s.pdef}%`));
+      const resLine = getResistanceSummaryLine(s);
+      if (resLine) rows.push(detailLine("Resistance", resLine));
+      if (s.hp) rows.push(detailLine("HP", s.hp));
+      if (s.mp) rows.push(detailLine("MP", s.mp));
+      if (s.speed) rows.push(detailLine("Speed", s.speed));
+      if (s.crit) rows.push(detailLine("Crit", `${s.crit}%`));
+      if (s.dodge) rows.push(detailLine("Dodge", `${s.dodge}%`));
+      if (s.goldFind) rows.push(detailLine("Gold Find", `${s.goldFind}%`));
+      return rows.join("") || detailLine("Stats", "No stats");
+    }
+
+    function renderCollectionEquipmentDetailBody(category, id) {
+      const item = getEquipItem(id);
+      const level = getCollectionPreviewLevel(category, id);
+      if (!item) return detailLine("Item", id);
+      return `
+        ${renderCollectionLevelHeader(category, id, item, level)}
+        ${detailSection("", `
+          ${detailLine("Type", titleCaseText(item.slot || "equipment"))}
+          ${detailLine("Rarity", titleCaseText(item.rarity || "common"))}
+          ${detailLine("Req", `Lv${item.reqLevel || 1}`)}
+          ${detailLine("Value", `${item.value || 0}g`)}
+        `)}
+        ${detailSection("Preview Stats", renderCollectionEquipmentStats(item, level))}
+        ${detailSection("Sockets", detailLine("Max Sockets", item.maxSockets || 0))}
+        ${renderEquipmentDescriptionDetail(item)}
+      `;
+    }
+
+    function renderCollectionDetail(category, id) {
+      ensureSystemState();
+      activeCollectionCategory = COLLECTION_CATEGORIES.includes(category) ? category : activeCollectionCategory;
+
+      const content = document.getElementById("inventoryContent");
+      const nav = renderCollectionNav(activeCollectionCategory, id);
+      document.getElementById("inventoryTabs").style.display = "none";
+      content.style.overflowY = "auto";
+
+      if (activeCollectionCategory === "weapons" || activeCollectionCategory === "armor" || activeCollectionCategory === "jewelry") {
+        const item = getEquipItem(id);
+        if (!item) { renderCollectionPage(); return; }
+        document.getElementById("inventoryTitle").textContent = "Collection Log";
+        content.innerHTML = `
+          ${renderDetailCard(equipDetailIconHtml(id), "", renderCollectionEquipmentDetailBody(activeCollectionCategory, id))}
+          <div class="equipDetailActions">${nav}</div>
+        `;
+        return;
+      }
+
+      if (activeCollectionCategory === "runes") {
+        const rune = typeof getRuneById === "function" ? getRuneById(id) : null;
+        const displayName = typeof getRuneDisplayName === "function" ? getRuneDisplayName(id, 0) : id;
+        const image = rune?.image || "rune1.png";
+        document.getElementById("inventoryTitle").textContent = displayName;
+        content.innerHTML = `
+          ${renderDetailCard(`<img class="equipDetailIcon" src="assets/runes/${image}" alt="">`, displayName, renderRuneDetailBody(id, 0, 0))}
+          <div class="equipDetailActions">${nav}</div>
+        `;
+        return;
+      }
+
+      if (activeCollectionCategory === "consumables") {
+        const item = getConsumableSafe(id);
+        if (!item) { renderCollectionPage(); return; }
+        document.getElementById("inventoryTitle").textContent = item.itemName;
+        content.innerHTML = `
+          ${renderDetailCard(consumableIconHtml(id, "equipDetailIcon"), item.itemName, renderConsumableDetailBody(id, 0))}
+          <div class="equipDetailActions">${nav}</div>
+        `;
+        return;
+      }
+
+      if (activeCollectionCategory === "skills") {
+        const skill = getSkillData(id);
+        if (!skill) { renderCollectionPage(); return; }
+        document.getElementById("inventoryTitle").textContent = skill.name;
+        content.innerHTML = `
+          ${renderDetailCard(skillDetailIconHtml(), skill.name, `
+            ${detailSection("", detailLine("Type", "Skill"))}
+            ${renderSkillEffectLines(id)}
+          `)}
+          <div class="equipDetailActions">${nav}</div>
+        `;
+        return;
+      }
+
+      renderCollectionPage();
+    }
+
+
+
+    // =========================
     // LOCAL SAVE
     // =========================
 
@@ -2606,6 +3352,7 @@
       if (!player.inventory.fragments) player.inventory.fragments = {};
       if (!player.inventory.skills) player.inventory.skills = {};
       ensureLeaderboardStats();
+      ensureSystemState();
     }
 
     function getOwnedEquipmentRecord(itemId) {
@@ -3086,6 +3833,7 @@
       if (!runeId) return null;
 
       addRune(player, runeId, 0, 1);
+      discoverCollection("runes", runeId);
       return getRuneDisplayName(runeId, 0);
     }
 
@@ -3197,6 +3945,8 @@
         };
 
         normalizeEquipmentSockets(itemId);
+        const cat = item.slot === "weapon" ? "weapons" : item.slot === "armor" ? "armor" : "jewelry";
+        discoverCollection(cat, itemId);
 
         return {
           ok: true,
@@ -3218,6 +3968,7 @@
 
       if (itemId === "shrine_stone" || (typeof getConsumable === "function" && getConsumable(itemId))) {
         addConsumableSafe(itemId, 1);
+        discoverCollection("consumables", itemId);
         return {
           ok: true,
           message: `Found ${getSafeItemName(itemId)}.`
@@ -3632,6 +4383,7 @@
 
 
     function updateRoomView() {
+      if (typeof markCurrentMapDiscovered === "function") markCurrentMapDiscovered();
       lastRoomImageName = getRoomImageName();
       setRoomImage(lastRoomImageName);
       updateChestLayer();
@@ -3832,6 +4584,7 @@
     function resetFloorShopState() {
       currentShopGearStock = { Weapons: [], Armor: [] };
       currentShopRuneStock = [];
+      currentShopRunePurchases = {};
       currentFloorNpcState = {};
       shopFreeRerollUsedFloor = null;
     }
@@ -3924,6 +4677,7 @@
         return false;
       }
 
+      incrementLeaderboardStat("shrineStonesUsed", 1);
       teleportToCurrentShrine();
       updateBars();
       if (typeof saveGameState === "function") saveGameState(true);
@@ -4407,6 +5161,7 @@
       }
 
       player.gold = Math.max(0, player.gold - cost);
+      incrementLeaderboardStat("shrineRetreats", 1);
       currentFloor = targetFloor;
       setMenuOpen(false);
       gameMode = "roaming";
@@ -4611,6 +5366,7 @@
     let currentShopGearStock = { Weapons: [], Armor: [] };
     let currentShopGearIndex = 0;
     let currentShopRuneStock = [];
+    let currentShopRunePurchases = {};
     let currentFloorNpcState = {};
     let shopFreeRerollUsedFloor = null;
     let activeShopContext = "shrine";
@@ -4925,12 +5681,7 @@
           .filter(id => typeof getRuneById !== "function" || getRuneById(id))
           .map(runeId => ({ runeId, level: Math.random() < 0.10 && currentFloor >= 10 ? 1 : 0 }));
 
-        const picks = [];
-        while (pool.length && picks.length < 6) {
-          const index = Math.floor(Math.random() * pool.length);
-          picks.push(pool.splice(index, 1)[0]);
-        }
-        currentShopRuneStock = picks;
+        currentShopRuneStock = pool.filter(entry => !currentShopRunePurchases?.[`${entry.runeId}:${entry.level || 0}`]);
       }
 
       return currentShopRuneStock;
@@ -4938,7 +5689,7 @@
 
     function getRuneBuyPrice(entry) {
       const level = Number(entry.level || 0);
-      return Math.max(25, Math.round(40 + currentFloor * 4 + level * 120));
+      return Math.max(150, Math.round(180 + currentFloor * 18 + level * 350));
     }
 
     function renderShopBuyRuneRow(entry) {
@@ -4952,7 +5703,7 @@
           ${shopIconHtml(image, "runes")}
           <div class="shopRowText">
             <div class="shopRowName">${name}</div>
-            <div class="shopRowSub">Random rune stock</div>
+            <div class="shopRowSub">One per floor</div>
           </div>
           <div class="shopRowValue">${price}g</div>
         </button>
@@ -4972,6 +5723,10 @@
 
       player.gold -= price;
       addRune(player, runeId, level, 1);
+      discoverCollection("runes", runeId);
+      if (!currentShopRunePurchases) currentShopRunePurchases = {};
+      currentShopRunePurchases[`${runeId}:${level}`] = true;
+      currentShopRuneStock = (currentShopRuneStock || []).filter(e => !(e.runeId === runeId && Number(e.level || 0) === Number(level || 0)));
       setMessage(`Bought ${typeof getRuneDisplayName === "function" ? getRuneDisplayName(runeId, level) : runeId}.`);
 
       if (gameMode === "shrine") {
@@ -5039,6 +5794,7 @@
       if (player.gold < price) { setMessage("Not enough gold."); return; }
       player.gold -= price;
       unlockSkill(skillId, true);
+      discoverCollection("skills", skillId);
       saveGameState();
       setMessage(`Learned ${skill.name}.`);
       const title = document.getElementById("inventoryTitle")?.textContent || "";
@@ -5147,6 +5903,7 @@
       }
 
       player.gold -= price;
+      discoverCollection("consumables", itemId);
       setMessage(`Bought ${getSafeItemName(itemId)} for ${price} gold.`);
 
       const title = document.getElementById("inventoryTitle")?.textContent || "";
@@ -6395,7 +7152,10 @@
         totalXp: 0,
         potionsUsed: 0,
         deaths: 0,
-        kills: 0
+        kills: 0,
+        bossesKilled: 0,
+        shrineRetreats: 0,
+        shrineStonesUsed: 0
       };
 
       Object.keys(defaults).forEach(key => {
@@ -6861,6 +7621,8 @@
     function defeatEnemy() {
       const defeatedId = currentEnemy.monId;
       incrementLeaderboardStat("kills", 1);
+      if (isBossMonster(currentEnemy)) incrementLeaderboardStat("bossesKilled", 1);
+      discoverBestiary(defeatedId);
       const defeatedName = currentEnemy.monName;
       const exp = getMonsterExpReward(currentEnemy);
       const expResult = gainExp(exp);
@@ -7213,6 +7975,9 @@
           ["POTS", stats.potionsUsed],
           ["DEATHS", stats.deaths],
           ["KILLS", stats.kills],
+          ["BOSSES", stats.bossesKilled],
+          ["RETREAT", stats.shrineRetreats],
+          ["STONES", stats.shrineStonesUsed],
           ["LEVEL", player.level]
         ];
       }
