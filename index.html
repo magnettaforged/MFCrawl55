@@ -2275,7 +2275,7 @@
 
         <div class="topHudBadge floorIndicator" id="floorIndicator">Floor 1 | A1</div>
         <div class="mapIndicator" id="mapIndicator">Map: -</div>
-        <div class="versionIndicator" id="versionIndicator">v0.6.9</div>
+        <div class="versionIndicator" id="versionIndicator">v0.7.1</div>
 
         <button class="soundToggle" id="settingsButton" onclick="openSystemOverlay()" aria-label="Settings">⚙</button>
 
@@ -2388,7 +2388,7 @@
 
   <script>
     
-    const GAME_VERSION = "v0.6.9";
+    const GAME_VERSION = "v0.7.1";
 // =========================
     // MAP / FLOOR STATE
     // =========================
@@ -2607,6 +2607,7 @@
     let gameMode = "roaming";
     let currentEnemy = null;
     let currentEnemyTileKey = null;
+    let currentOddityChestKey = null;
     let inventoryMode = "main";
     let activeEquipSlot = null;
 
@@ -2695,20 +2696,34 @@
       jewelry: 0,
       runes: 0,
       consumables: 0,
-      skills: 0
+      skills: 0,
+      keyitems: 0
     };
     let activeCollectionCategory = "weapons";
     let collectionPreviewLevel = {};
 
-    const COLLECTION_CATEGORIES = ["weapons", "armor", "jewelry", "runes", "consumables", "skills"];
+    const COLLECTION_CATEGORIES = ["weapons", "armor", "jewelry", "runes", "consumables", "skills", "keyitems"];
     const COLLECTION_LABELS = {
       weapons: "Weapons",
       armor: "Armor",
       jewelry: "Jewelry",
       runes: "Runes",
       consumables: "Consumables",
-      skills: "Skills"
+      skills: "Skills",
+      keyitems: "Key Items"
     };
+
+    function getKeyItemIconPath(item) {
+      if (!item) return "";
+      if (item.iconPath) return item.iconPath;
+      if (item.imagePath) return item.imagePath;
+      return item.image ? `assets/items/${item.image}` : "";
+    }
+
+    function keyItemIconHtml(item, className = "compactIcon") {
+      const src = getKeyItemIconPath(item);
+      return src ? `<img class="${className}" src="${src}" alt="" onerror="this.style.display='none';">` : `<span class="${className} empty"></span>`;
+    }
 
     function ensureSystemState() {
       if (!player.settings || typeof player.settings !== "object") player.settings = {};
@@ -2766,6 +2781,9 @@
       });
       Object.keys(player.inventory?.skills || {}).forEach(id => {
         if (player.inventory.skills[id] && player.discovery.collection.skills) player.discovery.collection.skills[id] = true;
+      });
+      Object.keys(player.inventory?.keyitems || {}).forEach(id => {
+        if (player.inventory.keyitems[id] && player.discovery.collection.keyitems) player.discovery.collection.keyitems[id] = true;
       });
     }
 
@@ -2972,6 +2990,12 @@
       }
       if (category === "skills") {
         return Object.keys(known).map(id => { const skill = getSkillData(id); return { id, name: skill?.name || id, icon: "", type: "skill" }; });
+      }
+      if (category === "keyitems") {
+        return Object.keys(known).map(id => {
+          const item = typeof getKeyItem === "function" ? getKeyItem(id) : null;
+          return { id, name: item?.itemName || id, icon: getKeyItemIconPath(item), type: "keyitem" };
+        });
       }
       return [];
     }
@@ -3196,6 +3220,24 @@
           ${renderDetailCard(skillDetailIconHtml(), skill.name, `
             ${detailSection("", detailLine("Type", "Skill"))}
             ${renderSkillEffectLines(id)}
+          `)}
+          <div class="equipDetailActions">${nav}</div>
+        `;
+        return;
+      }
+
+      if (activeCollectionCategory === "keyitems") {
+        const item = typeof getKeyItem === "function" ? getKeyItem(id) : null;
+        if (!item) { renderCollectionPage(); return; }
+        document.getElementById("inventoryTitle").textContent = item.itemName;
+        const icon = keyItemIconHtml(item, "equipDetailIcon");
+        content.innerHTML = `
+          ${renderDetailCard(icon, item.itemName, `
+            ${detailSection("", `
+              ${detailLine("Type", "Key Item")}
+              ${detailLine("Value", `${item.value || 0}g`)}
+            `)}
+            ${detailSection("Description", `<div class="itemDescLine">${item.description || "Key item."}</div>`)}
           `)}
           <div class="equipDetailActions">${nav}</div>
         `;
@@ -3977,9 +4019,11 @@
 
       if (typeof getKeyItem === "function" && getKeyItem(itemId)) {
         addKeyItem(player, itemId);
+        discoverCollection("keyitems", itemId);
+        const keyItem = getKeyItem(itemId);
         return {
           ok: true,
-          message: `Found ${getItemDisplayName(itemId)}.`
+          message: `Found ${keyItem?.itemName || getItemDisplayName(itemId)}.`
         };
       }
 
@@ -4600,6 +4644,100 @@
           description: "Teleports you directly to the shrine on the current floor."
         };
       }
+    }
+
+
+    const PANTYDOM_KEY_ITEMS = {
+      kpanty: {
+        itemId: "kpanty",
+        itemName: "Kyra Panty",
+        image: "kass.webp",
+        iconPath: "assets/monsters/kass.webp",
+        value: 0,
+        description: "A Pantydom key item recovered from a mysterious oddity."
+      },
+      rpanty: {
+        itemId: "rpanty",
+        itemName: "Reign Panty",
+        image: "rass.webp",
+        iconPath: "assets/monsters/rass.webp",
+        value: 0,
+        description: "A Pantydom key item recovered from a mysterious oddity."
+      },
+      mpanty: {
+        itemId: "mpanty",
+        itemName: "Maya Panty",
+        image: "mass.webp",
+        iconPath: "assets/monsters/mass.webp",
+        value: 0,
+        description: "A Pantydom key item recovered from a mysterious oddity."
+      },
+      npanty: {
+        itemId: "npanty",
+        itemName: "Nadia Panty",
+        image: "nass.webp",
+        iconPath: "assets/monsters/nass.webp",
+        value: 0,
+        description: "A Pantydom key item recovered from a mysterious oddity."
+      },
+      ktop: {
+        itemId: "ktop",
+        itemName: "Kyra Top",
+        image: "kchest.webp",
+        iconPath: "assets/monsters/kchest.webp",
+        value: 0,
+        description: "A Pantydom key item recovered from a mysterious chest oddity."
+      },
+      mtop: {
+        itemId: "mtop",
+        itemName: "Maya Top",
+        image: "mchest.webp",
+        iconPath: "assets/monsters/mchest.webp",
+        value: 0,
+        description: "A Pantydom key item recovered from a mysterious chest oddity."
+      },
+      ntop: {
+        itemId: "ntop",
+        itemName: "Nadia Top",
+        image: "nchest.webp",
+        iconPath: "assets/monsters/nchest.webp",
+        value: 0,
+        description: "A Pantydom key item recovered from a mysterious chest oddity."
+      },
+      rtop: {
+        itemId: "rtop",
+        itemName: "Reign Top",
+        image: "rchest.webp",
+        iconPath: "assets/monsters/rchest.webp",
+        value: 0,
+        description: "A Pantydom key item recovered from a mysterious chest oddity."
+      }
+    };
+
+    const externalGetKeyItem = typeof getKeyItem === "function" ? getKeyItem : null;
+    window.getKeyItem = function patchedGetKeyItem(itemId) {
+      if (PANTYDOM_KEY_ITEMS[itemId]) return PANTYDOM_KEY_ITEMS[itemId];
+      return externalGetKeyItem ? externalGetKeyItem(itemId) : null;
+    };
+
+    if (typeof window.addKeyItem !== "function") {
+      window.addKeyItem = function addKeyItemFallback(targetPlayer, itemId) {
+        if (!targetPlayer || !itemId) return false;
+        if (!targetPlayer.inventory) targetPlayer.inventory = {};
+        if (!targetPlayer.inventory.keyitems) targetPlayer.inventory.keyitems = {};
+        targetPlayer.inventory.keyitems[itemId] = true;
+        return true;
+      };
+    }
+
+    if (typeof window.getKeyItemInventoryList !== "function") {
+      window.getKeyItemInventoryList = function getKeyItemInventoryListFallback(targetPlayer) {
+        const keys = targetPlayer?.inventory?.keyitems || {};
+        return Object.keys(keys).filter(id => !!keys[id]).map(id => {
+          const item = window.getKeyItem(id) || { itemId: id, itemName: id, image: "", description: "Key item" };
+          return { ...item, itemId: id };
+        });
+      };
     }
 
     function getSafeItemName(itemId) {
@@ -6529,6 +6667,11 @@
           return;
         }
 
+        if (tryStartChestOddityEncounter(key)) {
+          setMessage("A mysterious chest oddity appears.");
+          return;
+        }
+
         openedChests.add(key);
 
         const lootMessages = openCurrentChestLoot();
@@ -6811,6 +6954,7 @@
       playerAttackMeter = 0;
       if (skill.type === "self") { applySelfSkill(skillId, false); gainUltimateCharge(7); }
       else { applyPlayerDamageToEnemy(calculateSkillDamage(currentEnemy, slot, false), 9); }
+      if (countRareOddityPlayerTurn()) return;
       updateBars();
       updateCombatMetersUI();
     }
@@ -6825,6 +6969,7 @@
       player.skills.ultimateCharge = 0;
       if (skill.type === "self") applySelfSkill(skillId, true);
       else applyPlayerDamageToEnemy(calculateSkillDamage(currentEnemy, "ultimate", true), 0);
+      if (countRareOddityPlayerTurn()) return;
       updateBars();
       updateCombatMetersUI();
     }
@@ -6846,9 +6991,11 @@
     }
 
     const COMBAT_TICK_MS = 250;
+    const RARE_ODDITY_FLEE_TURNS = 10;
     let combatTimer = null;
     let playerAttackMeter = 100;
     let enemyAttackMeter = 0;
+    let rareOddityPlayerTurns = 0;
 
     function clampNumber(value, min, max) {
       return Math.max(min, Math.min(max, value));
@@ -6930,7 +7077,7 @@
       const level = getMonsterLevelValue(currentEnemy);
       const speed = getMonsterSpeedValue(currentEnemy);
 
-      if (hudName) hudName.textContent = currentEnemy.monName || currentEnemy.name || "Monster";
+      if (hudName) hudName.textContent = currentEnemy.encounterName || currentEnemy.monName || currentEnemy.name || "Monster";
       if (hudLevel) hudLevel.textContent = `Lv. ${level}`;
       if (hpBar) hpBar.style.width = `${clampNumber(currentHp / maxHp * 100, 0, 100)}%`;
       if (hpText) hpText.textContent = `HP ${currentHp} / ${maxHp} · SPD ${speed}`;
@@ -6938,6 +7085,13 @@
 
     function updateCombatMetersUI() {
       ensurePlayerSkills();
+
+      if (isOddityQuizEncounter()) {
+        renderOddityQuizButtons();
+        updateMonsterHud();
+        return;
+      }
+      restoreCombatButtonActions();
 
       const attackButton = document.getElementById("attackButton");
       const ultimateButton = document.getElementById("ultimateSkillButton");
@@ -7002,6 +7156,177 @@
     }
 
 
+
+    function restoreCombatButtonActions() {
+      const attackButton = document.getElementById("attackButton");
+      const ultimateButton = document.getElementById("ultimateSkillButton");
+      const base1Button = document.getElementById("baseSkill1Button");
+      const base2Button = document.getElementById("baseSkill2Button");
+      if (attackButton) attackButton.setAttribute("onclick", "playerAttack()");
+      if (ultimateButton) ultimateButton.setAttribute("onclick", "useUltimateSkill()");
+      if (base1Button) base1Button.setAttribute("onclick", "useBaseSkill('base1')");
+      if (base2Button) base2Button.setAttribute("onclick", "useBaseSkill('base2')");
+    }
+
+    function isOddityQuizEncounter(enemy = currentEnemy) {
+      return !!(enemy && enemy.quizType);
+    }
+
+    function isCombatRareOddity(enemy = currentEnemy) {
+      return !!(enemy && enemy.rareOddity && !isOddityQuizEncounter(enemy));
+    }
+
+    function resetRareOddityTurns() {
+      rareOddityPlayerTurns = 0;
+    }
+
+    function fleeCurrentRareOddity() {
+      if (!currentEnemy) return false;
+      const escapedName = currentEnemy.encounterName || currentEnemy.monName || "The oddity";
+      if (currentEnemyTileKey) clearedMonsters.add(currentEnemyTileKey);
+      stopCombatTimer();
+      restoreCombatButtonActions();
+      currentEnemy = null;
+      currentEnemyTileKey = null;
+      resetRareOddityTurns();
+      setMode("roaming");
+      updateRoomView();
+      updateBars();
+      updateHud();
+      saveGameState();
+      setMessage(`${escapedName} escaped after ${RARE_ODDITY_FLEE_TURNS} turns.`);
+      return true;
+    }
+
+    function countRareOddityPlayerTurn() {
+      if (!isCombatRareOddity()) return false;
+      rareOddityPlayerTurns += 1;
+      if (rareOddityPlayerTurns >= RARE_ODDITY_FLEE_TURNS) {
+        return fleeCurrentRareOddity();
+      }
+      return false;
+    }
+
+    function renderOddityQuizButtons() {
+      const choices = [
+        { id: "maya", label: "Maya" },
+        { id: "kyra", label: "Kyra" },
+        { id: "nadia", label: "Nadia" },
+        { id: "reign", label: "Reign" }
+      ];
+      const buttons = [
+        document.getElementById("attackButton"),
+        document.getElementById("ultimateSkillButton"),
+        document.getElementById("baseSkill1Button"),
+        document.getElementById("baseSkill2Button")
+      ];
+      buttons.forEach((button, i) => {
+        const choice = choices[i];
+        if (!button || !choice) return;
+        button.style.setProperty("--fill", "100%");
+        button.classList.add("ready");
+        button.classList.remove("notReady", "noMp");
+        button.innerHTML = `<span>${choice.label}</span>`;
+        button.disabled = false;
+        button.setAttribute("onclick", `answerOddityQuiz('${choice.id}')`);
+      });
+      const enemyAttackText = document.getElementById("monsterAttackText");
+      if (enemyAttackText) enemyAttackText.textContent = "Choose";
+    }
+
+    function startOddityQuizEncounter() {
+      resetRareOddityTurns();
+      stopCombatTimer();
+      setMode("encounter");
+      clearSkillEffects();
+      updateMonsterHud();
+      renderOddityQuizButtons();
+      const prompt = currentEnemy.quizType === "ass" ? "Who's That Ass?" : currentEnemy.quizType === "chest" ? "Who's That Chest?" : "Identify the Oddity.";
+      showEncounterNotice(prompt);
+    }
+
+    function answerOddityQuiz(answerId) {
+      if (!isOddityQuizEncounter()) return;
+      const expected = String(currentEnemy.quizAnswer || "").toLowerCase();
+      const selected = String(answerId || "").toLowerCase();
+      const correct = expected && selected === expected;
+      const trueName = currentEnemy.monName || "Mysterious Oddity";
+      const rewardKey = currentEnemy.quizRewardKey || null;
+      const defeatedId = currentEnemy.monId;
+
+      restoreCombatButtonActions();
+      stopCombatTimer();
+
+      if (currentEnemyTileKey) {
+        if (currentEnemy.quizType === "chest") openedChests.add(currentEnemyTileKey);
+        else clearedMonsters.add(currentEnemyTileKey);
+      }
+
+      if (correct) {
+        incrementLeaderboardStat("kills", 1);
+        discoverBestiary(defeatedId);
+        let rewardMessage = "nothing";
+        if (rewardKey && typeof getKeyItem === "function" && getKeyItem(rewardKey)) {
+          addKeyItem(player, rewardKey);
+          discoverCollection("keyitems", rewardKey);
+          rewardMessage = getKeyItem(rewardKey)?.itemName || rewardKey;
+        }
+        const exp = getMonsterExpReward(currentEnemy);
+        const expResult = gainExp(exp);
+        const levelText = expResult.levelsGained > 0 ? ` Level up! Now level ${player.level}.` : "";
+        currentEnemy = null;
+        currentEnemyTileKey = null;
+        currentOddityChestKey = null;
+        setMode("roaming");
+        updateRoomView();
+        updateBars();
+        updateHud();
+        saveGameState();
+        setMessage(`Correct. ${trueName} identified. Gained ${exp} EXP.${levelText} Found ${rewardMessage}.`);
+        return;
+      }
+
+      const escapedName = currentEnemy.encounterName || "The oddity";
+      if (currentEnemyTileKey && currentEnemy.quizType === "chest") openedChests.add(currentEnemyTileKey);
+      currentEnemy = null;
+      currentEnemyTileKey = null;
+      currentOddityChestKey = null;
+      setMode("roaming");
+      updateRoomView();
+      updateBars();
+      saveGameState();
+      setMessage(`Wrong. ${escapedName} escaped.`);
+    }
+
+    function tryStartChestOddityEncounter(chestKey) {
+      if (typeof shouldRollChestOddity !== "function" || typeof getRandomChestOddity !== "function") return false;
+      if (!shouldRollChestOddity(currentFloor)) return false;
+
+      const rolledChestOddity = getRandomChestOddity();
+      if (!rolledChestOddity) return false;
+
+      currentEnemy = { ...rolledChestOddity };
+      currentEnemyTileKey = chestKey || null;
+      currentOddityChestKey = chestKey || null;
+      resetRareOddityTurns();
+
+      currentEnemy.maxHp = getMonsterMaxHpValue(currentEnemy);
+      currentEnemy.currentHp = getMonsterCurrentHpValue(currentEnemy);
+      if (currentEnemy.currentHp <= 0 || currentEnemy.currentHp > currentEnemy.maxHp) {
+        currentEnemy.currentHp = currentEnemy.maxHp;
+      }
+
+      const monsterImg = document.getElementById("monsterLayer");
+      setImageWithPngFallback(
+        monsterImg,
+        `assets/monsters/${forceWebpFileName(currentEnemy.image)}`,
+        `assets/monsters/${String(currentEnemy.image || "").replace(/\.webp$/i, ".png")}`
+      );
+
+      startOddityQuizEncounter();
+      return true;
+    }
+
     function startEncounter(poolId, encounterKey, tileType = "M") {
       let rolledMonster = null;
 
@@ -7024,6 +7349,7 @@
 
       currentEnemy = { ...rolledMonster };
       currentEnemyTileKey = encounterKey || null;
+      resetRareOddityTurns();
 
       currentEnemy.maxHp = getMonsterMaxHpValue(currentEnemy);
       currentEnemy.currentHp = getMonsterCurrentHpValue(currentEnemy);
@@ -7037,6 +7363,11 @@
         `assets/monsters/${forceWebpFileName(currentEnemy.image)}`,
         `assets/monsters/${String(currentEnemy.image || "").replace(/\.webp$/i, ".png")}`
       );
+
+      if (isOddityQuizEncounter(currentEnemy)) {
+        startOddityQuizEncounter();
+        return;
+      }
 
       setMode("encounter");
       clearSkillEffects();
@@ -7512,6 +7843,7 @@
 
       const damage = calculateAttackDamage(currentEnemy);
       applyPlayerDamageToEnemy(damage, 7);
+      if (countRareOddityPlayerTurn()) return;
 
       // Hit feedback is handled by the damage number/effect layer during encounters.
     }
@@ -7524,8 +7856,10 @@
     function runAway() {
       stopCombatTimer();
       stopCombatTimer();
+      restoreCombatButtonActions();
       currentEnemy = null;
       currentEnemyTileKey = null;
+      resetRareOddityTurns();
       setMode("roaming");
       updateRoomView();
       setMessage("You ran away.");
@@ -7533,10 +7867,12 @@
 
     function handlePlayerDeath() {
       stopCombatTimer();
+      restoreCombatButtonActions();
       setMode("roaming");
       currentEnemy = null;
       currentEnemyTileKey = null;
       currentEnemyDefeatedThisTurn = false;
+      resetRareOddityTurns();
 
       ensureFullInventoryShape();
 
@@ -7660,8 +7996,10 @@
       if (typeof playMonsterDeathSound === "function") playMonsterDeathSound(currentEnemy);
 
       stopCombatTimer();
+      restoreCombatButtonActions();
       currentEnemy = null;
       currentEnemyTileKey = null;
+      resetRareOddityTurns();
       setMode("roaming");
       updateRoomView();
       updateBars();
@@ -8373,8 +8711,20 @@
 
     function renderBasicInventoryDetail(kind, itemId) {
       const content = document.getElementById("inventoryContent");
-      document.getElementById("inventoryTitle").textContent = itemId;
       document.getElementById("inventoryTabs").style.display = "none";
+      if (kind === "Key Item" && typeof getKeyItem === "function") {
+        const item = getKeyItem(itemId);
+        document.getElementById("inventoryTitle").textContent = item?.itemName || itemId;
+        content.innerHTML = `
+          ${renderDetailCard(keyItemIconHtml(item, "equipDetailIcon"), item?.itemName || itemId, `
+            ${detailSection("Type", detailLine("Category", "Key Item"))}
+            ${detailSection("Description", `<div class="itemDescLine">${item?.description || "Key item."}</div>`)}
+          `)}
+          <div class="equipDetailActions">${detailBackButton("renderItemsTab()")}</div>
+        `;
+        return;
+      }
+      document.getElementById("inventoryTitle").textContent = itemId;
       content.innerHTML = `
         <div class="smallNote">${kind}: ${itemId}</div>
         <div class="equipDetailActions">${detailBackButton("renderItemsTab()")}</div>
@@ -8674,7 +9024,7 @@
         } else {
           html += visible.map(item => `
             <button class="compactRow" onclick="renderBasicInventoryDetail('Key Item', '${item.itemId}')" title="${item.description || ""}">
-              ${compactIconWithQtyHtml(item.image, "items", 0)}
+              ${keyItemIconHtml(item, "compactIcon")}
               <div>
                 <div class="compactName">${item.itemName}</div>
               </div>
