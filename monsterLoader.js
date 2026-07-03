@@ -273,8 +273,8 @@ const CHEST_MIMIC_DEFINITION = {
   critChance: 4,
   dodgeChance: 3,
   exp: 90,
-  image: "mimic.webp",
-  images: ["mimic.webp"],
+  image: "mimic1.webp",
+  images: ["mimic1.webp"],
   drops: [
     { type: "gold", min: 25, max: 80, chance: 100 },
     { type: "item", id: "gold_potion", name: "Gold Potion", chance: 18 }
