@@ -57,7 +57,6 @@ const RARE_ODDITY_POOL = [
   "cblock",
   "deez",
   "gthong",
-  "possum_weasel",
   "kass",
   "mass",
   "nass",
@@ -79,7 +78,7 @@ const RARE_ODDITY_DEFINITIONS = {
   },
   nocowvl: {
     monName: "Cow with Bardiche",
-    image: "nocowvl.webp",
+    image: "nocowlvl.webp",
     hp: 80,
     attack: 8,
     pdef: 12,
@@ -134,18 +133,6 @@ const RARE_ODDITY_DEFINITIONS = {
       { type: "item", id: "gold_potion", name: "Gold Potion", chance: 50 }
     ],
     flavorText: "You have been blessed."
-  },
-  possum_weasel: {
-    monName: "Possum-Weasel Taxidermy",
-    image: "possum_weasel.webp",
-    hp: 65,
-    attack: 2,
-    pdef: 5,
-    magicDefense: 20,
-    speed: 35,
-    dodgeChance: 90,
-    exp: 380,
-    flavorText: "It is probably not alive. Probably."
   },
   kass: {
     monName: "Kyra's Ass",
