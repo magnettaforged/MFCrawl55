@@ -123,12 +123,28 @@ function normalizeEquipmentObject(itemId, data, slot) {
     atk: equipNumber(stats.atk ?? data.atk),
     mag: equipNumber(stats.mag ?? data.mag),
     def: equipNumber(stats.def ?? data.def),
+    pdef: equipNumber(stats.pdef ?? data.pdef ?? stats.def ?? data.def),
     mdef: equipNumber(stats.mdef ?? data.mdef),
+    fireRes: equipNumber(stats.fireRes ?? data.fireRes),
+    iceRes: equipNumber(stats.iceRes ?? data.iceRes),
+    shockRes: equipNumber(stats.shockRes ?? data.shockRes),
+    darkRes: equipNumber(stats.darkRes ?? data.darkRes),
     speed: equipNumber(stats.speed ?? data.speed),
 
     crit: equipNumber(stats.crit ?? data.crit),
     dodge: equipNumber(stats.dodge ?? data.dodge),
     goldFind: equipNumber(stats.goldFind ?? data.goldFind),
+    hpPct: equipNumber(stats.hpPct ?? data.hpPct),
+    mpPct: equipNumber(stats.mpPct ?? data.mpPct),
+    atkPct: equipNumber(stats.atkPct ?? data.atkPct),
+    magPct: equipNumber(stats.magPct ?? data.magPct),
+    speedPct: equipNumber(stats.speedPct ?? data.speedPct),
+    lifeStealPct: equipNumber(stats.lifeStealPct ?? data.lifeStealPct),
+    fireDamagePct: equipNumber(stats.fireDamagePct ?? data.fireDamagePct),
+    iceDamagePct: equipNumber(stats.iceDamagePct ?? data.iceDamagePct),
+    shockDamagePct: equipNumber(stats.shockDamagePct ?? data.shockDamagePct),
+    darkDamagePct: equipNumber(stats.darkDamagePct ?? data.darkDamagePct),
+    bonusSockets: equipNumber(stats.bonusSockets ?? data.bonusSockets),
 
     value: equipNumber(data.value),
 
@@ -227,20 +243,46 @@ function upgradeStat(baseValue, upgradeLevel) {
 
 function getUpgradedEquipmentStats(item, upgradeLevel = 0) {
   if (!item) {
-    return { hp: 0, mp: 0, atk: 0, mag: 0, def: 0, mdef: 0, speed: 0, crit: 0, dodge: 0, goldFind: 0 };
+    return {
+      hp: 0, mp: 0, atk: 0, mag: 0, def: 0, pdef: 0, mdef: 0,
+      fireRes: 0, iceRes: 0, shockRes: 0, darkRes: 0,
+      speed: 0, crit: 0, dodge: 0, goldFind: 0,
+      hpPct: 0, mpPct: 0, atkPct: 0, magPct: 0, speedPct: 0, lifeStealPct: 0,
+      fireDamagePct: 0, iceDamagePct: 0, shockDamagePct: 0, darkDamagePct: 0,
+      bonusSockets: 0
+    };
   }
 
+  const stats = item.stats || {};
+  const base = (key, fallback = 0) => equipNumber(item[key] ?? stats[key] ?? fallback);
+
   return {
-    hp: upgradeStat(item.hp, upgradeLevel),
-    mp: upgradeStat(item.mp, upgradeLevel),
-    atk: upgradeStat(item.atk, upgradeLevel),
-    mag: upgradeStat(item.mag, upgradeLevel),
-    def: upgradeStat(item.def, upgradeLevel),
-    mdef: upgradeStat(item.mdef, upgradeLevel),
-    speed: upgradeStat(item.speed, upgradeLevel),
-    crit: item.crit || 0,
-    dodge: item.dodge || 0,
-    goldFind: upgradeStat(item.goldFind, upgradeLevel)
+    hp: upgradeStat(base("hp"), upgradeLevel),
+    mp: upgradeStat(base("mp"), upgradeLevel),
+    atk: upgradeStat(base("atk"), upgradeLevel),
+    mag: upgradeStat(base("mag"), upgradeLevel),
+    def: upgradeStat(base("def", base("pdef")), upgradeLevel),
+    pdef: upgradeStat(base("pdef", base("def")), upgradeLevel),
+    mdef: upgradeStat(base("mdef"), upgradeLevel),
+    fireRes: upgradeStat(base("fireRes"), upgradeLevel),
+    iceRes: upgradeStat(base("iceRes"), upgradeLevel),
+    shockRes: upgradeStat(base("shockRes"), upgradeLevel),
+    darkRes: upgradeStat(base("darkRes"), upgradeLevel),
+    speed: upgradeStat(base("speed"), upgradeLevel),
+    crit: base("crit"),
+    dodge: base("dodge"),
+    goldFind: upgradeStat(base("goldFind"), upgradeLevel),
+    hpPct: base("hpPct"),
+    mpPct: base("mpPct"),
+    atkPct: base("atkPct"),
+    magPct: base("magPct"),
+    speedPct: base("speedPct"),
+    lifeStealPct: base("lifeStealPct"),
+    fireDamagePct: base("fireDamagePct"),
+    iceDamagePct: base("iceDamagePct"),
+    shockDamagePct: base("shockDamagePct"),
+    darkDamagePct: base("darkDamagePct"),
+    bonusSockets: base("bonusSockets")
   };
 }
 
@@ -252,13 +294,32 @@ function getEquipmentStatLine(item, upgradeLevel = 0) {
 
   if (stats.atk) parts.push(`Atk ${stats.atk}`);
   if (stats.mag) parts.push(`Mag ${stats.mag}`);
-  if (stats.def) parts.push(`Def ${stats.def}`);
-  if (stats.mdef) parts.push(`MDef ${stats.mdef}`);
+  if (stats.pdef || stats.def) parts.push(`PDEF ${stats.pdef || stats.def}%`);
+  if (stats.fireRes || stats.iceRes || stats.shockRes || stats.darkRes) {
+    const resValues = [stats.fireRes || 0, stats.iceRes || 0, stats.shockRes || 0, stats.darkRes || 0];
+    if (resValues.every(v => v === resValues[0]) && resValues[0]) parts.push(`All Res ${resValues[0]}%`);
+    else {
+      if (stats.fireRes) parts.push(`Fire Res ${stats.fireRes}%`);
+      if (stats.iceRes) parts.push(`Ice Res ${stats.iceRes}%`);
+      if (stats.shockRes) parts.push(`Shock Res ${stats.shockRes}%`);
+      if (stats.darkRes) parts.push(`Dark Res ${stats.darkRes}%`);
+    }
+  }
   if (stats.hp) parts.push(`HP ${stats.hp}`);
   if (stats.mp) parts.push(`MP ${stats.mp}`);
   if (stats.speed) parts.push(`Speed ${stats.speed}`);
   if (stats.crit) parts.push(`Crit ${stats.crit}%`);
   if (stats.dodge) parts.push(`Dodge ${stats.dodge}%`);
+  if (stats.hpPct) parts.push(`HP ${stats.hpPct}%`);
+  if (stats.mpPct) parts.push(`MP ${stats.mpPct}%`);
+  if (stats.atkPct) parts.push(`ATK ${stats.atkPct}%`);
+  if (stats.magPct) parts.push(`MAG ${stats.magPct}%`);
+  if (stats.speedPct) parts.push(`SPD ${stats.speedPct}%`);
+  if (stats.lifeStealPct) parts.push(`Life ${stats.lifeStealPct}%`);
+  if (stats.fireDamagePct) parts.push(`Fire Dmg ${stats.fireDamagePct}%`);
+  if (stats.iceDamagePct) parts.push(`Ice Dmg ${stats.iceDamagePct}%`);
+  if (stats.shockDamagePct) parts.push(`Shock Dmg ${stats.shockDamagePct}%`);
+  if (stats.darkDamagePct) parts.push(`Dark Dmg ${stats.darkDamagePct}%`);
   if (stats.goldFind) parts.push(`Gold Find ${stats.goldFind}%`);
 
   const req = [];

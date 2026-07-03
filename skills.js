@@ -65,9 +65,11 @@
     "mpCost": 8,
     "shop": "basic",
     "price": 120,
-    "power": 35,
-    "ultimatePower": 95,
-    "description": "Restore a small amount of HP."
+    "power": 25,
+    "ultimatePower": 50,
+    "healPct": 25,
+    "ultimateHealPct": 50,
+    "description": "Restore 25% of max HP."
   },
   "heal_2": {
     "id": "heal_2",
@@ -79,9 +81,11 @@
     "mpCost": 16,
     "shop": "basic",
     "price": 360,
-    "power": 80,
-    "ultimatePower": 190,
-    "description": "Restore a moderate amount of HP."
+    "power": 50,
+    "ultimatePower": 75,
+    "healPct": 50,
+    "ultimateHealPct": 75,
+    "description": "Restore 50% of max HP."
   },
   "heal_3": {
     "id": "heal_3",
@@ -94,9 +98,11 @@
     "shop": "secret",
     "secret": true,
     "price": 900,
-    "power": 165,
-    "ultimatePower": 360,
-    "description": "Restore a large amount of HP."
+    "power": 75,
+    "ultimatePower": 100,
+    "healPct": 75,
+    "ultimateHealPct": 100,
+    "description": "Restore 75% of max HP."
   },
   "haste": {
     "id": "haste",
@@ -249,8 +255,8 @@
     "price": 180,
     "hits": 2,
     "ultimateHits": 4,
-    "baseMultiplier": 0.78,
-    "ultimateMultiplier": 0.9,
+    "baseMultiplier": 1.0,
+    "ultimateMultiplier": 1.0,
     "piercePct": 5,
     "ultimatePiercePct": 15,
     "description": "Two quick physical hits."
@@ -267,8 +273,8 @@
     "price": 620,
     "hits": 3,
     "ultimateHits": 6,
-    "baseMultiplier": 0.7,
-    "ultimateMultiplier": 0.82,
+    "baseMultiplier": 1.0,
+    "ultimateMultiplier": 1.0,
     "piercePct": 10,
     "ultimatePiercePct": 25,
     "description": "Three fast physical hits."

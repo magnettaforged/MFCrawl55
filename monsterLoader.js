@@ -51,13 +51,14 @@ const RARE_ODDITY_DEFAULT_DROPS = [
   { type: "item", id: "gold_potion", name: "Gold Potion", chance: 35 }
 ];
 
+const CHEST_MIMIC_CHANCE_PCT = 15;
+
 const RARE_ODDITY_POOL = [
   "missingno",
-  "nocowvl",
+  "nocowlvl",
   "cblock",
   "deez",
   "gthong",
-  "possum_weasel",
   "kass",
   "mass",
   "nass",
@@ -77,9 +78,9 @@ const RARE_ODDITY_DEFINITIONS = {
     exp: 350,
     flavorText: "A corrupted shape that should not be here."
   },
-  nocowvl: {
+  nocowlvl: {
     monName: "Cow with Bardiche",
-    image: "nocowvl.webp",
+    image: "nocowlvl.webp",
     hp: 80,
     attack: 8,
     pdef: 12,
@@ -87,6 +88,11 @@ const RARE_ODDITY_DEFINITIONS = {
     speed: 18,
     dodgeChance: 82,
     exp: 420,
+    drops: [
+      { type: "gold", min: 350, max: 900, chance: 100 },
+      { type: "item", id: "bardiche", name: "Bardiche", chance: 100 },
+      { type: "item", id: "gold_potion", name: "Gold Potion", chance: 35 }
+    ],
     flavorText: "The secret herd armed itself."
   },
   cblock: {
@@ -134,18 +140,6 @@ const RARE_ODDITY_DEFINITIONS = {
       { type: "item", id: "gold_potion", name: "Gold Potion", chance: 50 }
     ],
     flavorText: "You have been blessed."
-  },
-  possum_weasel: {
-    monName: "Possum-Weasel Taxidermy",
-    image: "possum_weasel.webp",
-    hp: 65,
-    attack: 2,
-    pdef: 5,
-    magicDefense: 20,
-    speed: 35,
-    dodgeChance: 90,
-    exp: 380,
-    flavorText: "It is probably not alive. Probably."
   },
   kass: {
     monName: "Kyra's Ass",
@@ -263,6 +257,33 @@ const CHEST_ODDITY_DEFINITIONS = {
   }
 };
 
+const CHEST_MIMIC_DEFINITION = {
+  monId: "chest_mimic",
+  monName: "Mimic",
+  monsterType: "mimic",
+  behavior: "chest_mimic",
+  level: 1,
+  hp: 90,
+  mp: 0,
+  attack: 14,
+  pdef: 8,
+  defense: 8,
+  magicDefense: 4,
+  speed: 12,
+  critChance: 4,
+  dodgeChance: 3,
+  exp: 90,
+  image: "mimic.webp",
+  images: ["mimic.webp"],
+  drops: [
+    { type: "gold", min: 25, max: 80, chance: 100 },
+    { type: "item", id: "gold_potion", name: "Gold Potion", chance: 18 }
+  ],
+  tiered: true,
+  chestMimic: true,
+  flavorText: "It waited for someone greedy enough to open it."
+};
+
 function registerRareOddityMonster() {
   if (typeof MONSTERS === "undefined" || !MONSTERS) return;
 
@@ -271,6 +292,9 @@ function registerRareOddityMonster() {
   if (typeof MONSTER_LOCATIONS !== "undefined" && MONSTER_LOCATIONS && MONSTER_LOCATIONS.mysterious_elusive) {
     delete MONSTER_LOCATIONS.mysterious_elusive;
   }
+
+  if (!MONSTERS.chest_mimic) MONSTERS.chest_mimic = { ...CHEST_MIMIC_DEFINITION };
+  if (typeof MONSTER_LOCATIONS !== "undefined" && MONSTER_LOCATIONS && MONSTER_LOCATIONS.chest_mimic) delete MONSTER_LOCATIONS.chest_mimic;
 
   Object.entries(RARE_ODDITY_DEFINITIONS).forEach(([id, def]) => {
     if (!MONSTERS[id]) {
@@ -364,11 +388,22 @@ function getRandomRareOddity() {
 }
 
 function getRareOddityChancePct(floor) {
-  return 2; // intentionally rare; can be tuned later
+  return 1; // intentionally rare; monster oddity roll
 }
 
 function getChestOddityChancePct(floor) {
-  return 2; // intentionally rare; separate roll for chest oddities
+  return 1; // intentionally rare; separate roll for chest oddities
+}
+
+function shouldRollChestMimic(floor) {
+  if (typeof MONSTERS === "undefined" || !MONSTERS.chest_mimic) return false;
+  return Math.random() * 100 < CHEST_MIMIC_CHANCE_PCT;
+}
+
+function getChestMimicEncounter(floor = 1) {
+  if (typeof MONSTERS === "undefined" || !MONSTERS.chest_mimic) return null;
+  const monster = normalizeMonster(MONSTERS.chest_mimic);
+  return monster ? scaleMonster(monster, floor) : null;
 }
 
 function getChestOddityIds() {
