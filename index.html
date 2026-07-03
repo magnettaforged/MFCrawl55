@@ -2308,7 +2308,7 @@
 
         <div class="topHudBadge floorIndicator" id="floorIndicator">Floor 1 | A1</div>
         <div class="mapIndicator" id="mapIndicator">Map: -</div>
-        <div class="versionIndicator" id="versionIndicator">v0.7.6</div>
+        <div class="versionIndicator" id="versionIndicator">v0.7.6b</div>
         <div class="miniMapHud" id="miniMapHud" aria-label="Mini map"></div>
 
         <button class="soundToggle" id="settingsButton" onclick="openSystemOverlay()" aria-label="Settings">⚙</button>
@@ -2421,7 +2421,7 @@
 
   <script>
     
-    const GAME_VERSION = "v0.7.6";
+    const GAME_VERSION = "v0.7.6b";
 // =========================
     // MAP / FLOOR STATE
     // =========================
@@ -2430,6 +2430,7 @@
 
     let currentFloor = 1;
     let currentMapId = "";
+    let currentMapDiscoveryId = "";
     let currentMap = null;
     let currentFloorTheme = "c";
     let testMap = [];
@@ -2608,6 +2609,7 @@
       }
 
       currentFloorTheme = dungeonRandomChoice(FLOOR_THEMES);
+      currentMapDiscoveryId = `${currentFloor}:${currentMapId}:${Date.now().toString(36)}${Math.floor(Math.random() * 100000).toString(36)}`;
 
       const start = findEntrancePosition(testMap);
       playerX = start.x;
@@ -2820,9 +2822,16 @@
       });
     }
 
+    function getCurrentMapDiscoveryId() {
+      if (!currentMapDiscoveryId) {
+        currentMapDiscoveryId = `${currentFloor}:${currentMapId || "fallback"}:${Date.now().toString(36)}${Math.floor(Math.random() * 100000).toString(36)}`;
+      }
+      return currentMapDiscoveryId;
+    }
+
     function markCurrentMapDiscovered() {
       ensureSystemState();
-      const id = currentMapId || "fallback";
+      const id = getCurrentMapDiscoveryId();
       if (!player.discovery.maps[id]) player.discovery.maps[id] = {};
       player.discovery.maps[id][tileKey(playerX, playerY)] = true;
     }
@@ -2870,7 +2879,7 @@
     }
 
     function buildRelativeMiniMapCells(cellTag = "div") {
-      const id = currentMapId || "fallback";
+      const id = typeof getCurrentMapDiscoveryId === "function" ? getCurrentMapDiscoveryId() : (currentMapId || "fallback");
       const maps = player && player.discovery && player.discovery.maps ? player.discovery.maps : {};
       const discovered = maps[id] || {};
       const cells = [];
@@ -3379,6 +3388,7 @@
         savedAt: Date.now(),
         currentFloor,
         currentMapId,
+        currentMapDiscoveryId,
         currentFloorTheme,
         playerX,
         playerY,
@@ -3440,6 +3450,7 @@
         // On every page load, the character keeps progression/inventory/floor,
         // but starts a freshly generated floor at the entrance.
         currentMapId = "";
+        currentMapDiscoveryId = "";
         currentMap = null;
         testMap = [];
         currentFloorTheme = "c";
@@ -3496,7 +3507,7 @@
 
 
     // =========================
-    // GENERATED RINGS
+    // GENERATED EQUIPMENT
     // =========================
 
     const RING_ICON_POOLS = {
@@ -3510,7 +3521,7 @@
       unique: ["mayaring1", "reignring1", "kyraring1", "nadiaring1"]
     };
 
-    const GENERATED_RING_PREFIXES = {
+    const GENERATED_EQUIPMENT_PREFIXES = {
       sturdy: { label: "Sturdy", stats: { hpPct: 10 } },
       vigorous: { label: "Vigorous", stats: { hpPct: 15 } },
       mindful: { label: "Mindful", stats: { mpPct: 10 } },
@@ -3523,30 +3534,50 @@
       fortified: { label: "Fortified", stats: { pdef: 10 } },
       warded: { label: "Warded", stats: { fireRes: 5, iceRes: 5, shockRes: 5, darkRes: 5 } },
       vampiric: { label: "Vampiric", stats: { lifeStealPct: 5 } },
+      flaming: { label: "Flaming", stats: { fireDamagePct: 10 } },
+      frozen: { label: "Frozen", stats: { iceDamagePct: 10 } },
+      shocking: { label: "Shocking", stats: { shockDamagePct: 10 } },
+      shadowed: { label: "Shadowed", stats: { darkDamagePct: 10 } },
       lucky: { label: "Lucky", stats: { goldFind: 25 } },
       socketed: { label: "Socketed", stats: { bonusSockets: 1 } }
     };
 
-    const GENERATED_RING_SUFFIXES = {
+    const GENERATED_EQUIPMENT_SUFFIXES = {
       vitality: { label: "of Vitality", stats: { hpPct: 10 } },
+      endurance: { label: "of Endurance", stats: { hpPct: 15 } },
       wisdom: { label: "of Wisdom", stats: { mpPct: 10 } },
       strength: { label: "of Strength", stats: { atkPct: 10 } },
+      brutality: { label: "of Brutality", stats: { atkPct: 15 } },
       sorcery: { label: "of Sorcery", stats: { magPct: 10 } },
       speed: { label: "of Speed", stats: { speedPct: 10 } },
       evasion: { label: "of Evasion", stats: { dodge: 5 } },
       guarding: { label: "of Guarding", stats: { pdef: 10 } },
+      shielding: { label: "of Shielding", stats: { pdef: 15 } },
       warding: { label: "of Warding", stats: { fireRes: 5, iceRes: 5, shockRes: 5, darkRes: 5 } },
+      protection: { label: "of Protection", stats: { fireRes: 8, iceRes: 8, shockRes: 8, darkRes: 8 } },
       leeching: { label: "of Leeching", stats: { lifeStealPct: 5 } },
+      draining: { label: "of Draining", stats: { lifeStealPct: 8 } },
+      flames: { label: "of Flames", stats: { fireDamagePct: 10 } },
+      frost: { label: "of Frost", stats: { iceDamagePct: 10 } },
+      storms: { label: "of Storms", stats: { shockDamagePct: 10 } },
+      dusk: { label: "of Dusk", stats: { darkDamagePct: 10 } },
       fortune: { label: "of Fortune", stats: { goldFind: 25 } },
+      greed: { label: "of Greed", stats: { goldFind: 50 } },
       sockets: { label: "of Sockets", stats: { bonusSockets: 1 } }
     };
 
-    const GENERATED_RING_RARITIES = {
+    // Backwards-compatible names for older saves/debug references.
+    const GENERATED_RING_PREFIXES = GENERATED_EQUIPMENT_PREFIXES;
+    const GENERATED_RING_SUFFIXES = GENERATED_EQUIPMENT_SUFFIXES;
+
+    const GENERATED_EQUIPMENT_RARITIES = {
       magical: { label: "Magical", affixes: 1, valueMult: 1.2 },
       rare: { label: "Rare", affixes: 2, valueMult: 2.0 },
       epic: { label: "Epic", affixes: 2, statMult: 1.35, valueMult: 3.5 },
       legendary: { label: "Legendary", affixes: 2, statMult: 1.75, valueMult: 6.0 }
     };
+
+    const GENERATED_RING_RARITIES = GENERATED_EQUIPMENT_RARITIES;
 
     function mergeGeneratedStats(target, source, mult = 1) {
       Object.entries(source || {}).forEach(([key, value]) => {
@@ -3556,7 +3587,7 @@
       return target;
     }
 
-    function rollGeneratedRingRarity() {
+    function rollGeneratedEquipmentRarity() {
       const roll = Math.random() * 100;
       if (roll < 4) return "legendary";
       if (roll < 14) return "epic";
@@ -3564,11 +3595,64 @@
       return "magical";
     }
 
-    function pickObjectEntry(obj) {
-      const keys = Object.keys(obj || {});
+    function rollGeneratedRingRarity() {
+      return rollGeneratedEquipmentRarity();
+    }
+
+    function pickObjectEntry(obj, excludeKeys = []) {
+      const blocked = new Set(excludeKeys || []);
+      const keys = Object.keys(obj || {}).filter(key => !blocked.has(key));
       if (!keys.length) return null;
       const key = keys[Math.floor(Math.random() * keys.length)];
       return { key, ...obj[key] };
+    }
+
+    function rollGeneratedAffixes(maxAffixes = 1) {
+      const count = Math.max(1, Math.floor(Number(maxAffixes) || 1));
+      const prefixKeys = [];
+      const suffixKeys = [];
+      const affixes = [];
+
+      const addPrefix = () => {
+        const picked = pickObjectEntry(GENERATED_EQUIPMENT_PREFIXES, prefixKeys);
+        if (picked) {
+          picked.kind = "prefix";
+          prefixKeys.push(picked.key);
+          affixes.push(picked);
+        }
+      };
+
+      const addSuffix = () => {
+        const picked = pickObjectEntry(GENERATED_EQUIPMENT_SUFFIXES, suffixKeys);
+        if (picked) {
+          picked.kind = "suffix";
+          suffixKeys.push(picked.key);
+          affixes.push(picked);
+        }
+      };
+
+      if (count <= 1) {
+        Math.random() < 0.5 ? addPrefix() : addSuffix();
+        return affixes;
+      }
+
+      const modeRoll = Math.random();
+      if (modeRoll < 0.60) {
+        addPrefix();
+        addSuffix();
+      } else if (modeRoll < 0.80) {
+        for (let i = 0; i < count; i++) addPrefix();
+      } else {
+        for (let i = 0; i < count; i++) addSuffix();
+      }
+
+      while (affixes.length < count) {
+        Math.random() < 0.5 ? addPrefix() : addSuffix();
+        if (prefixKeys.length >= Object.keys(GENERATED_EQUIPMENT_PREFIXES).length &&
+            suffixKeys.length >= Object.keys(GENERATED_EQUIPMENT_SUFFIXES).length) break;
+      }
+
+      return affixes.slice(0, count);
     }
 
     function getGeneratedRingIcon(rarity) {
@@ -3576,20 +3660,124 @@
       return `${pool[Math.floor(Math.random() * pool.length)]}.webp`;
     }
 
-    function createGeneratedRing() {
+    function getBaseEquipmentStatsForGeneratedItem(baseItem) {
+      if (!baseItem) return {};
+      if (typeof getUpgradedEquipmentStats === "function") {
+        return getUpgradedEquipmentStats(baseItem, 0);
+      }
+
+      const stats = baseItem.stats || {};
+      return {
+        hp: Number(baseItem.hp ?? stats.hp ?? 0),
+        mp: Number(baseItem.mp ?? stats.mp ?? 0),
+        atk: Number(baseItem.atk ?? stats.atk ?? 0),
+        mag: Number(baseItem.mag ?? stats.mag ?? 0),
+        def: Number(baseItem.def ?? stats.def ?? 0),
+        pdef: Number(baseItem.pdef ?? stats.pdef ?? baseItem.def ?? stats.def ?? 0),
+        mdef: Number(baseItem.mdef ?? stats.mdef ?? 0),
+        fireRes: Number(baseItem.fireRes ?? stats.fireRes ?? 0),
+        iceRes: Number(baseItem.iceRes ?? stats.iceRes ?? 0),
+        shockRes: Number(baseItem.shockRes ?? stats.shockRes ?? 0),
+        darkRes: Number(baseItem.darkRes ?? stats.darkRes ?? 0),
+        speed: Number(baseItem.speed ?? stats.speed ?? 0),
+        crit: Number(baseItem.crit ?? stats.crit ?? 0),
+        dodge: Number(baseItem.dodge ?? stats.dodge ?? 0),
+        goldFind: Number(baseItem.goldFind ?? stats.goldFind ?? 0)
+      };
+    }
+
+    function buildGeneratedEquipmentName(baseName, affixes) {
+      const prefixes = (affixes || []).filter(a => a.kind === "prefix").map(a => a.label);
+      const suffixes = (affixes || []).filter(a => a.kind === "suffix").map(a => a.label);
+      return `${prefixes.length ? prefixes.join(" ") + " " : ""}${baseName}${suffixes.length ? " " + suffixes.join(" ") : ""}`;
+    }
+
+    function ensureGeneratedEquipmentCounter() {
       ensureFullInventoryShape();
+      if (!Number.isFinite(Number(player.generatedEquipmentCounter))) player.generatedEquipmentCounter = 0;
+      if (!Number.isFinite(Number(player.generatedRingCounter))) player.generatedRingCounter = 0;
+    }
+
+    function addGeneratedEquipmentRecord(item) {
+      ensureGeneratedEquipmentCounter();
+      player.generatedEquipment[item.itemId] = item;
+      player.inventory.equipment[item.itemId] = {
+        owned: true,
+        level: 0,
+        pending: 0,
+        socketsUnlocked: item.maxSockets > 0 ? 1 : 0,
+        sockets: []
+      };
+      normalizeEquipmentSockets(item.itemId);
+      discoverCollection(item.slot === "weapon" ? "weapons" : item.slot === "armor" ? "armor" : "jewelry", item.itemId);
+      return item;
+    }
+
+    function createGeneratedEquipmentFromBase(baseItem) {
+      if (!baseItem) return null;
+      ensureGeneratedEquipmentCounter();
+
+      const rarity = rollGeneratedEquipmentRarity();
+      const rarityData = GENERATED_EQUIPMENT_RARITIES[rarity] || GENERATED_EQUIPMENT_RARITIES.magical;
+      const affixes = rollGeneratedAffixes(rarityData.affixes || 1);
+      const stats = getBaseEquipmentStatsForGeneratedItem(baseItem);
+      const statMult = Number(rarityData.statMult || 1);
+
+      affixes.forEach(affix => mergeGeneratedStats(stats, affix.stats, statMult));
+
+      const prefixes = affixes.filter(a => a.kind === "prefix").map(a => a.key);
+      const suffixes = affixes.filter(a => a.kind === "suffix").map(a => a.key);
+      const bonusSockets = Math.max(0, Number(stats.bonusSockets || 0));
+
+      player.generatedEquipmentCounter = Math.floor(Number(player.generatedEquipmentCounter || 0)) + 1;
+      const itemId = `gen${baseItem.slot || "equip"}${Date.now().toString(36)}${player.generatedEquipmentCounter}`;
+
+      const generated = {
+        ...baseItem,
+        itemId,
+        itemName: buildGeneratedEquipmentName(baseItem.itemName || baseItem.name || "Equipment", affixes),
+        slot: baseItem.slot || "weapon",
+        character: baseItem.character || "all",
+        tier: baseItem.tier || "",
+        material: baseItem.material || "",
+        rarity,
+        reqLevel: baseItem.reqLevel || 1,
+        reqStr: baseItem.reqStr || 0,
+        reqDex: baseItem.reqDex || 0,
+        maxSockets: Math.max(0, Number(baseItem.maxSockets || 0) + bonusSockets),
+        value: Math.round(Math.max(1, Number(baseItem.value || 25)) * Number(rarityData.valueMult || 1)),
+        stats,
+        assets: JSON.parse(JSON.stringify(baseItem.assets || {})),
+        text: {
+          ...(baseItem.text || {}),
+          description: `${rarityData.label} generated ${baseItem.slot || "equipment"} based on ${baseItem.itemName || "equipment"}.`
+        },
+        description: `${rarityData.label} generated ${baseItem.slot || "equipment"} based on ${baseItem.itemName || "equipment"}.`,
+        generated: true,
+        baseItemId: baseItem.itemId,
+        prefixes,
+        suffixes,
+        prefix: prefixes[0] || null,
+        suffix: suffixes[0] || null
+      };
+
+      return addGeneratedEquipmentRecord(generated);
+    }
+
+    function createGeneratedRing() {
+      ensureGeneratedEquipmentCounter();
       const rarity = rollGeneratedRingRarity();
-      const rarityData = GENERATED_RING_RARITIES[rarity] || GENERATED_RING_RARITIES.magical;
-      const prefix = pickObjectEntry(GENERATED_RING_PREFIXES);
-      const suffix = rarityData.affixes >= 2 ? pickObjectEntry(GENERATED_RING_SUFFIXES) : (Math.random() < 0.5 ? pickObjectEntry(GENERATED_RING_SUFFIXES) : null);
+      const rarityData = GENERATED_EQUIPMENT_RARITIES[rarity] || GENERATED_EQUIPMENT_RARITIES.magical;
+      const affixes = rollGeneratedAffixes(rarityData.affixes || 1);
       const stats = {};
       const statMult = Number(rarityData.statMult || 1);
-      if (prefix) mergeGeneratedStats(stats, prefix.stats, statMult);
-      if (suffix) mergeGeneratedStats(stats, suffix.stats, statMult);
-      const baseName = "Ring";
-      const itemName = `${prefix ? prefix.label + " " : ""}${baseName}${suffix ? " " + suffix.label : ""}`;
+
+      affixes.forEach(affix => mergeGeneratedStats(stats, affix.stats, statMult));
+
+      const itemName = buildGeneratedEquipmentName("Ring", affixes);
       const icon = getGeneratedRingIcon(rarity);
       player.generatedRingCounter = Math.floor(Number(player.generatedRingCounter || 0)) + 1;
+      player.generatedEquipmentCounter = Math.floor(Number(player.generatedEquipmentCounter || 0)) + 1;
       const itemId = `genring${Date.now().toString(36)}${player.generatedRingCounter}`;
       const maxSockets = Math.max(0, Number(stats.bonusSockets || 0));
       const ring = {
@@ -3605,15 +3793,15 @@
         stats,
         assets: { icon: `assets/items/rings/${icon}`, image: icon },
         text: { description: `${rarityData.label} generated ring.` },
+        description: `${rarityData.label} generated ring.`,
         generated: true,
-        prefix: prefix ? prefix.key : null,
-        suffix: suffix ? suffix.key : null
+        prefixes: affixes.filter(a => a.kind === "prefix").map(a => a.key),
+        suffixes: affixes.filter(a => a.kind === "suffix").map(a => a.key),
+        prefix: affixes.find(a => a.kind === "prefix")?.key || null,
+        suffix: affixes.find(a => a.kind === "suffix")?.key || null
       };
-      player.generatedEquipment[itemId] = ring;
-      player.inventory.equipment[itemId] = { owned: true, level: 0, pending: 0, socketsUnlocked: maxSockets > 0 ? 1 : 0, sockets: [] };
-      normalizeEquipmentSockets(itemId);
-      discoverCollection("jewelry", itemId);
-      return ring;
+
+      return addGeneratedEquipmentRecord(ring);
     }
 
     function getGeneratedEquipmentItem(itemId) {
@@ -3622,15 +3810,29 @@
     }
 
     function getGeneratedEquipmentListBySlot(slot) {
+      const sourceSlot = ["ring1", "ring2", "ring3", "ring4"].includes(slot) ? "ring" : slot;
       if (!player.generatedEquipment || typeof player.generatedEquipment !== "object") return [];
-      return Object.values(player.generatedEquipment || {}).filter(item => item && item.slot === slot);
+      return Object.values(player.generatedEquipment || {}).filter(item => item && item.slot === sourceSlot);
     }
 
     function getGeneratedEquipmentIconPath(item) {
-      if (!item) return "";
-      if (item.assets && item.assets.icon) return item.assets.icon;
+      if (!item || !item.generated) return "";
+
+      if (item.slot === "ring") {
+        if (item.assets && item.assets.icon) return item.assets.icon;
+        if (item.iconPath) return item.iconPath;
+        if (item.image) return `assets/items/rings/${item.image}`;
+      }
+
+      if (item.baseItemId && typeof getEquipmentById === "function" && typeof getEquipmentIconPath === "function") {
+        const baseItem = getEquipmentById(item.baseItemId);
+        const baseIcon = getEquipmentIconPath(baseItem);
+        if (baseIcon) return baseIcon;
+      }
+
       if (item.iconPath) return item.iconPath;
-      if (item.image && item.slot === "ring") return `assets/items/rings/${item.image}`;
+      if (item.assets && item.assets.icon && String(item.assets.icon).includes("/")) return item.assets.icon;
+      if (item.image && typeof getEquipmentIconPath === "function") return getEquipmentIconPath(item);
       return "";
     }
 
@@ -3759,14 +3961,19 @@
       if (!itemId) return "None";
 
       const level = getEquipmentLevel(itemId);
+      const item = getEquipItem(itemId);
+
+      if (item && item.generated) {
+        return level > 0 ? `${item.itemName} +${level}` : item.itemName;
+      }
 
       if (typeof getEquipmentDisplayName === "function") {
         return getEquipmentDisplayName(itemId, level);
       }
 
-      const item = getEquipItem(itemId);
       return item ? item.itemName : itemId;
     }
+
 
     function getEquipStats(itemId) {
       const item = getEquipItem(itemId);
@@ -6977,13 +7184,21 @@
       if (Math.random() < 0.30) {
         const item = randomFromList(getChestEquipmentPool());
         if (item) {
-          const result = addEquipmentToInventory(item.itemId);
-          if (result && result.ok) messages.push(item.itemName);
-          else {
-            const bonusGold = Math.max(1, getSellPrice(item.itemId));
-            player.gold += bonusGold;
-            addLeaderboardGold(bonusGold);
-            messages.push(`${bonusGold} bonus gold`);
+          const shouldGenerate = Math.random() < 0.70;
+          if (shouldGenerate && typeof createGeneratedEquipmentFromBase === "function") {
+            const generated = createGeneratedEquipmentFromBase(item);
+            if (generated) {
+              messages.push(generated.itemName);
+            }
+          } else {
+            const result = addEquipmentToInventory(item.itemId);
+            if (result && result.ok) messages.push(item.itemName);
+            else {
+              const bonusGold = Math.max(1, getSellPrice(item.itemId));
+              player.gold += bonusGold;
+              addLeaderboardGold(bonusGold);
+              messages.push(`${bonusGold} bonus gold`);
+            }
           }
         }
       }
@@ -8430,6 +8645,12 @@
         }
       });
 
+      if (!currentEnemy?.rareOddity && Math.random() < 0.06 && typeof createGeneratedEquipmentFromBase === "function") {
+        const item = randomFromList(getChestEquipmentPool());
+        const generated = item ? createGeneratedEquipmentFromBase(item) : null;
+        if (generated) foundMessages.push(generated.itemName);
+      }
+
       const dropText = foundMessages.length ? foundMessages.join(", ") : "nothing";
       const levelText = expResult.levelsGained > 0
         ? ` Level up! Now level ${player.level}.`
@@ -9310,12 +9531,15 @@
       if (typeof getEquipmentBySlot !== "function") return [];
       const equippedIds = new Set(getEquippedEquipmentIds());
 
-      return getEquipmentBySlot(slot)
+      const sourceSlot = getSlotSource(slot);
+      const baseItems = getEquipmentBySlot(sourceSlot) || [];
+      const generatedItems = getGeneratedEquipmentListBySlot(sourceSlot);
+      return baseItems.concat(generatedItems)
         .filter(item => ownsEquipment(item.itemId))
         .filter(item => !equippedIds.has(item.itemId))
         .map(item => ({
           itemId: item.itemId,
-          itemName: item.itemName,
+          itemName: getEquipName(item.itemId),
           image: item.image,
           slot: item.slot,
           tier: item.tier,
