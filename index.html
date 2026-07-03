@@ -3736,7 +3736,7 @@
 
     function getRingIconPathForRarity(rarity, image) {
       const file = image || getGeneratedRingIcon(rarity);
-      return `assets/jewlery/${forceWebpFileName(file)}`;
+      return `assets/jewelry/${forceWebpFileName(file)}`;
     }
 
     function getBaseEquipmentStatsForGeneratedItem(baseItem) {
@@ -3947,10 +3947,10 @@
         if (item.assets && item.assets.icon) {
           const icon = String(item.assets.icon);
           if (icon.includes("/")) return icon;
-          return `assets/jewlery/${forceWebpFileName(icon)}`;
+          return `assets/jewelry/${forceWebpFileName(icon)}`;
         }
         if (item.iconPath) return item.iconPath;
-        if (item.image) return `assets/jewlery/${forceWebpFileName(item.image)}`;
+        if (item.image) return `assets/jewelry/${forceWebpFileName(item.image)}`;
       }
 
       if (item.baseItemId && typeof getEquipmentById === "function" && typeof getEquipmentIconPath === "function") {
@@ -10057,14 +10057,14 @@
         if (item.assets && item.assets.icon) {
           const icon = String(item.assets.icon);
           if (icon.includes("/")) return icon;
-          return `assets/jewlery/${forceWebpFileName(icon)}`;
+          return `assets/jewelry/${forceWebpFileName(icon)}`;
         }
         if (item.icon) {
           const icon = String(item.icon);
           if (icon.includes("/")) return icon;
-          return `assets/jewlery/${forceWebpFileName(icon)}`;
+          return `assets/jewelry/${forceWebpFileName(icon)}`;
         }
-        if (item.image) return `assets/jewlery/${forceWebpFileName(item.image)}`;
+        if (item.image) return `assets/jewelry/${forceWebpFileName(item.image)}`;
       }
 
       if (typeof getEquipmentIconPath === "function") return getEquipmentIconPath(item);
@@ -10077,7 +10077,7 @@
       if (!item) return "items";
       if (item.slot === "weapon") return "weapons";
       if (item.slot === "armor") return "armor";
-      if (item.slot === "ring" || item.slot === "necklace") return "jewlery";
+      if (item.slot === "ring" || item.slot === "necklace") return "jewelry";
       if (item.slot === "cloak") return "cloaks";
       return "items";
     }
