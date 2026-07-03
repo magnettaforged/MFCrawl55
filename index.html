@@ -1604,6 +1604,72 @@
       word-break: normal;
     }
 
+    .detailStatGrid,
+    .detailRuneGrid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      column-gap: 12px;
+      row-gap: 2px;
+    }
+
+    .detailStatGrid .detailLine,
+    .detailRuneGrid .detailRuneRow {
+      grid-template-columns: auto minmax(0, 1fr);
+      min-height: 18px;
+      padding: 1px 0;
+    }
+
+    .detailStatGrid .detailValue,
+    .detailRuneGrid .detailValue {
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .rarityName {
+      font-weight: bold;
+    }
+
+    .rarity-common,
+    .rarity-normal,
+    .rarity-basic {
+      color: #ffffff;
+    }
+
+    .rarity-magical {
+      color: #8fb9ff;
+    }
+
+    .rarity-rare {
+      color: #f2c85b;
+    }
+
+    .rarity-epic {
+      color: #d58cff;
+    }
+
+    .rarity-legendary {
+      color: #ff9d4d;
+      text-shadow: 0 0 6px rgba(255,120,40,0.35);
+    }
+
+    .sellConfirmPanel {
+      display: grid;
+      gap: 8px;
+    }
+
+    .qtyControlRow {
+      display: grid;
+      grid-template-columns: 42px 1fr 42px;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .qtyValue {
+      color: #fff;
+      text-align: center;
+      font-weight: bold;
+    }
+
     .detailSection .detailLine .detailLabel {
       white-space: nowrap;
     }
@@ -2308,7 +2374,7 @@
 
         <div class="topHudBadge floorIndicator" id="floorIndicator">Floor 1 | A1</div>
         <div class="mapIndicator" id="mapIndicator">Map: -</div>
-        <div class="versionIndicator" id="versionIndicator">v0.7.6b</div>
+        <div class="versionIndicator" id="versionIndicator">v0.7.6c</div>
         <div class="miniMapHud" id="miniMapHud" aria-label="Mini map"></div>
 
         <button class="soundToggle" id="settingsButton" onclick="openSystemOverlay()" aria-label="Settings">⚙</button>
@@ -2421,7 +2487,7 @@
 
   <script>
     
-    const GAME_VERSION = "v0.7.6b";
+    const GAME_VERSION = "v0.7.6c";
 // =========================
     // MAP / FLOOR STATE
     // =========================
@@ -3656,8 +3722,13 @@
     }
 
     function getGeneratedRingIcon(rarity) {
-      const pool = RING_ICON_POOLS[rarity] || RING_ICON_POOLS.magical;
+      const pool = RING_ICON_POOLS[String(rarity || "magical").toLowerCase()] || RING_ICON_POOLS.magical;
       return `${pool[Math.floor(Math.random() * pool.length)]}.webp`;
+    }
+
+    function getRingIconPathForRarity(rarity, image) {
+      const file = image || getGeneratedRingIcon(rarity);
+      return `assets/items/rings/${forceWebpFileName(file)}`;
     }
 
     function getBaseEquipmentStatsForGeneratedItem(baseItem) {
@@ -3735,7 +3806,7 @@
       const generated = {
         ...baseItem,
         itemId,
-        itemName: buildGeneratedEquipmentName(baseItem.itemName || baseItem.name || "Equipment", affixes),
+        itemName: buildGeneratedEquipmentName(getCleanEquipmentBaseName(baseItem) || "Equipment", affixes),
         slot: baseItem.slot || "weapon",
         character: baseItem.character || "all",
         tier: baseItem.tier || "",
@@ -3750,9 +3821,9 @@
         assets: JSON.parse(JSON.stringify(baseItem.assets || {})),
         text: {
           ...(baseItem.text || {}),
-          description: `${rarityData.label} generated ${baseItem.slot || "equipment"} based on ${baseItem.itemName || "equipment"}.`
+          description: `${rarityData.label} generated ${baseItem.slot || "equipment"} based on ${getCleanEquipmentBaseName(baseItem) || "equipment"}.`
         },
-        description: `${rarityData.label} generated ${baseItem.slot || "equipment"} based on ${baseItem.itemName || "equipment"}.`,
+        description: `${rarityData.label} generated ${baseItem.slot || "equipment"} based on ${getCleanEquipmentBaseName(baseItem) || "equipment"}.`,
         generated: true,
         baseItemId: baseItem.itemId,
         prefixes,
@@ -3791,7 +3862,7 @@
         maxSockets,
         value: Math.round(75 * Number(rarityData.valueMult || 1)),
         stats,
-        assets: { icon: `assets/items/rings/${icon}`, image: icon },
+        assets: { icon: getRingIconPathForRarity(rarity, icon), image: forceWebpFileName(icon) },
         text: { description: `${rarityData.label} generated ring.` },
         description: `${rarityData.label} generated ring.`,
         generated: true,
@@ -3819,9 +3890,13 @@
       if (!item || !item.generated) return "";
 
       if (item.slot === "ring") {
-        if (item.assets && item.assets.icon) return item.assets.icon;
+        if (item.assets && item.assets.icon) {
+          const icon = String(item.assets.icon);
+          if (icon.includes("/")) return icon;
+          return `assets/items/rings/${forceWebpFileName(icon)}`;
+        }
         if (item.iconPath) return item.iconPath;
-        if (item.image) return `assets/items/rings/${item.image}`;
+        if (item.image) return `assets/items/rings/${forceWebpFileName(item.image)}`;
       }
 
       if (item.baseItemId && typeof getEquipmentById === "function" && typeof getEquipmentIconPath === "function") {
@@ -3959,19 +4034,7 @@
 
     function getEquipName(itemId) {
       if (!itemId) return "None";
-
-      const level = getEquipmentLevel(itemId);
-      const item = getEquipItem(itemId);
-
-      if (item && item.generated) {
-        return level > 0 ? `${item.itemName} +${level}` : item.itemName;
-      }
-
-      if (typeof getEquipmentDisplayName === "function") {
-        return getEquipmentDisplayName(itemId, level);
-      }
-
-      return item ? item.itemName : itemId;
+      return getCleanEquipmentDisplayName(itemId, true);
     }
 
 
@@ -6189,14 +6252,11 @@
     function getEquipmentShopIconHtml(item) {
       if (!item) return `<span class="shopIcon empty"></span>`;
 
-      const iconPath = typeof getEquipmentIconPath === "function"
-        ? getEquipmentIconPath(item)
-        : (item.icon || item.image || "");
-
+      const iconPath = getEquipmentIconPathSafe(item);
       if (!iconPath) return `<span class="shopIcon empty"></span>`;
 
       const finalPath = iconPath.startsWith("assets/") ? iconPath : `assets/${getEquipmentImageFolder(item)}/${iconPath}`;
-      return `<img class="shopIcon" src="${finalPath}" alt="" onerror="this.style.display='none';">`;
+      return `<img class="shopIcon" src="${finalPath}" alt="" onerror="${fallbackImageOnErrorHtml('shopIcon')}">`;
     }
 
     function isSpecialRestrictedGear(item) {
@@ -6668,7 +6728,7 @@
       const price = getSellPrice(entry.itemId);
 
       return `
-        <button class="shopRow" onclick="sellShopConsumable('${entry.itemId}', ${price})">
+        <button class="shopRow" onclick="openSellConsumableConfirm('${entry.itemId}')">
           ${shopIconHtml(image, "items")}
           <div class="shopRowText">
             <div class="shopRowName">${name}</div>
@@ -6688,11 +6748,11 @@
       const levelText = level > 0 ? ` +${level}` : "";
 
       return `
-        <button class="shopRow" onclick="sellShopEquipment('${entry.itemId}', ${price})">
+        <button class="shopRow" onclick="openSellEquipmentConfirm('${entry.itemId}')">
           ${getEquipmentShopIconHtml(item)}
           <div class="shopRowText">
-            <div class="shopRowName">${item.itemName}${levelText}</div>
-            <div class="shopRowSub">${item.slot.toUpperCase()} · Unequipped</div>
+            <div class="shopRowName">${rarityNameHtml(entry.itemId, false)}${levelText}</div>
+            <div class="shopRowSub">Unequipped</div>
           </div>
           <div class="shopRowValue">${price}g</div>
         </button>
@@ -6704,7 +6764,7 @@
       if (!item) return "";
       const price = Math.max(1, Math.floor(Number(item.value || 0) * 0.5));
       return `
-        <button class="shopRow" onclick="sellShopKeyItem('${entry.itemId}', ${price})">
+        <button class="shopRow" onclick="openSellKeyConfirm('${entry.itemId}')">
           ${shopIconHtml(item.image || "", "items")}
           <div class="shopRowText">
             <div class="shopRowName">${item.itemName}</div>
@@ -6776,56 +6836,24 @@
       content.innerHTML = html;
     }
 
-    function sellShopConsumable(itemId, price) {
+    let pendingSellConfirm = null;
+
+    function openSellConsumableConfirm(itemId) {
       ensureFullInventoryShape();
       const quantity = Number(player.inventory.consumables[itemId] || 0);
-
       if (quantity <= 0) {
         setMessage("You do not have that item.");
         renderShrineSell();
         return;
       }
 
-      if (!confirmAction(`Sell ${getSafeItemName(itemId)} for ${price} gold?`)) {
-        setMessage("Sale cancelled.");
-        renderShrineSell();
-        return;
-      }
-
-      player.inventory.consumables[itemId] = quantity - 1;
-      if (player.inventory.consumables[itemId] <= 0) delete player.inventory.consumables[itemId];
-
-      player.gold += price;
-      addLeaderboardGold(price);
-      setMessage(`Sold ${getSafeItemName(itemId)} for ${price} gold.`);
-      renderShrineSell();
+      const unitPrice = getSellPrice(itemId);
+      pendingSellConfirm = { type: "consumable", itemId, qty: 1, maxQty: quantity, unitPrice };
+      renderSellConfirmOverlay();
     }
 
-    function sellShopKeyItem(itemId, price) {
+    function openSellEquipmentConfirm(itemId) {
       ensureFullInventoryShape();
-
-      if (!player.inventory.keyitems[itemId]) {
-        setMessage("You do not own that key.");
-        renderShrineSell();
-        return;
-      }
-
-      if (!confirmAction(`Sell ${getSafeItemName(itemId)} for ${price} gold?`)) {
-        setMessage("Sale cancelled.");
-        renderShrineSell();
-        return;
-      }
-
-      delete player.inventory.keyitems[itemId];
-      player.gold += price;
-      addLeaderboardGold(price);
-      setMessage(`Sold ${getSafeItemName(itemId)} for ${price} gold.`);
-      renderShrineSell();
-    }
-
-    function sellShopEquipment(itemId, price) {
-      ensureFullInventoryShape();
-
       if (isEquipmentCurrentlyEquipped(itemId)) {
         setMessage("Unequip that item before selling it.");
         renderShrineSell();
@@ -6839,16 +6867,175 @@
         return;
       }
 
-      if (!confirmAction(`Sell ${getEquipName(itemId)} for ${price} gold?`)) {
-        setMessage("Sale cancelled.");
+      pendingSellConfirm = {
+        type: "equipment",
+        itemId,
+        qty: 1,
+        maxQty: 1,
+        unitPrice: getEquipmentSellPrice(itemId, record)
+      };
+      renderSellConfirmOverlay();
+    }
+
+    function openSellKeyConfirm(itemId) {
+      ensureFullInventoryShape();
+      if (!player.inventory.keyitems[itemId]) {
+        setMessage("You do not own that key.");
         renderShrineSell();
         return;
       }
 
-      delete player.inventory.equipment[itemId];
-      player.gold += price;
-      addLeaderboardGold(price);
-      setMessage(`Sold ${getEquipName(itemId)} for ${price} gold.`);
+      const item = typeof getKeyItem === "function" ? getKeyItem(itemId) : null;
+      const unitPrice = Math.max(1, Math.floor(Number(item?.value || 0) * 0.5));
+      pendingSellConfirm = { type: "keyitem", itemId, qty: 1, maxQty: 1, unitPrice };
+      renderSellConfirmOverlay();
+    }
+
+    function setSellConfirmQty(qty) {
+      if (!pendingSellConfirm) return;
+      const maxQty = Math.max(1, Number(pendingSellConfirm.maxQty || 1));
+      pendingSellConfirm.qty = Math.max(1, Math.min(maxQty, Math.floor(Number(qty) || 1)));
+      renderSellConfirmOverlay();
+    }
+
+    function renderSellConfirmOverlay() {
+      const data = pendingSellConfirm;
+      if (!data) {
+        renderShrineSell();
+        return;
+      }
+
+      setOverlayTitle("Confirm Sale");
+      hideInventoryTabs();
+
+      const content = document.getElementById("inventoryContent");
+      content.style.overflowY = "auto";
+
+      const qty = Math.max(1, Number(data.qty || 1));
+      const total = Math.max(0, Number(data.unitPrice || 0) * qty);
+      let name = data.itemId;
+      let iconHtml = shopIconHtml("", "items");
+      let note = "";
+
+      if (data.type === "consumable") {
+        const item = getConsumableSafe(data.itemId);
+        name = item ? item.itemName : getSafeItemName(data.itemId);
+        iconHtml = shopIconHtml(item ? item.image : "", "items");
+        note = `Owned x${data.maxQty}`;
+      } else if (data.type === "equipment") {
+        const item = getEquipItem(data.itemId);
+        name = getCleanEquipmentDisplayName(data.itemId, true);
+        iconHtml = getEquipmentShopIconHtml(item);
+        const record = player.inventory.equipment[data.itemId] || {};
+        const socketed = Array.isArray(record.sockets) && record.sockets.some(socket => socket && socket.runeId);
+        note = socketed ? "Socketed runes will be returned." : "Unequipped equipment.";
+      } else if (data.type === "keyitem") {
+        const item = typeof getKeyItem === "function" ? getKeyItem(data.itemId) : null;
+        name = item?.itemName || data.itemId;
+        iconHtml = shopIconHtml(item?.image || "", "items");
+        note = item?.description || "Key item.";
+      }
+
+      const qtyControls = data.maxQty > 1 ? `
+        <div class="qtyControlRow">
+          <button class="uiButton" onclick="setSellConfirmQty(${qty - 1})">-</button>
+          <div class="qtyValue">${qty} / ${data.maxQty}</div>
+          <button class="uiButton" onclick="setSellConfirmQty(${qty + 1})">+</button>
+        </div>
+        <div class="qtyControlRow">
+          <button class="uiButton" onclick="setSellConfirmQty(1)">1</button>
+          <button class="uiButton" onclick="setSellConfirmQty(Math.ceil(${data.maxQty} / 2))">Half</button>
+          <button class="uiButton" onclick="setSellConfirmQty(${data.maxQty})">All</button>
+        </div>
+      ` : "";
+
+      content.innerHTML = `
+        <div class="sellConfirmPanel">
+          <div class="shopRow">
+            ${iconHtml}
+            <div class="shopRowText">
+              <div class="shopRowName">${data.type === "equipment" ? rarityNameHtml(data.itemId, true) : name}</div>
+              <div class="shopRowSub">${note}</div>
+            </div>
+            <div class="shopRowValue">${total}g</div>
+          </div>
+          ${qtyControls}
+          <button class="shopRow" onclick="confirmSellOverlay()">
+            ${shopIconHtml("", "items")}
+            <div class="shopRowText">
+              <div class="shopRowName">Sell</div>
+              <div class="shopRowSub">Confirm sale</div>
+            </div>
+            <div class="shopRowValue">${total}g</div>
+          </button>
+          <button class="shopRow shopBackRow" onclick="cancelSellOverlay()">
+            ${shopIconHtml("", "items")}
+            <div class="shopRowText">
+              <div class="shopRowName">Cancel</div>
+              <div class="shopRowSub">Return to Sell</div>
+            </div>
+            <div class="shopRowValue">Back</div>
+          </button>
+        </div>
+      `;
+    }
+
+    function returnSocketedRunesToInventory(record) {
+      if (!record || !Array.isArray(record.sockets)) return;
+      record.sockets.forEach(socket => {
+        if (socket && socket.runeId && typeof addRune === "function") {
+          addRune(player, socket.runeId, socket.level || 0, 1);
+        }
+      });
+    }
+
+    function confirmSellOverlay() {
+      const data = pendingSellConfirm;
+      if (!data) {
+        renderShrineSell();
+        return;
+      }
+
+      const qty = Math.max(1, Math.floor(Number(data.qty || 1)));
+      const total = Math.max(0, Number(data.unitPrice || 0) * qty);
+
+      if (data.type === "consumable") {
+        const current = Number(player.inventory.consumables[data.itemId] || 0);
+        const sold = Math.max(1, Math.min(current, qty));
+        player.inventory.consumables[data.itemId] = current - sold;
+        if (player.inventory.consumables[data.itemId] <= 0) delete player.inventory.consumables[data.itemId];
+        player.gold += Number(data.unitPrice || 0) * sold;
+        addLeaderboardGold(Number(data.unitPrice || 0) * sold);
+        setMessage(`Sold ${sold} ${getSafeItemName(data.itemId)} for ${Number(data.unitPrice || 0) * sold} gold.`);
+      } else if (data.type === "equipment") {
+        const record = player.inventory.equipment[data.itemId];
+        if (record && record.owned && !isEquipmentCurrentlyEquipped(data.itemId)) {
+          returnSocketedRunesToInventory(record);
+          const soldName = getEquipName(data.itemId);
+          delete player.inventory.equipment[data.itemId];
+          if (player.generatedEquipment && player.generatedEquipment[data.itemId]) delete player.generatedEquipment[data.itemId];
+          player.gold += total;
+          addLeaderboardGold(total);
+          setMessage(`Sold ${soldName} for ${total} gold.`);
+        }
+      } else if (data.type === "keyitem") {
+        if (player.inventory.keyitems[data.itemId]) {
+          delete player.inventory.keyitems[data.itemId];
+          player.gold += total;
+          addLeaderboardGold(total);
+          setMessage(`Sold ${getSafeItemName(data.itemId)} for ${total} gold.`);
+        }
+      }
+
+      pendingSellConfirm = null;
+      recalcDerivedStats();
+      updateBars();
+      renderShrineSell();
+    }
+
+    function cancelSellOverlay() {
+      pendingSellConfirm = null;
+      setMessage("Sale cancelled.");
       renderShrineSell();
     }
 
@@ -7080,7 +7267,7 @@
           <button class="shopRow" ${row.canUnlock ? `onclick="unlockSocket('${row.slot}', ${row.cost})"` : ""}>
             ${shopIconHtml("rune6.png", "runes")}
             <div class="shopRowText">
-              <div class="shopRowName">${getEquipName(row.itemId)}</div>
+              <div class="shopRowName">${rarityNameHtml(row.itemId)}</div>
               <div class="shopRowSub">${row.unlocked}/${row.max} sockets unlocked</div>
             </div>
             <div class="shopRowValue">${row.canUnlock ? row.cost + "g" : "Max"}</div>
@@ -9019,7 +9206,7 @@
 
     function compactIconHtml(image, folder) {
       if (!image) return `<span class="compactIcon empty"></span>`;
-      return `<img class="compactIcon" src="assets/${folder}/${image}" alt="">`;
+      return `<img class="compactIcon" src="assets/${folder}/${image}" alt="" onerror="${fallbackImageOnErrorHtml('compactIcon')}">`;
     }
 
 
@@ -9088,14 +9275,63 @@
         .replace(/\b\w/g, c => c.toUpperCase());
     }
 
+    function stripLeadingCharacterName(name) {
+      return String(name || "")
+        .replace(/^(Maya|Kyra|Nadia|Reign)\s+/i, "")
+        .trim();
+    }
+
+    function getCleanEquipmentBaseName(item) {
+      if (!item) return "";
+      const raw = item.itemName || item.name || item.itemId || "";
+      return item.slot === "armor" ? stripLeadingCharacterName(raw) : String(raw || "");
+    }
+
+    function getCleanEquipmentDisplayName(itemOrId, includeLevel = true) {
+      const item = typeof itemOrId === "string" ? getEquipItem(itemOrId) : itemOrId;
+      const itemId = typeof itemOrId === "string" ? itemOrId : (item && item.itemId);
+      if (!item) return itemId || "None";
+
+      let name = item.generated ? (item.itemName || item.name || itemId) : getCleanEquipmentBaseName(item);
+      if (item.slot === "armor") name = stripLeadingCharacterName(name);
+
+      if (includeLevel && itemId) {
+        const level = getEquipmentLevel(itemId);
+        if (level > 0) name += ` +${level}`;
+      }
+
+      return name;
+    }
+
+    function getRarityClass(itemOrRarity) {
+      const rarity = typeof itemOrRarity === "string"
+        ? itemOrRarity
+        : (itemOrRarity && itemOrRarity.rarity);
+      return `rarity-${String(rarity || "common").toLowerCase()}`;
+    }
+
+    function rarityNameHtml(itemOrId, includeLevel = true) {
+      const item = typeof itemOrId === "string" ? getEquipItem(itemOrId) : itemOrId;
+      const name = getCleanEquipmentDisplayName(typeof itemOrId === "string" ? itemOrId : item, includeLevel);
+      return `<span class="rarityName ${getRarityClass(item)}">${name}</span>`;
+    }
+
+    function getImagePngFallbackPath(src) {
+      const path = String(src || "");
+      if (!path || !/\.webp$/i.test(path)) return "";
+      return path.replace(/\.webp$/i, ".png");
+    }
+
+    function fallbackImageOnErrorHtml(emptyClass) {
+      return `if(!this.dataset.fallbackTried){this.dataset.fallbackTried='1';var p=this.getAttribute('src')||'';if(/\\.webp$/i.test(p)){this.src=p.replace(/\\.webp$/i,'.png');return;}}this.style.display='none';this.insertAdjacentHTML('afterend','<span class=&quot;${emptyClass} empty&quot;></span>');`;
+    }
+
     function getEquipmentDetailTitle(itemId) {
       const item = getEquipItem(itemId);
       if (!item) return getEquipName(itemId);
 
       const reqLevel = item.reqLevel || 1;
-      const upgradeLevel = getEquipmentLevel(itemId);
-      const upgradeText = upgradeLevel > 0 ? ` +${upgradeLevel}` : "";
-      return `${item.itemName}${upgradeText} Lv${reqLevel}`;
+      return `${getCleanEquipmentDisplayName(itemId, true)} Lv${reqLevel}`;
     }
 
     function getEquipmentBaseStat(item, key) {
@@ -9109,14 +9345,10 @@
       return Number(stats[key] || 0) || 0;
     }
 
-    function equipmentBreakdownLine(label, item, itemId, key, suffix = "") {
-      const base = getEquipmentBaseStat(item, key);
-      const total = getEquipmentTotalStat(itemId, key);
-      if (!base && !total) return "";
-
-      const bonus = total - base;
-      const bonusText = bonus >= 0 ? `+ ${bonus}` : `- ${Math.abs(bonus)}`;
-      return detailLine(label, `${base}${suffix} ${bonusText}${suffix} = ${total}${suffix}`);
+    function equipmentLiveStatLine(label, value, suffix = "") {
+      const n = Number(value || 0);
+      if (!n) return "";
+      return detailLine(label, `${n}${suffix}`);
     }
 
     function renderEquipmentStatBreakdown(itemId) {
@@ -9124,46 +9356,46 @@
       if (!item) return detailLine("Stats", "No stats");
 
       const stats = getEquipStats(itemId);
-      const resistanceRows = [];
+      const rows = [];
 
       const resValues = {
-        "Fire Res": stats.fireRes || 0,
-        "Ice Res": stats.iceRes || 0,
-        "Shock Res": stats.shockRes || 0,
-        "Dark Res": stats.darkRes || 0
+        Fire: stats.fireRes || 0,
+        Ice: stats.iceRes || 0,
+        Shock: stats.shockRes || 0,
+        Dark: stats.darkRes || 0
       };
+      const activeRes = Object.entries(resValues).filter(([, value]) => Number(value || 0) !== 0);
+      const uniqueRes = [...new Set(activeRes.map(([, value]) => Number(value || 0)))];
 
-      const activeRes = Object.entries(resValues).filter(([, value]) => value !== 0);
-      const uniqueRes = [...new Set(activeRes.map(([, value]) => value))];
+      rows.push(equipmentLiveStatLine("ATK", stats.atk));
+      rows.push(equipmentLiveStatLine("MAG", stats.mag));
+      rows.push(equipmentLiveStatLine("PDEF", stats.pdef, "%"));
 
       if (activeRes.length === 4 && uniqueRes.length === 1) {
-        resistanceRows.push(equipmentBreakdownLine("All Res", item, itemId, "fireRes", "%"));
+        rows.push(equipmentLiveStatLine("All Res", uniqueRes[0], "%"));
       } else {
-        activeRes.forEach(([label, value]) => {
-          const keyMap = {
-            "Fire Res": "fireRes",
-            "Ice Res": "iceRes",
-            "Shock Res": "shockRes",
-            "Dark Res": "darkRes"
-          };
-          resistanceRows.push(equipmentBreakdownLine(label, item, itemId, keyMap[label], "%"));
-        });
+        activeRes.forEach(([label, value]) => rows.push(equipmentLiveStatLine(label, value, "%")));
       }
 
-      const rows = [
-        equipmentBreakdownLine("Atk", item, itemId, "atk"),
-        equipmentBreakdownLine("Mag", item, itemId, "mag"),
-        equipmentBreakdownLine("PDEF", item, itemId, "pdef", "%"),
-        ...resistanceRows,
-        equipmentBreakdownLine("HP", item, itemId, "hp"),
-        equipmentBreakdownLine("MP", item, itemId, "mp"),
-        equipmentBreakdownLine("Speed", item, itemId, "speed"),
-        equipmentBreakdownLine("Crit", item, itemId, "crit", "%"),
-        equipmentBreakdownLine("Dodge", item, itemId, "dodge", "%"),
-        equipmentBreakdownLine("Gold Find", item, itemId, "goldFind", "%")
-      ].filter(Boolean).join("");
+      rows.push(equipmentLiveStatLine("HP", stats.hp));
+      rows.push(equipmentLiveStatLine("MP", stats.mp));
+      rows.push(equipmentLiveStatLine("SPD", stats.speed));
+      rows.push(equipmentLiveStatLine("Crit", stats.crit, "%"));
+      rows.push(equipmentLiveStatLine("Dodge", stats.dodge, "%"));
+      rows.push(equipmentLiveStatLine("Gold", stats.goldFind, "%"));
+      rows.push(equipmentLiveStatLine("HP%", stats.hpPct, "%"));
+      rows.push(equipmentLiveStatLine("MP%", stats.mpPct, "%"));
+      rows.push(equipmentLiveStatLine("ATK%", stats.atkPct, "%"));
+      rows.push(equipmentLiveStatLine("MAG%", stats.magPct, "%"));
+      rows.push(equipmentLiveStatLine("SPD%", stats.speedPct, "%"));
+      rows.push(equipmentLiveStatLine("Life", stats.lifeStealPct, "%"));
+      rows.push(equipmentLiveStatLine("Fire Dmg", stats.fireDamagePct, "%"));
+      rows.push(equipmentLiveStatLine("Ice Dmg", stats.iceDamagePct, "%"));
+      rows.push(equipmentLiveStatLine("Shock Dmg", stats.shockDamagePct, "%"));
+      rows.push(equipmentLiveStatLine("Dark Dmg", stats.darkDamagePct, "%"));
 
-      return rows || detailLine("Stats", "No stats");
+      const html = rows.filter(Boolean).join("");
+      return html ? `<div class="detailStatGrid">${html}</div>` : detailLine("Stats", "No stats");
     }
 
     function renderEquipmentSocketDetail(itemId) {
@@ -9202,7 +9434,7 @@
 
         if (i < current) {
           text = socket && socket.runeId
-            ? `${getRuneDisplayName(socket.runeId, socket.level || 0)} — ${getShortRuneStatLine(socket.runeId, socket.level || 0).replace("Attack", "Atk").replace("Defense", "PDEF").replace("Magic", "Mag").replace("Speed", "Spd")}`
+            ? `${getRuneDisplayName(socket.runeId, socket.level || 0)} ${getShortRuneStatLine(socket.runeId, socket.level || 0)}`
             : "Empty";
         }
 
@@ -9214,7 +9446,7 @@
         `);
       }
 
-      return detailSection("Runes", `<div class="detailRuneList">${rows.join("")}</div>`);
+      return detailSection("Runes", `<div class="detailRuneGrid">${rows.join("")}</div>`);
     }
 
     function getEquipmentDescriptionText(item) {
@@ -9242,7 +9474,6 @@
 
       return `
         ${detailSection("", `
-          ${slotLabel ? detailLine("Slot", slotLabel) : detailLine("Type", titleCaseText(item.slot || "equipment"))}
           ${detailLine("Rarity", titleCaseText(item.rarity || "common"))}
           ${detailLine("Req", `Lv${item.reqLevel || 1}`)}
           ${detailLine("Value", `${item.value || 0}g`)}
@@ -9539,7 +9770,7 @@
         .filter(item => !equippedIds.has(item.itemId))
         .map(item => ({
           itemId: item.itemId,
-          itemName: getEquipName(item.itemId),
+          itemName: getCleanEquipmentDisplayName(item.itemId, true),
           image: item.image,
           slot: item.slot,
           tier: item.tier,
@@ -9560,7 +9791,7 @@
         .filter(item => !equippedIds.has(item.itemId))
         .map(item => ({
           itemId: item.itemId,
-          itemName: getEquipName(item.itemId),
+          itemName: getCleanEquipmentDisplayName(item.itemId, true),
           image: item.image,
           slot: item.slot,
           tier: item.tier,
@@ -9769,6 +10000,21 @@
     function getEquipmentIconPathSafe(item) {
       const generatedPath = getGeneratedEquipmentIconPath(item);
       if (generatedPath) return generatedPath;
+
+      if (item && item.slot === "ring") {
+        if (item.assets && item.assets.icon) {
+          const icon = String(item.assets.icon);
+          if (icon.includes("/")) return icon;
+          return `assets/items/rings/${forceWebpFileName(icon)}`;
+        }
+        if (item.icon) {
+          const icon = String(item.icon);
+          if (icon.includes("/")) return icon;
+          return `assets/items/rings/${forceWebpFileName(icon)}`;
+        }
+        if (item.image) return `assets/items/rings/${forceWebpFileName(item.image)}`;
+      }
+
       if (typeof getEquipmentIconPath === "function") return getEquipmentIconPath(item);
       if (item && item.assets && item.assets.icon) return item.assets.icon;
       if (item && item.image) return `assets/${getEquipmentImageFolder(item)}/${item.image}`;
@@ -9791,7 +10037,7 @@
       const iconPath = getEquipmentIconPathSafe(item);
 
       if (!iconPath) return `<span class="equipIcon empty"></span>`;
-      return `<img class="equipIcon" src="${iconPath}" alt="" onerror="this.style.display='none'; this.insertAdjacentHTML('afterend','<span class=&quot;equipIcon empty&quot;></span>');">`;
+      return `<img class="equipIcon" src="${iconPath}" alt="" onerror="${fallbackImageOnErrorHtml('equipIcon')}">`;
     }
 
 
@@ -9802,7 +10048,7 @@
       const iconPath = getEquipmentIconPathSafe(item);
 
       if (!iconPath) return `<span class="equipDetailIcon empty"></span>`;
-      return `<img class="equipDetailIcon" src="${iconPath}" alt="" onerror="this.style.display='none'; this.insertAdjacentHTML('afterend','<span class=&quot;equipDetailIcon empty&quot;></span>');">`;
+      return `<img class="equipDetailIcon" src="${iconPath}" alt="" onerror="${fallbackImageOnErrorHtml('equipDetailIcon')}">`;
     }
 
 
@@ -9845,7 +10091,7 @@
       if (!item) return `<span class="equipGridIcon empty"></span>`;
       const iconPath = getEquipmentIconPathSafe(item);
       if (!iconPath) return `<span class="equipGridIcon empty"></span>`;
-      return `<img class="equipGridIcon" src="${iconPath}" alt="">`;
+      return `<img class="equipGridIcon" src="${iconPath}" alt="" onerror="${fallbackImageOnErrorHtml('equipGridIcon')}">`;
     }
 
     function getSlotDisplayName(slot, itemId) {
@@ -10287,13 +10533,43 @@
         return `
           <button class="${rowClass} equipItemRow" onclick="renderEquipCandidateDetail('${slot}', '${itemId}')">
             ${equipmentCompactIconWithQtyHtml(itemId)}
-            <span class="equipSlotLabel">${getEquipName(itemId)}${equipped ? " *" : ""}</span>
+            <span class="equipSlotLabel">${rarityNameHtml(itemId)}${equipped ? " *" : ""}</span>
           </button>
         `;
       }).join("");
 
       html += `</div>${renderEquipmentPager(slot, rowData.length)}`;
       content.innerHTML = html;
+    }
+
+    function countSocketedRunes(record) {
+      return record && Array.isArray(record.sockets)
+        ? record.sockets.filter(socket => socket && socket.runeId).length
+        : 0;
+    }
+
+    function removeAllRunesFromEquippedItem(slot) {
+      const itemId = player.equipment[slot];
+      const record = getOrCreateEquipmentRecord(itemId);
+      if (!record || !Array.isArray(record.sockets)) {
+        setMessage("No socketed runes.");
+        renderRuneSlots(slot);
+        return;
+      }
+
+      let removed = 0;
+      record.sockets.forEach(socket => {
+        if (socket && socket.runeId && typeof addRune === "function") {
+          addRune(player, socket.runeId, socket.level || 0, 1);
+          removed++;
+        }
+      });
+
+      record.sockets = record.sockets.map(() => null);
+      recalcDerivedStats();
+      updateBars();
+      setMessage(removed ? `Removed ${removed} rune${removed === 1 ? "" : "s"}.` : "No socketed runes.");
+      renderRuneSlots(slot);
     }
 
     function renderRuneSlots(slot) {
@@ -10324,7 +10600,7 @@
           <span class="equipSlotValue">${getSlotLabel(slot)}</span>
         </button>
 
-        <div class="smallNote">${getEquipName(itemId)}</div>
+        <div class="smallNote">${rarityNameHtml(itemId)}</div>
         <div class="equipCompactList">
       `;
 
@@ -10341,6 +10617,15 @@
             <button class="equipSlotRow" onclick="renderRuneSelect('${slot}', ${i})">
               <span class="equipSlotLabel">Rune ${i + 1}</span>
               <span class="equipSlotValue">${runeText}</span>
+            </button>
+          `;
+        }
+
+        if (countSocketedRunes(record) > 0) {
+          html += `
+            <button class="equipSlotRow" onclick="removeAllRunesFromEquippedItem('${slot}')">
+              <span class="equipSlotLabel">Remove All</span>
+              <span class="equipSlotValue">Return runes</span>
             </button>
           `;
         }
@@ -10368,7 +10653,7 @@
 
       normalizeEquipmentSockets(itemId);
 
-      let html = `<div class="smallNote">Rune Sockets</div>`;
+      let html = `<div class="smallNote">Rune Sockets</div><div class="detailRuneGrid">`;
 
       for (let i = 0; i < record.socketsUnlocked; i++) {
         const socket = record.sockets[i];
@@ -10378,16 +10663,13 @@
 
         html += `
           <button class="sotnRow" onclick="renderRuneSelect('${slot}', ${i})">
-            <span class="sotnSlot">Rune ${i + 1}</span>
-            <span class="sotnValue">
-              <span style="display:inline-grid;grid-template-columns:30px 1fr;gap:6px;align-items:center;">
-                ${socketRuneIconHtml(socket).replace('class="menuIcon"', 'class="menuIcon" style="width:28px;height:28px;"')}
-                <span>${runeText}</span>
-              </span>
-            </span>
+            <span class="sotnSlot">${i + 1}</span>
+            <span class="sotnValue">${runeText}</span>
           </button>
         `;
       }
+
+      html += `</div>`;
 
       if (record.socketsUnlocked < item.maxSockets) {
         html += `<div class="smallNote">Locked sockets: ${item.maxSockets - record.socketsUnlocked}. Shrine merchant will unlock these later.</div>`;
@@ -10411,7 +10693,7 @@
 
       let html = `
         <div class="menuHeader">
-          <span>${getEquipName(itemId)}</span>
+          <span>${rarityNameHtml(itemId)}</span>
           <span>${currentSocket ? getRuneDisplayName(currentSocket.runeId, currentSocket.level || 0) : "Empty"}</span>
         </div>
 

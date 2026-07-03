@@ -100,7 +100,7 @@ const WEAPON_DATA = {
       "tier": "mythic",
       "rarity": "mythic",
       "reqLevel": 12,
-      "maxSockets": 8,
+      "maxSockets": 3,
       "value": 500,
       "stats": {
           "atk": 64,

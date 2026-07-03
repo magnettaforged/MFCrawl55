@@ -1,19 +1,21 @@
-Dungeon v0.7.6b generated weapon/armor + ring/map fixes
+Dungeon v0.7.6c UI cleanup
 
-Replace these files in the repository root:
-- index.html
-- equipmentLoader.js
-- rings.js
-- keyitems.js
-- plus the included support JS files if you want the full synced package.
+Replace these files with the contents of this package.
 
-Changes:
-- Generated magic+ weapons and armor are live from equipment loot rolls.
-- Generated weapons/armor preserve their base item's image/icon/status pose assets.
-  Example: Warded Black Full Plate of Warding still uses Black Full Plate visuals.
-- Generated rings/weapons/armor now show correct generated names in inventory/equipment menus.
-- Generated items may roll prefix only, suffix only, or prefix+suffix.
-- Chest equipment roll can produce generated equipment.
-- Monsters have a small generated equipment drop chance.
-- Minimap discovery now uses a fresh floor-instance key so a reused map layout does not appear pre-completed on a new/revisited floor instance.
-- Version label: v0.7.6b
+Main changes:
+- Armor display names strip leading character names, without changing item IDs or image paths.
+- Generated armor names use the clean base armor name and keep the base armor visuals.
+- Ring icon paths audited:
+  common/basic/normal -> ring1-4
+  magical -> magicring1-4
+  rare -> rarering1-4
+  epic -> epicring1-4
+  legendary -> legendaryring1-4
+  unique -> character ring icons
+- Ring/equipment icons now try .webp first, then .png fallback.
+- Equipment detail stats now show final live values only.
+- Equipment detail stats/runes use compact two-column grids where possible.
+- Rarity-colored generated/equipment names in equipment/shop list contexts.
+- Sell confirmation uses an in-game overlay instead of browser confirm().
+- Stackable sell items have quantity controls.
+- Socketing screen has Remove All Runes for the selected equipped weapon/armor.
