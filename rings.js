@@ -14,7 +14,19 @@ const RING_DATA = {
     maxSockets: 0,
     value: 15,
     stats: { hp: 10 },
-    assets: { icon: "assets/items/rings/ring1.webp", image: "ring1.webp" },
+    assets: { icon: "assets/jewelry/ring2.webp", image: "ring2.webp" },
+    text: { description: "A simple starter ring." }
+  },
+  iron_ring: {
+    itemName: "Iron Ring",
+    character: "all",
+    tier: "ring",
+    rarity: "common",
+    reqLevel: 1,
+    maxSockets: 0,
+    value: 15,
+    stats: { mp: 10 },
+    assets: { icon: "assets/jewelry/ring1.webp", image: "ring1.webp" },
     text: { description: "A simple starter ring." }
   }
 };

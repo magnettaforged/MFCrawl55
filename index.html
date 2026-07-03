@@ -1614,15 +1614,22 @@
 
     .detailStatGrid .detailLine,
     .detailRuneGrid .detailRuneRow {
-      grid-template-columns: auto minmax(0, 1fr);
+      grid-template-columns: 18px minmax(0, 1fr);
       min-height: 18px;
       padding: 1px 0;
+      gap: 4px;
     }
 
     .detailStatGrid .detailValue,
     .detailRuneGrid .detailValue {
       text-align: right;
       white-space: nowrap;
+    }
+
+    .detailRuneGrid .detailValue {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-size: 11.5px;
     }
 
     .rarityName {
@@ -2374,7 +2381,7 @@
 
         <div class="topHudBadge floorIndicator" id="floorIndicator">Floor 1 | A1</div>
         <div class="mapIndicator" id="mapIndicator">Map: -</div>
-        <div class="versionIndicator" id="versionIndicator">v0.7.6c</div>
+        <div class="versionIndicator" id="versionIndicator">v0.7.6f</div>
         <div class="miniMapHud" id="miniMapHud" aria-label="Mini map"></div>
 
         <button class="soundToggle" id="settingsButton" onclick="openSystemOverlay()" aria-label="Settings">⚙</button>
@@ -2487,7 +2494,7 @@
 
   <script>
     
-    const GAME_VERSION = "v0.7.6c";
+    const GAME_VERSION = "v0.7.6f";
 // =========================
     // MAP / FLOOR STATE
     // =========================
@@ -3563,6 +3570,7 @@
       if (!player.inventory.skills) player.inventory.skills = {};
       if (!player.generatedEquipment || typeof player.generatedEquipment !== "object") player.generatedEquipment = {};
       if (!Number.isFinite(Number(player.generatedRingCounter))) player.generatedRingCounter = 0;
+      repairGeneratedEquipmentTopLevelStats();
       ensureLeaderboardStats();
       // Do not call ensureSystemState() here.
       // ensureSystemState() calls syncCollectionDiscovery(), which may call getEquipItem(),
@@ -3728,7 +3736,7 @@
 
     function getRingIconPathForRarity(rarity, image) {
       const file = image || getGeneratedRingIcon(rarity);
-      return `assets/items/rings/${forceWebpFileName(file)}`;
+      return `assets/jewlery/${forceWebpFileName(file)}`;
     }
 
     function getBaseEquipmentStatsForGeneratedItem(baseItem) {
@@ -3817,6 +3825,31 @@
         reqDex: baseItem.reqDex || 0,
         maxSockets: Math.max(0, Number(baseItem.maxSockets || 0) + bonusSockets),
         value: Math.round(Math.max(1, Number(baseItem.value || 25)) * Number(rarityData.valueMult || 1)),
+        hp: Number(stats.hp || 0),
+        mp: Number(stats.mp || 0),
+        atk: Number(stats.atk || 0),
+        mag: Number(stats.mag || 0),
+        def: Number(stats.def ?? stats.pdef ?? 0),
+        pdef: Number(stats.pdef ?? stats.def ?? 0),
+        mdef: Number(stats.mdef || 0),
+        fireRes: Number(stats.fireRes || 0),
+        iceRes: Number(stats.iceRes || 0),
+        shockRes: Number(stats.shockRes || 0),
+        darkRes: Number(stats.darkRes || 0),
+        speed: Number(stats.speed || 0),
+        crit: Number(stats.crit || 0),
+        dodge: Number(stats.dodge || 0),
+        goldFind: Number(stats.goldFind || 0),
+        hpPct: Number(stats.hpPct || 0),
+        mpPct: Number(stats.mpPct || 0),
+        atkPct: Number(stats.atkPct || 0),
+        magPct: Number(stats.magPct || 0),
+        speedPct: Number(stats.speedPct || 0),
+        lifeStealPct: Number(stats.lifeStealPct || 0),
+        fireDamagePct: Number(stats.fireDamagePct || 0),
+        iceDamagePct: Number(stats.iceDamagePct || 0),
+        shockDamagePct: Number(stats.shockDamagePct || 0),
+        darkDamagePct: Number(stats.darkDamagePct || 0),
         stats,
         assets: JSON.parse(JSON.stringify(baseItem.assets || {})),
         text: {
@@ -3875,6 +3908,27 @@
       return addGeneratedEquipmentRecord(ring);
     }
 
+    function repairGeneratedEquipmentTopLevelStats() {
+      if (!player.generatedEquipment || typeof player.generatedEquipment !== "object") return;
+
+      const keys = [
+        "hp", "mp", "atk", "mag", "def", "pdef", "mdef",
+        "fireRes", "iceRes", "shockRes", "darkRes",
+        "speed", "crit", "dodge", "goldFind",
+        "hpPct", "mpPct", "atkPct", "magPct", "speedPct", "lifeStealPct",
+        "fireDamagePct", "iceDamagePct", "shockDamagePct", "darkDamagePct"
+      ];
+
+      Object.values(player.generatedEquipment).forEach(item => {
+        if (!item || !item.generated || !item.stats) return;
+        keys.forEach(key => {
+          if (item.stats[key] !== undefined) item[key] = Number(item.stats[key] || 0);
+        });
+        if (item.stats.pdef !== undefined && item.stats.def === undefined) item.def = Number(item.stats.pdef || 0);
+        if (item.stats.def !== undefined && item.stats.pdef === undefined) item.pdef = Number(item.stats.def || 0);
+      });
+    }
+
     function getGeneratedEquipmentItem(itemId) {
       if (!player.generatedEquipment || typeof player.generatedEquipment !== "object") return null;
       return player.generatedEquipment[itemId] ? player.generatedEquipment[itemId] : null;
@@ -3893,10 +3947,10 @@
         if (item.assets && item.assets.icon) {
           const icon = String(item.assets.icon);
           if (icon.includes("/")) return icon;
-          return `assets/items/rings/${forceWebpFileName(icon)}`;
+          return `assets/jewlery/${forceWebpFileName(icon)}`;
         }
         if (item.iconPath) return item.iconPath;
-        if (item.image) return `assets/items/rings/${forceWebpFileName(item.image)}`;
+        if (item.image) return `assets/jewlery/${forceWebpFileName(item.image)}`;
       }
 
       if (item.baseItemId && typeof getEquipmentById === "function" && typeof getEquipmentIconPath === "function") {
@@ -8064,8 +8118,8 @@
       clearSkillEffects();
       updateMonsterHud();
       renderOddityQuizButtons();
-      const prompt = currentEnemy.quizType === "ass" ? "Who's That Ass?" : currentEnemy.quizType === "chest" ? "Who's That Chest?" : "Identify the Oddity.";
-      showEncounterNotice(prompt);
+      const quizPromptText = currentEnemy.quizType === "ass" ? "Who's That Ass?" : currentEnemy.quizType === "chest" ? "Who's That Chest?" : "Identify the Oddity.";
+      showEncounterNotice(quizPromptText);
     }
 
     function answerOddityQuiz(answerId) {
@@ -9329,9 +9383,7 @@
     function getEquipmentDetailTitle(itemId) {
       const item = getEquipItem(itemId);
       if (!item) return getEquipName(itemId);
-
-      const reqLevel = item.reqLevel || 1;
-      return `${getCleanEquipmentDisplayName(itemId, true)} Lv${reqLevel}`;
+      return getCleanEquipmentDisplayName(itemId, true);
     }
 
     function getEquipmentBaseStat(item, key) {
@@ -9434,7 +9486,7 @@
 
         if (i < current) {
           text = socket && socket.runeId
-            ? `${getRuneDisplayName(socket.runeId, socket.level || 0)} ${getShortRuneStatLine(socket.runeId, socket.level || 0)}`
+            ? `${getRuneDisplayName(socket.runeId, socket.level || 0)}`
             : "Empty";
         }
 
@@ -10005,14 +10057,14 @@
         if (item.assets && item.assets.icon) {
           const icon = String(item.assets.icon);
           if (icon.includes("/")) return icon;
-          return `assets/items/rings/${forceWebpFileName(icon)}`;
+          return `assets/jewlery/${forceWebpFileName(icon)}`;
         }
         if (item.icon) {
           const icon = String(item.icon);
           if (icon.includes("/")) return icon;
-          return `assets/items/rings/${forceWebpFileName(icon)}`;
+          return `assets/jewlery/${forceWebpFileName(icon)}`;
         }
-        if (item.image) return `assets/items/rings/${forceWebpFileName(item.image)}`;
+        if (item.image) return `assets/jewlery/${forceWebpFileName(item.image)}`;
       }
 
       if (typeof getEquipmentIconPath === "function") return getEquipmentIconPath(item);
@@ -10025,7 +10077,7 @@
       if (!item) return "items";
       if (item.slot === "weapon") return "weapons";
       if (item.slot === "armor") return "armor";
-      if (item.slot === "ring" || item.slot === "necklace") return "jewelry";
+      if (item.slot === "ring" || item.slot === "necklace") return "jewlery";
       if (item.slot === "cloak") return "cloaks";
       return "items";
     }
@@ -10658,7 +10710,7 @@
       for (let i = 0; i < record.socketsUnlocked; i++) {
         const socket = record.sockets[i];
         const runeText = socket && socket.runeId
-          ? `${getRuneDisplayName(socket.runeId, socket.level || 0)} · ${getShortRuneStatLine(socket.runeId, socket.level || 0)}`
+          ? `${getRuneDisplayName(socket.runeId, socket.level || 0)}`
           : "Empty";
 
         html += `

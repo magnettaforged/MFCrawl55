@@ -254,7 +254,10 @@ function getUpgradedEquipmentStats(item, upgradeLevel = 0) {
   }
 
   const stats = item.stats || {};
-  const base = (key, fallback = 0) => equipNumber(item[key] ?? stats[key] ?? fallback);
+  const base = (key, fallback = 0) => {
+    if (item.generated && stats[key] !== undefined) return equipNumber(stats[key]);
+    return equipNumber(item[key] ?? stats[key] ?? fallback);
+  };
 
   return {
     hp: upgradeStat(base("hp"), upgradeLevel),
@@ -340,7 +343,7 @@ function getEquipmentImageFolder(item) {
   if (!item) return "items";
   if (item.slot === "weapon") return "weapons";
   if (item.slot === "armor") return "armor";
-  if (item.slot === "ring" || item.slot === "necklace") return "jewelry";
+  if (item.slot === "ring" || item.slot === "necklace") return "jewlery";
   if (item.slot === "cloak") return "cloaks";
   return "items";
 }
