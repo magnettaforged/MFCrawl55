@@ -440,9 +440,9 @@
 
     .twoColList {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: 1fr;
       column-gap: 5px;
-      row-gap: 3px;
+      row-gap: 4px;
     }
 
     .oneColList {
@@ -504,9 +504,9 @@
       font-weight: normal;
       font-size: 12px;
       line-height: 1;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+      overflow: visible;
+      text-overflow: clip;
+      white-space: normal;
       letter-spacing: 0.2px;
     }
 
@@ -921,6 +921,9 @@
       color: var(--accent);
       font-size: 12px;
       font-weight: bold;
+      line-height: 1.15;
+      white-space: normal;
+      overflow-wrap: anywhere;
     }
 
     .equipSlotValue {
@@ -1521,16 +1524,25 @@
 
     .equipDetailCard {
       display: grid;
-      grid-template-columns: 112px 1fr;
-      gap: 7px;
-      align-items: center;
-      min-height: 122px;
+      grid-template-columns: 104px 1fr;
+      gap: 9px;
+      align-items: start;
+      min-height: 118px;
       margin-bottom: 7px;
-      padding: 8px;
+      padding: 7px;
       border: 1px solid rgba(214,168,79,0.35);
       border-radius: 8px;
       background: rgba(0,0,0,0.28);
     }
+
+    .equipDetailCard > div:last-child { min-width: 0; }
+    .equipmentNameMain, .equipmentNameSuffix { display: block; }
+    .equipmentNameSuffix { margin-top: 2px; font-size: 0.92em; }
+    .magicStat { font-weight: bold; }
+    .magicStat.rarity-magical { color: #8fb9ff; }
+    .magicStat.rarity-rare { color: #f2c85b; }
+    .magicStat.rarity-epic { color: #d58cff; }
+    .magicStat.rarity-legendary { color: #ff9d4d; }
 
     .equipDetailIcon {
       width: 108px;
@@ -1795,13 +1807,21 @@
 
     .damageNumber.show {
       display: block;
-      animation: damageFloat 1250ms ease-out forwards;
+      animation: damageFloat var(--float-duration, 1600ms) ease-out forwards;
+    }
+
+    .damageNumber.floatingInstance {
+      display: block;
+      left: calc(50% + var(--float-x, 0px));
+      top: calc(40% + var(--float-y, 0px));
+      font-size: calc(22px * var(--float-scale, 1));
     }
 
     @keyframes damageFloat {
-      0% { opacity: 0; transform: translate(-50%, -35%) scale(0.8); }
-      20% { opacity: 1; transform: translate(-50%, -50%) scale(1.12); }
-      100% { opacity: 0; transform: translate(-50%, -92%) scale(1); }
+      0% { opacity: 0; transform: translate(-50%, -30%) scale(0.72); }
+      16% { opacity: 1; transform: translate(-50%, -50%) scale(1.15); }
+      68% { opacity: 1; }
+      100% { opacity: 0; transform: translate(-50%, -110%) scale(1); }
     }
 
   
@@ -1856,6 +1876,15 @@
     .layer-chest.show {
       display: block;
     }
+
+    .layer-merchant {
+      z-index: 9;
+      object-fit: contain;
+      display: none;
+      pointer-events: none;
+    }
+
+    .layer-merchant.show { display: block; }
 
     body.chestOpened .layer-chest {
       animation: chestOpenPulse 420ms ease-out;
@@ -2352,6 +2381,7 @@
 
         <img class="roomLayer layer-room" id="roomLayer" src="assets/rooms/openroomc1.webp" alt="">
         <img class="roomLayer layer-chest" id="chestLayer" src="" alt="">
+        <img class="roomLayer layer-merchant" id="merchantLayer" src="" alt="">
         <img class="roomLayer layer-monster" id="monsterLayer" src="assets/monsters/skeleton1.webp" alt="">
         <div class="monsterHud" id="monsterHud">
           <div class="monsterHudTop">
@@ -2494,7 +2524,7 @@
 
   <script>
     
-    const GAME_VERSION = "v0.7.6f";
+    const GAME_VERSION = "v0.8.0";
 // =========================
     // MAP / FLOOR STATE
     // =========================
@@ -2697,6 +2727,7 @@
 
       resetFloorShopState();
       incrementLeaderboardStat("totalFloors", 1);
+      queueCrawlerStatsSubmit("floor-change", 400);
 
       preloadFloorThemeImages();
       updateRoomView();
@@ -3491,6 +3522,7 @@
           saveTimer = null;
         }
         write();
+        queueCrawlerStatsSubmit("save", 250);
         return;
       }
 
@@ -3498,6 +3530,7 @@
       saveTimer = window.setTimeout(() => {
         saveTimer = null;
         write();
+        queueCrawlerStatsSubmit("save", 900);
       }, 250);
     }
 
@@ -3552,7 +3585,7 @@
       }
     }
 
-    window.addEventListener("beforeunload", () => saveGameState(true));
+    window.addEventListener("beforeunload", () => { saveGameState(true); submitCrawlerStats("page-close"); });
 
     // =========================
     // INVENTORY SHAPE / EQUIPMENT HELPERS
@@ -3766,9 +3799,32 @@
     }
 
     function buildGeneratedEquipmentName(baseName, affixes) {
-      const prefixes = (affixes || []).filter(a => a.kind === "prefix").map(a => a.label);
-      const suffixes = (affixes || []).filter(a => a.kind === "suffix").map(a => a.label);
-      return `${prefixes.length ? prefixes.join(" ") + " " : ""}${baseName}${suffixes.length ? " " + suffixes.join(" ") : ""}`;
+      const prefixes = (affixes || []).filter(a => a.kind === "prefix").map(a => String(a.label || "").trim()).filter(Boolean);
+      const suffixes = (affixes || []).filter(a => a.kind === "suffix").map(a => String(a.label || "").replace(/^of\s+/i, "").trim()).filter(Boolean);
+      const prefixText = prefixes.length ? `${prefixes.join(" ")} ` : "";
+      const suffixText = suffixes.length ? ` of ${suffixes.join(" and ")}` : "";
+      return `${prefixText}${baseName}${suffixText}`.trim();
+    }
+
+    function getGeneratedEquipmentNameParts(item) {
+      if (!item || !item.generated) return { main: getCleanEquipmentBaseName(item), suffix: "" };
+      const prefixLabels = (item.prefixes || []).map(key => GENERATED_EQUIPMENT_PREFIXES[key]?.label || "").filter(Boolean);
+      const suffixLabels = (item.suffixes || []).map(key => GENERATED_EQUIPMENT_SUFFIXES[key]?.label || "").map(label => String(label).replace(/^of\s+/i, "").trim()).filter(Boolean);
+      const baseItem = item.baseItemId ? getEquipItem(item.baseItemId) : null;
+      const baseName = getCleanEquipmentBaseName(baseItem || item);
+      return {
+        main: `${prefixLabels.length ? prefixLabels.join(" ") + " " : ""}${baseName}`.trim(),
+        suffix: suffixLabels.length ? `of ${suffixLabels.join(" and ")}` : ""
+      };
+    }
+
+    function equipmentNamePartsHtml(itemId, includeLevel = true) {
+      const item = getEquipItem(itemId);
+      if (!item) return getEquipName(itemId);
+      const parts = getGeneratedEquipmentNameParts(item);
+      const level = includeLevel ? getEquipmentLevel(itemId) : 0;
+      const levelText = level > 0 ? ` +${level}` : "";
+      return `<span class="equipmentNameMain">${parts.main}${levelText}</span>${parts.suffix ? `<span class="equipmentNameSuffix">${parts.suffix}</span>` : ""}`;
     }
 
     function ensureGeneratedEquipmentCounter() {
@@ -5025,6 +5081,31 @@
       };
     }
 
+    const MERCHANT_OVERLAY_BY_THEME = {
+      c: {},
+      b: {},
+      f: {}
+    };
+
+    function updateMerchantLayer() {
+      const layer = document.getElementById("merchantLayer");
+      if (!layer) return;
+      const tile = getTile(playerX, playerY);
+      const npcType = tile === "N" && typeof getFloorNpcType === "function" ? getFloorNpcType() : "";
+      const file = MERCHANT_OVERLAY_BY_THEME[currentFloorTheme]?.[npcType] || "";
+      if (!file) {
+        layer.classList.remove("show");
+        layer.removeAttribute("src");
+        return;
+      }
+      setImageWithPngFallback(
+        layer,
+        `assets/npc/${forceWebpFileName(file)}`,
+        `assets/npc/${String(file).replace(/\.webp$/i, ".png")}`
+      );
+      layer.classList.add("show");
+    }
+
     function updateChestLayer() {
       const layer = document.getElementById("chestLayer");
       if (!layer) return;
@@ -5064,6 +5145,7 @@
       lastRoomImageName = getRoomImageName();
       setRoomImage(lastRoomImageName);
       updateChestLayer();
+      updateMerchantLayer();
       updateFacingAndExits();
       updateTopHud();
 
@@ -7729,7 +7811,7 @@
       return { physical, fire, shock, ice, holy, dark, typeBonus, total, lifeSteal: Math.floor(Math.max(0, total) * stealPct / 100) };
     }
 
-    function applyPlayerDamageToEnemy(damage, chargeGain = 0) {
+    function applyPlayerDamageToEnemy(damage, chargeGain = 0, options = {}) {
       if (!currentEnemy || !damage) return;
 
       const total = Math.floor(Number(damage.total || 0));
@@ -7743,8 +7825,11 @@
         playCombatEffect(getAttackEffectType(damage), `Absorb +${absorbed}`);
         playMonsterHit();
       } else {
+        const hpBefore = Math.max(0, getMonsterCurrentHpValue(currentEnemy));
         currentEnemy.currentHp -= total;
-        playCombatEffect(getAttackEffectType(damage), total > 0 ? String(total) : "Block");
+        const actualDamage = Math.max(0, Math.min(hpBefore, total));
+        if (actualDamage > 0) incrementLeaderboardStat("totalMonsterDamageDealt", actualDamage);
+        playCombatEffect(getAttackEffectType(damage), total > 0 ? String(total) : "Block", options);
         playMonsterHit();
       }
 
@@ -7763,6 +7848,45 @@
       }
     }
 
+    function splitDamageForHit(damage, hitIndex, hitCount) {
+      const count = Math.max(1, Math.floor(Number(hitCount) || 1));
+      const index = Math.max(0, Math.floor(Number(hitIndex) || 0));
+      const result = {};
+      ["physical","fire","shock","ice","holy","dark","typeBonus","total","lifeSteal"].forEach(key => {
+        const total = Math.floor(Number(damage?.[key] || 0));
+        const sign = total < 0 ? -1 : 1;
+        const abs = Math.abs(total);
+        const base = Math.floor(abs / count);
+        const remainder = abs % count;
+        result[key] = sign * (base + (index < remainder ? 1 : 0));
+      });
+      return result;
+    }
+
+    function performMultiHitSkill(slot, ultimate = false, chargeGain = 0) {
+      if (!currentEnemy) return;
+      const skill = getSkillData(getEquippedSkillId(slot));
+      const hits = Math.max(1, Math.floor(Number(ultimate ? (skill.ultimateHits || skill.hits || 1) : (skill.hits || 1))));
+      const totalDamage = calculateSkillDamage(currentEnemy, slot, ultimate);
+      const delay = ultimate ? COMBAT_EFFECT_TIMING.ultimateHitDelay : COMBAT_EFFECT_TIMING.multiHitDelay;
+      const startup = ultimate ? COMBAT_EFFECT_TIMING.ultimateStartupDelay : 0;
+      let hitIndex = 0;
+
+      const runHit = () => {
+        if (!currentEnemy || hitIndex >= hits) return;
+        const isFinal = hitIndex === hits - 1;
+        applyPlayerDamageToEnemy(splitDamageForHit(totalDamage, hitIndex, hits), isFinal ? chargeGain : 0, {
+          comboIndex: hitIndex,
+          scale: 1 + Math.min(hitIndex * COMBAT_EFFECT_TIMING.multiHitScaleStep, COMBAT_EFFECT_TIMING.multiHitScaleCap - 1),
+          duration: COMBAT_EFFECT_TIMING.floatingTextDuration + (isFinal && ultimate ? 250 : 0)
+        });
+        hitIndex += 1;
+        if (currentEnemy && hitIndex < hits) window.setTimeout(runHit, delay);
+      };
+
+      window.setTimeout(runHit, startup);
+    }
+
     function useBaseSkill(slot) {
       if (!currentEnemy) return;
       if (playerAttackMeter < 100) { updateCombatMetersUI(); return; }
@@ -7775,7 +7899,7 @@
       player.mp -= cost;
       playerAttackMeter = 0;
       if (skill.type === "self") { applySelfSkill(skillId, false); gainUltimateCharge(7); }
-      else { applyPlayerDamageToEnemy(calculateSkillDamage(currentEnemy, slot, false), 9); }
+      else { performMultiHitSkill(slot, false, 9); }
       if (countRareOddityPlayerTurn()) return;
       updateBars();
       updateCombatMetersUI();
@@ -7790,7 +7914,7 @@
       if (!ownsSkill(skillId) || !canUseSkillLevel(skillId)) { setMessage(`${skill.name} is not available yet.`); updateCombatMetersUI(); return; }
       player.skills.ultimateCharge = 0;
       if (skill.type === "self") applySelfSkill(skillId, true);
-      else applyPlayerDamageToEnemy(calculateSkillDamage(currentEnemy, "ultimate", true), 0);
+      else performMultiHitSkill("ultimate", true, 0);
       if (countRareOddityPlayerTurn()) return;
       updateBars();
       updateCombatMetersUI();
@@ -8112,6 +8236,7 @@
     }
 
     function startOddityQuizEncounter() {
+      incrementLeaderboardStat("rareOdditiesEncountered", 1);
       resetRareOddityTurns();
       stopCombatTimer();
       setMode("encounter");
@@ -8141,6 +8266,7 @@
 
       if (correct) {
         incrementLeaderboardStat("kills", 1);
+        incrementLeaderboardStat("totalQuizAnswerSolved", 1);
         discoverBestiary(defeatedId);
         let rewardMessage = "nothing";
         if (rewardKey && typeof getKeyItem === "function" && getKeyItem(rewardKey)) {
@@ -8175,6 +8301,24 @@
       setMessage(`Wrong. ${escapedName} escaped.`);
     }
 
+    function getEncounterImageFolder(enemy) {
+      return enemy && (enemy.imageFolder === "chest" || enemy.chestMimic || enemy.chestOddity || enemy.quizType === "chest")
+        ? "chest"
+        : "monsters";
+    }
+
+    function setEncounterMonsterImage(enemy) {
+      const monsterImg = document.getElementById("monsterLayer");
+      if (!monsterImg || !enemy) return;
+      const image = enemy.image || (Array.isArray(enemy.images) ? enemy.images[0] : "");
+      const folder = getEncounterImageFolder(enemy);
+      setImageWithPngFallback(
+        monsterImg,
+        `assets/${folder}/${forceWebpFileName(image)}`,
+        `assets/${folder}/${String(image || "").replace(/\.webp$/i, ".png")}`
+      );
+    }
+
     function tryStartChestOddityEncounter(chestKey) {
       if (typeof shouldRollChestOddity !== "function" || typeof getRandomChestOddity !== "function") return false;
       if (!shouldRollChestOddity(currentFloor)) return false;
@@ -8193,12 +8337,7 @@
         currentEnemy.currentHp = currentEnemy.maxHp;
       }
 
-      const monsterImg = document.getElementById("monsterLayer");
-      setImageWithPngFallback(
-        monsterImg,
-        `assets/monsters/${forceWebpFileName(currentEnemy.image)}`,
-        `assets/monsters/${String(currentEnemy.image || "").replace(/\.webp$/i, ".png")}`
-      );
+      setEncounterMonsterImage(currentEnemy);
 
       startOddityQuizEncounter();
       return true;
@@ -8221,12 +8360,7 @@
         currentEnemy.currentHp = currentEnemy.maxHp;
       }
 
-      const monsterImg = document.getElementById("monsterLayer");
-      setImageWithPngFallback(
-        monsterImg,
-        `assets/monsters/${forceWebpFileName(currentEnemy.image)}`,
-        `assets/monsters/${String(currentEnemy.image || "").replace(/\.webp$/i, ".png")}`
-      );
+      setEncounterMonsterImage(currentEnemy);
 
       setMode("encounter");
       clearSkillEffects();
@@ -8266,12 +8400,7 @@
         currentEnemy.currentHp = currentEnemy.maxHp;
       }
 
-      const monsterImg = document.getElementById("monsterLayer");
-      setImageWithPngFallback(
-        monsterImg,
-        `assets/monsters/${forceWebpFileName(currentEnemy.image)}`,
-        `assets/monsters/${String(currentEnemy.image || "").replace(/\.webp$/i, ".png")}`
-      );
+      setEncounterMonsterImage(currentEnemy);
 
       if (isOddityQuizEncounter(currentEnemy)) {
         startOddityQuizEncounter();
@@ -8378,6 +8507,11 @@
         totalRooms: 0,
         totalGold: 0,
         totalXp: 0,
+        totalReborns: 0,
+        totalMonsterDamageDealt: 0,
+        totalPlayerDamageTaken: 0,
+        rareOdditiesEncountered: 0,
+        totalQuizAnswerSolved: 0,
         potionsUsed: 0,
         deaths: 0,
         kills: 0,
@@ -8408,6 +8542,92 @@
     function incrementLeaderboardStat(key, amount = 1) {
       const stats = ensureLeaderboardStats();
       stats[key] = Math.max(0, Math.floor(Number(stats[key] || 0) + Number(amount || 0)));
+    }
+
+    const CRAWLER_STATS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxscw81NK0kW9U7RP0BxJo6JPjfjbJpKNCu_4K__Ghz2lY08sjwuzjieHxMXu2aPeNL/exec"; // Paste your deployed Apps Script /exec URL here.
+    const CRAWLER_PROFILE_KEY = "dungeonCrawlerStatsProfile_v1";
+    let crawlerStatsSubmitTimer = null;
+
+    function getOrCreateCrawlerProfile() {
+      let profile = {};
+      try { profile = JSON.parse(window.localStorage.getItem(CRAWLER_PROFILE_KEY) || "{}"); }
+      catch (err) { profile = {}; }
+
+      if (!profile.playerId) profile.playerId = `crawler-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,9)}`;
+      if (!profile.username) {
+        const entered = window.prompt("Choose a crawler username:", "Player");
+        profile.username = String(entered || "Player").trim() || "Player";
+      }
+      window.localStorage.setItem(CRAWLER_PROFILE_KEY, JSON.stringify(profile));
+      return profile;
+    }
+
+    function getCharacterLevelForStats(characterId) {
+      const id = String(characterId || "").toLowerCase();
+      if (player.characterProgress && Number.isFinite(Number(player.characterProgress[id]?.level))) {
+        return Math.max(1, Math.floor(Number(player.characterProgress[id].level)));
+      }
+      return id === String(player.character || "").toLowerCase() ? Math.max(1, Math.floor(Number(player.level || 1))) : 1;
+    }
+
+    function getBestiaryProgressDisplay() {
+      ensureSystemState();
+      const ids = typeof getBestiaryIds === "function" ? getBestiaryIds() : [];
+      const unlocked = ids.filter(id => !!player.discovery?.bestiary?.[id]?.defeated).length;
+      return `${unlocked}/${ids.length}`;
+    }
+
+    function buildCrawlerStatsPayload() {
+      const profile = getOrCreateCrawlerProfile();
+      const stats = ensureLeaderboardStats();
+      return {
+        username: profile.username,
+        playerId: profile.playerId,
+        currentFloor: Math.max(1, Number(currentFloor || 1)),
+        totalFloorsTraveled: Number(stats.totalFloors || 0),
+        totalRoomsTraveled: Number(stats.totalRooms || 0),
+        currentGold: Number(player.gold || 0),
+        totalGoldEarned: Number(stats.totalGold || 0),
+        mayaLevel: getCharacterLevelForStats("maya"),
+        reignLevel: getCharacterLevelForStats("reign"),
+        kyraLevel: getCharacterLevelForStats("kyra"),
+        nadiaLevel: getCharacterLevelForStats("nadia"),
+        totalCharacterXp: Number(stats.totalXp || 0),
+        totalReborns: Number(stats.totalReborns || 0),
+        totalMonsterDamageDealt: Number(stats.totalMonsterDamageDealt || 0),
+        totalPlayerDamageTaken: Number(stats.totalPlayerDamageTaken || 0),
+        bestiaryProgressDisplay: getBestiaryProgressDisplay(),
+        rareOdditiesEncountered: Number(stats.rareOdditiesEncountered || 0),
+        totalQuizAnswerSolved: Number(stats.totalQuizAnswerSolved || 0),
+        lastUpdated: new Date().toISOString(),
+        gameVersion: GAME_VERSION
+      };
+    }
+
+    async function submitCrawlerStats(reason = "auto") {
+      if (!CRAWLER_STATS_WEB_APP_URL || !/^https:\/\/script\.google\.com\//i.test(CRAWLER_STATS_WEB_APP_URL)) {
+        return { ok:false, skipped:true, reason:"missing-url" };
+      }
+      try {
+        await fetch(CRAWLER_STATS_WEB_APP_URL, {
+          method: "POST",
+          mode: "no-cors",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({ ...buildCrawlerStatsPayload(), submitReason: reason })
+        });
+        return { ok:true };
+      } catch (error) {
+        console.warn("Crawler stats submission failed:", error);
+        return { ok:false, error:String(error) };
+      }
+    }
+
+    function queueCrawlerStatsSubmit(reason = "auto", delay = 1200) {
+      if (crawlerStatsSubmitTimer) clearTimeout(crawlerStatsSubmitTimer);
+      crawlerStatsSubmitTimer = window.setTimeout(() => {
+        crawlerStatsSubmitTimer = null;
+        submitCrawlerStats(reason);
+      }, delay);
     }
 
     function getAttacksPerSecondFromSpeed(speed) {
@@ -8644,6 +8864,17 @@
     }
 
 
+    const COMBAT_EFFECT_TIMING = {
+      floatingTextDuration: 1650,
+      multiHitDelay: 230,
+      multiHitScaleStep: 0.12,
+      multiHitScaleCap: 1.35,
+      ultimateStartupDelay: 280,
+      ultimateHitDelay: 260,
+      ultimateFinalHitDelay: 380,
+      ultimateShakeMs: 220
+    };
+
     const COMBAT_EFFECTS = {
       physical: ["slashwhite1.png", "slashwhite2.png"],
       fire: ["impactfire1.png", "impactfire2.png"],
@@ -8666,7 +8897,7 @@
       return "physical";
     }
 
-    function playCombatEffect(effectType = "physical", damageText = "") {
+    function playCombatEffect(effectType = "physical", damageText = "", options = {}) {
       const layer = document.getElementById("effectLayer");
       if (!layer) return;
 
@@ -8681,22 +8912,28 @@
       }, 360);
 
       if (damageText) {
-        showDamageNumber(damageText);
+        showDamageNumber(damageText, options);
       }
     }
 
-    function showDamageNumber(text) {
-      const el = document.getElementById("damageNumber");
-      if (!el) return;
+    function showDamageNumber(text, options = {}) {
+      const stage = document.getElementById("dungeonStage");
+      if (!stage) return;
+      const comboIndex = Math.max(0, Number(options.comboIndex || 0));
+      const scale = Math.min(Number(options.scale || (1 + comboIndex * COMBAT_EFFECT_TIMING.multiHitScaleStep)), COMBAT_EFFECT_TIMING.multiHitScaleCap);
+      const offsets = [{x:0,y:0},{x:22,y:-8},{x:-22,y:-16},{x:10,y:-24}];
+      const offset = offsets[comboIndex % offsets.length];
+      const duration = Number(options.duration || COMBAT_EFFECT_TIMING.floatingTextDuration);
 
+      const el = document.createElement("div");
+      el.className = "damageNumber floatingInstance show";
       el.textContent = text;
-      el.classList.remove("show");
-      void el.offsetWidth;
-      el.classList.add("show");
-
-      window.setTimeout(() => {
-        el.classList.remove("show");
-      }, 1280);
+      el.style.setProperty("--float-duration", `${duration}ms`);
+      el.style.setProperty("--float-scale", String(scale));
+      el.style.setProperty("--float-x", `${offset.x}px`);
+      el.style.setProperty("--float-y", `${offset.y}px`);
+      stage.appendChild(el);
+      window.setTimeout(() => el.remove(), duration + 80);
     }
 
     function playMonsterHit() {
@@ -8843,6 +9080,7 @@
 
       playPlayerHit();
       updateBars();
+      if (damage > 0) incrementLeaderboardStat("totalPlayerDamageTaken", damage);
 
       if (player.hp <= 0) {
         handlePlayerDeath();
@@ -9218,12 +9456,14 @@
           ["ROOMS", stats.totalRooms],
           ["GOLD", stats.totalGold],
           ["XP", stats.totalXp],
+          ["DMG OUT", stats.totalMonsterDamageDealt],
+          ["DMG IN", stats.totalPlayerDamageTaken],
+          ["ODDITIES", stats.rareOdditiesEncountered],
+          ["QUIZZES", stats.totalQuizAnswerSolved],
           ["POTS", stats.potionsUsed],
           ["DEATHS", stats.deaths],
           ["KILLS", stats.kills],
           ["BOSSES", stats.bossesKilled],
-          ["RETREAT", stats.shrineRetreats],
-          ["STONES", stats.shrineStonesUsed],
           ["LEVEL", player.level]
         ];
       }
@@ -9346,7 +9586,13 @@
       const itemId = typeof itemOrId === "string" ? itemOrId : (item && item.itemId);
       if (!item) return itemId || "None";
 
-      let name = item.generated ? (item.itemName || item.name || itemId) : getCleanEquipmentBaseName(item);
+      let name;
+      if (item.generated) {
+        const parts = getGeneratedEquipmentNameParts(item);
+        name = `${parts.main}${parts.suffix ? " " + parts.suffix : ""}`.trim();
+      } else {
+        name = getCleanEquipmentBaseName(item);
+      }
       if (item.slot === "armor") name = stripLeadingCharacterName(name);
 
       if (includeLevel && itemId) {
@@ -9403,51 +9649,82 @@
       return detailLine(label, `${n}${suffix}`);
     }
 
+    function getGeneratedAffixBonusStats(item) {
+      const totals = {};
+      if (!item || !item.generated) return totals;
+      const rarityData = GENERATED_EQUIPMENT_RARITIES[item.rarity] || {};
+      const mult = Number(rarityData.statMult || 1);
+      const keys = []
+        .concat(Array.isArray(item.prefixes) ? item.prefixes.map(key => ["prefix", key]) : [])
+        .concat(Array.isArray(item.suffixes) ? item.suffixes.map(key => ["suffix", key]) : []);
+
+      keys.forEach(([kind, key]) => {
+        const source = kind === "prefix" ? GENERATED_EQUIPMENT_PREFIXES[key] : GENERATED_EQUIPMENT_SUFFIXES[key];
+        Object.entries(source?.stats || {}).forEach(([statKey, value]) => {
+          totals[statKey] = Number(totals[statKey] || 0) + Math.round(Number(value || 0) * mult);
+        });
+      });
+      return totals;
+    }
+
+    function equipmentLiveStatLineHtml(label, value, suffix = "", magical = false, rarity = "common") {
+      const n = Number(value || 0);
+      if (!n) return "";
+      const cls = magical ? ` magicStat ${getRarityClass(rarity)}` : "";
+      return `<div class="detailLine${cls}"><span class="detailLabel">${label}</span><span class="detailValue">${n}${suffix}</span></div>`;
+    }
+
     function renderEquipmentStatBreakdown(itemId) {
       const item = getEquipItem(itemId);
       if (!item) return detailLine("Stats", "No stats");
-
       const stats = getEquipStats(itemId);
+      const magical = getGeneratedAffixBonusStats(item);
       const rows = [];
+      const isMagic = key => Number(magical[key] || 0) !== 0;
 
-      const resValues = {
-        Fire: stats.fireRes || 0,
-        Ice: stats.iceRes || 0,
-        Shock: stats.shockRes || 0,
-        Dark: stats.darkRes || 0
-      };
+      const resValues = { Fire: stats.fireRes || 0, Ice: stats.iceRes || 0, Shock: stats.shockRes || 0, Dark: stats.darkRes || 0 };
       const activeRes = Object.entries(resValues).filter(([, value]) => Number(value || 0) !== 0);
       const uniqueRes = [...new Set(activeRes.map(([, value]) => Number(value || 0)))];
+      const allResMagic = ["fireRes","iceRes","shockRes","darkRes"].some(isMagic);
 
-      rows.push(equipmentLiveStatLine("ATK", stats.atk));
-      rows.push(equipmentLiveStatLine("MAG", stats.mag));
-      rows.push(equipmentLiveStatLine("PDEF", stats.pdef, "%"));
+      rows.push(equipmentLiveStatLineHtml("ATK", stats.atk, "", isMagic("atk") || isMagic("atkPct"), item.rarity));
+      rows.push(equipmentLiveStatLineHtml("MAG", stats.mag, "", isMagic("mag") || isMagic("magPct"), item.rarity));
+      rows.push(equipmentLiveStatLineHtml("PDEF", stats.pdef, "%", isMagic("pdef"), item.rarity));
 
       if (activeRes.length === 4 && uniqueRes.length === 1) {
-        rows.push(equipmentLiveStatLine("All Res", uniqueRes[0], "%"));
+        rows.push(equipmentLiveStatLineHtml("All Res", uniqueRes[0], "%", allResMagic, item.rarity));
       } else {
-        activeRes.forEach(([label, value]) => rows.push(equipmentLiveStatLine(label, value, "%")));
+        const map={Fire:"fireRes",Ice:"iceRes",Shock:"shockRes",Dark:"darkRes"};
+        activeRes.forEach(([label,value])=>rows.push(equipmentLiveStatLineHtml(label,value,"%",isMagic(map[label]),item.rarity)));
       }
 
-      rows.push(equipmentLiveStatLine("HP", stats.hp));
-      rows.push(equipmentLiveStatLine("MP", stats.mp));
-      rows.push(equipmentLiveStatLine("SPD", stats.speed));
-      rows.push(equipmentLiveStatLine("Crit", stats.crit, "%"));
-      rows.push(equipmentLiveStatLine("Dodge", stats.dodge, "%"));
-      rows.push(equipmentLiveStatLine("Gold", stats.goldFind, "%"));
-      rows.push(equipmentLiveStatLine("HP%", stats.hpPct, "%"));
-      rows.push(equipmentLiveStatLine("MP%", stats.mpPct, "%"));
-      rows.push(equipmentLiveStatLine("ATK%", stats.atkPct, "%"));
-      rows.push(equipmentLiveStatLine("MAG%", stats.magPct, "%"));
-      rows.push(equipmentLiveStatLine("SPD%", stats.speedPct, "%"));
-      rows.push(equipmentLiveStatLine("Life", stats.lifeStealPct, "%"));
-      rows.push(equipmentLiveStatLine("Fire Dmg", stats.fireDamagePct, "%"));
-      rows.push(equipmentLiveStatLine("Ice Dmg", stats.iceDamagePct, "%"));
-      rows.push(equipmentLiveStatLine("Shock Dmg", stats.shockDamagePct, "%"));
-      rows.push(equipmentLiveStatLine("Dark Dmg", stats.darkDamagePct, "%"));
+      rows.push(equipmentLiveStatLineHtml("HP", stats.hp, "", isMagic("hp") || isMagic("hpPct"), item.rarity));
+      rows.push(equipmentLiveStatLineHtml("MP", stats.mp, "", isMagic("mp") || isMagic("mpPct"), item.rarity));
+      rows.push(equipmentLiveStatLineHtml("SPD", stats.speed, "", isMagic("speed") || isMagic("speedPct"), item.rarity));
+      rows.push(equipmentLiveStatLineHtml("Crit", stats.crit, "%", isMagic("crit"), item.rarity));
+      rows.push(equipmentLiveStatLineHtml("Dodge", stats.dodge, "%", isMagic("dodge"), item.rarity));
+      rows.push(equipmentLiveStatLineHtml("Gold", stats.goldFind, "%", isMagic("goldFind"), item.rarity));
+      rows.push(equipmentLiveStatLineHtml("HP%", stats.hpPct, "%", isMagic("hpPct"), item.rarity));
+      rows.push(equipmentLiveStatLineHtml("MP%", stats.mpPct, "%", isMagic("mpPct"), item.rarity));
+      rows.push(equipmentLiveStatLineHtml("ATK%", stats.atkPct, "%", isMagic("atkPct"), item.rarity));
+      rows.push(equipmentLiveStatLineHtml("MAG%", stats.magPct, "%", isMagic("magPct"), item.rarity));
+      rows.push(equipmentLiveStatLineHtml("SPD%", stats.speedPct, "%", isMagic("speedPct"), item.rarity));
+      rows.push(equipmentLiveStatLineHtml("Life", stats.lifeStealPct, "%", isMagic("lifeStealPct"), item.rarity));
+      rows.push(equipmentLiveStatLineHtml("Fire Dmg", stats.fireDamagePct, "%", isMagic("fireDamagePct"), item.rarity));
+      rows.push(equipmentLiveStatLineHtml("Ice Dmg", stats.iceDamagePct, "%", isMagic("iceDamagePct"), item.rarity));
+      rows.push(equipmentLiveStatLineHtml("Shock Dmg", stats.shockDamagePct, "%", isMagic("shockDamagePct"), item.rarity));
+      rows.push(equipmentLiveStatLineHtml("Dark Dmg", stats.darkDamagePct, "%", isMagic("darkDamagePct"), item.rarity));
 
-      const html = rows.filter(Boolean).join("");
-      return html ? `<div class="detailStatGrid">${html}</div>` : detailLine("Stats", "No stats");
+      const record = getOwnedEquipmentRecord(itemId);
+      if (record) normalizeEquipmentSockets(itemId);
+      const unlocked = record ? Number(record.socketsUnlocked || 0) : 0;
+      const maxSockets = Number(item.maxSockets || 0);
+      if (maxSockets > 0) {
+        rows.push(`<div class="detailLine${isMagic("bonusSockets") ? ` magicStat ${getRarityClass(item.rarity)}` : ""}"><span class="detailLabel">Sockets</span><span class="detailValue">${unlocked}/${maxSockets}</span></div>`);
+      }
+
+      const html=rows.filter(Boolean).join("");
+      return html ? `<div class="detailStatGrid">${html}</div>` : detailLine("Stats","No stats");
     }
 
     function renderEquipmentSocketDetail(itemId) {
@@ -9523,16 +9800,11 @@
     function renderEquipmentDetailBody(itemId, slotLabel = "") {
       const item = getEquipItem(itemId);
       if (!item) return detailLine("Item", itemId);
-
       return `
         ${detailSection("", `
-          ${detailLine("Rarity", titleCaseText(item.rarity || "common"))}
-          ${detailLine("Req", `Lv${item.reqLevel || 1}`)}
-          ${detailLine("Value", `${item.value || 0}g`)}
+          <div class="detailLine"><span class="detailLabel">${titleCaseText(item.rarity || "common")}</span><span class="detailValue">Req Lv ${item.reqLevel || 1}</span></div>
         `)}
         ${detailSection("Stats", renderEquipmentStatBreakdown(itemId))}
-        ${renderEquipmentSocketDetail(itemId)}
-        ${renderEquipmentRunesDetail(itemId)}
         ${renderEquipmentDescriptionDetail(item)}
       `;
     }
@@ -9648,7 +9920,7 @@
       document.getElementById("inventoryTitle").textContent = getEquipmentDetailTitle(itemId);
       document.getElementById("inventoryTabs").style.display = "none";
       content.innerHTML = `
-        ${renderDetailCard(equipDetailIconHtml(itemId), getEquipmentDetailTitle(itemId), renderEquipmentDetailBody(itemId))}
+        ${renderDetailCard(equipDetailIconHtml(itemId), equipmentNamePartsHtml(itemId), renderEquipmentDetailBody(itemId))}
         <div class="equipDetailActions">
           <button class="equipSlotRow ${!allowed ? "locked" : ""}" ${allowed ? `onclick="equipItemFromInventory('${itemId}')"` : ""}>
             <span class="equipSlotLabel">Equip</span>
@@ -9717,7 +9989,7 @@
       const allowed = canEquip(itemId);
       document.getElementById("inventoryTitle").textContent = getEquipmentDetailTitle(itemId);
       content.innerHTML = `
-        ${renderDetailCard(equipDetailIconHtml(itemId), getEquipmentDetailTitle(itemId), renderEquipmentDetailBody(itemId, label))}
+        ${renderDetailCard(equipDetailIconHtml(itemId), equipmentNamePartsHtml(itemId), renderEquipmentDetailBody(itemId, label))}
         <div class="equipDetailActions">
           <button class="equipSlotRow ${!allowed ? "locked" : ""}" ${allowed ? `onclick="equipSlotItem('${slot}', '${itemId}')"` : ""}>
             <span class="equipSlotLabel">Equip</span>
@@ -10455,83 +10727,40 @@
     }
 
     function renderEquipSlot(slot) {
-      if (isSkillSlot(slot)) {
-        renderSkillSlot(slot);
-        return;
-      }
-
+      if (isSkillSlot(slot)) { renderSkillSlot(slot); return; }
       const content = document.getElementById("inventoryContent");
       const label = getSlotLabel(slot);
       const equippedId = player.equipment[slot];
-
       document.getElementById("inventoryTitle").textContent = label;
       document.getElementById("inventoryTabs").style.display = "none";
 
       if (isBeltSlot(slot)) {
         const item = equippedId ? getConsumableSafe(equippedId) : null;
         const qty = getConsumableQuantityForSlot(slot);
-        const desc = item ? (item.description || `${item.itemName} x${qty}`) : "No consumable assigned.";
-
         content.innerHTML = `
           <div class="equipDetailCard">
             ${consumableIconHtml(equippedId, "equipDetailIcon")}
             <div>
               <div class="equipDetailName">${item && qty > 0 ? item.itemName : "Empty"}</div>
-              <div class="equipDetailLine">Belt Slot ${getBeltNumber(slot)}</div>
-              <div class="equipDetailLine">${desc}${item ? ` · Qty ${qty}` : ""}</div>
+              <div class="equipDetailLine">${item ? (item.description || item.itemName) + ` · Qty ${qty}` : "No consumable assigned."}</div>
             </div>
           </div>
           <div class="equipDetailActions">
-            <button class="equipSlotRow" onclick="renderChangeEquipSlot('${slot}')">
-              <span class="equipSlotLabel">Change</span>
-              <span class="equipSlotValue">${label}</span>
-            </button>
-            <button class="equipSlotRow" onclick="renderEquipOverview()">
-              <span class="equipSlotLabel">Close</span>
-              <span class="equipSlotValue">Equipment</span>
-            </button>
-          </div>
-        `;
+            <button class="equipSlotRow" onclick="renderChangeEquipSlot('${slot}')"><span class="equipSlotLabel">Change</span><span class="equipSlotValue">${label}</span></button>
+            <button class="equipSlotRow" onclick="renderEquipOverview()"><span class="equipSlotLabel">Back</span><span class="equipSlotValue">Equipment</span></button>
+          </div>`;
         return;
       }
 
-      const item = getEquipItem(equippedId);
+      if (!equippedId) { renderChangeEquipSlot(slot); return; }
 
-      let html = `
-        <div class="equipDetailCard">
-          ${equipDetailIconHtml(equippedId)}
-          <div>
-            <div class="equipDetailName">${getEquipName(equippedId)}</div>
-            <div class="equipDetailLine">${getEquipmentDetailMeta(item)}</div>
-            <div class="equipDetailLine">${equippedId ? equipmentStatLine(equippedId) : "No stats"}</div>
-          </div>
-        </div>
-
+      content.innerHTML = `
+        ${renderDetailCard(equipDetailIconHtml(equippedId), equipmentNamePartsHtml(equippedId), renderEquipmentDetailBody(equippedId, label))}
         <div class="equipDetailActions">
-          <button class="equipSlotRow" onclick="renderChangeEquipSlot('${slot}')">
-            <span class="equipSlotLabel">Change</span>
-            <span class="equipSlotValue">${label}</span>
-          </button>
-      `;
-
-      if ((slot === "weapon" || slot === "armor") && equippedId) {
-        html += `
-          <button class="equipSlotRow" onclick="renderRuneSlots('${slot}')">
-            <span class="equipSlotLabel">Runes</span>
-            <span class="equipSlotValue">${getSocketSummary(equippedId).replace("Runes ", "")}</span>
-          </button>
-        `;
-      }
-
-      html += `
-          <button class="equipSlotRow" onclick="renderEquipOverview()">
-            <span class="equipSlotLabel">Close</span>
-            <span class="equipSlotValue">Equipment</span>
-          </button>
-        </div>
-      `;
-
-      content.innerHTML = html;
+          <button class="equipSlotRow" onclick="renderChangeEquipSlot('${slot}')"><span class="equipSlotLabel">Change</span><span class="equipSlotValue">${label}</span></button>
+          ${(slot === "weapon" || slot === "armor") ? `<button class="equipSlotRow" onclick="renderRuneSlots('${slot}')"><span class="equipSlotLabel">Runes</span><span class="equipSlotValue">${getSocketSummary(equippedId).replace("Runes ", "")}</span></button>` : ""}
+          <button class="equipSlotRow" onclick="renderEquipOverview()"><span class="equipSlotLabel">Back</span><span class="equipSlotValue">Equipment</span></button>
+        </div>`;
     }
 
     function renderChangeEquipSlot(slot) {
@@ -10560,7 +10789,7 @@
       html += visibleRows.map(item => {
         if (item.none) {
           return `
-            <button class="equipSlotRow equipItemRow" onclick="renderEquipCandidateDetail('${slot}', null)">
+            <button class="equipSlotRow equipItemRow" onclick="equipSlotItem('${slot}', null)">
               <span class="compactIconWrap"><span class="equipIcon empty"></span></span>
               <span class="equipSlotLabel">None</span>
             </button>
@@ -10571,7 +10800,7 @@
           const itemId = item.itemId;
           const equipped = equippedId === itemId;
           return `
-            <button class="equipSlotRow ${equipped ? "equipped" : ""} equipItemRow" onclick="renderEquipCandidateDetail('${slot}', '${itemId}')">
+            <button class="equipSlotRow ${equipped ? "equipped" : ""} equipItemRow" onclick="${equipped ? `renderEquipSlot('${slot}')` : `equipSlotItem('${slot}', '${itemId}')`}">
               ${compactIconWithQtyHtml(item.image || "", "items", item.quantity)}
               <span class="equipSlotLabel">${item.itemName}${equipped ? " *" : ""}</span>
             </button>
@@ -10583,7 +10812,7 @@
         const allowed = canEquip(itemId);
         const rowClass = `equipSlotRow ${equipped ? "equipped" : ""} ${!allowed ? "locked" : ""}`;
         return `
-          <button class="${rowClass} equipItemRow" onclick="renderEquipCandidateDetail('${slot}', '${itemId}')">
+          <button class="${rowClass} equipItemRow" ${allowed ? `onclick="${equipped ? `renderEquipSlot('${slot}')` : `equipSlotItem('${slot}', '${itemId}')`}"` : ""}>
             ${equipmentCompactIconWithQtyHtml(itemId)}
             <span class="equipSlotLabel">${rarityNameHtml(itemId)}${equipped ? " *" : ""}</span>
           </button>
