@@ -104,7 +104,7 @@
       position: absolute;
       left: 38px;
       right: 38px;
-      bottom: 118px;
+      bottom: 205px;
       z-index: 65;
       min-height: 38px;
       padding: 8px 10px;
@@ -965,12 +965,14 @@
       grid-column: 1;
       grid-row: 1;
       gap: 3px;
-      padding: 5px 8px 2px;
+      padding: 4px 8px 5px;
       border: 1px solid rgba(213,170,62,0.42);
-      border-bottom: none;
-      border-radius: 10px 10px 0 0;
+      border-bottom: 1px solid rgba(213,170,62,0.42);
+      border-radius: 10px;
       background: rgba(0,0,0,0.28);
       box-shadow: 0 0 10px rgba(0,0,0,0.35);
+      overflow: visible;
+      transform: translateY(-3px);
     }
 
     body.encounterMode .statLine {
@@ -2428,7 +2430,7 @@
 
         <div class="debugLine" id="debugLine"></div>
         <div class="facingBadge" id="facingBadge">E</div>
-        <div class="messageBox" id="messageBox">Tutorial map loaded.</div>
+        <div class="messageBox" id="messageBox" style="visibility:hidden"></div>
 
 
         <div class="splashOverlay" id="splashOverlay">
@@ -2689,7 +2691,9 @@
       });
     }
 
-    function startNewFloor() {
+    function startNewFloor(options = {}) {
+      const suppressMessage = Boolean(options.suppressMessage);
+      const countFloorTravel = options.countFloorTravel !== false;
       // Starting or reloading a floor is a safe rest point.
       player.hp = player.maxHp;
       player.mp = player.maxMp;
@@ -2726,8 +2730,10 @@
       disabledTraps.clear();
 
       resetFloorShopState();
-      incrementLeaderboardStat("totalFloors", 1);
-      queueCrawlerStatsSubmit("floor-change", 400);
+      if (countFloorTravel) {
+        incrementLeaderboardStat("totalFloors", 1);
+        queueCrawlerStatsSubmit("floor-change", 400);
+      }
 
       preloadFloorThemeImages();
       updateRoomView();
@@ -2735,8 +2741,10 @@
       updateBars();
       syncSoundToggleButton();
 
-      const themeName = currentFloorTheme === "c" ? "Castle" : currentFloorTheme === "b" ? "Beach" : "Forest";
-      setMessage(`${themeName} floor ${currentFloor} loaded.`);
+      if (!suppressMessage) {
+        const themeName = currentFloorTheme === "c" ? "Castle" : currentFloorTheme === "b" ? "Beach" : "Forest";
+        setMessage(`${themeName} floor ${currentFloor} loaded.`);
+      }
     }
 
     // =========================
@@ -3798,9 +3806,76 @@
       };
     }
 
+    // Future-ready display vocabulary for repeated affixes.
+    // Duplicate affixes are not currently rolled, but older/debug/future items can use these ranks.
+    const GENERATED_AFFIX_RANK_NAMES = {
+      prefix: {
+        sturdy: ["Sturdy", "Steadfast", "Unbreakable"],
+        vigorous: ["Vigorous", "Mighty", "Titanic"],
+        mindful: ["Mindful", "Focused", "Transcendent"],
+        brutal: ["Brutal", "Savage", "Ruthless"],
+        savage: ["Savage", "Feral", "Primal"],
+        mystic: ["Mystic", "Arcane", "Eldritch"],
+        quick: ["Quick", "Fleet", "Blinding"],
+        swift: ["Swift", "Rapid", "Lightning"],
+        evasive: ["Evasive", "Elusive", "Untouchable"],
+        fortified: ["Fortified", "Bulwarked", "Impregnable"],
+        warded: ["Warded", "Sanctified", "Consecrated"],
+        vampiric: ["Vampiric", "Sanguine", "Bloodlord's"],
+        flaming: ["Flaming", "Infernal", "Cataclysmic"],
+        frozen: ["Frozen", "Glacial", "Absolute"],
+        shocking: ["Shocking", "Tempestuous", "Thunderous"],
+        shadowed: ["Shadowed", "Umbral", "Abyssal"],
+        lucky: ["Lucky", "Fortunate", "Providential"],
+        socketed: ["Socketed", "Runed", "Inscribed"]
+      },
+      suffix: {
+        vitality: ["Vitality", "Life", "Immortality"],
+        endurance: ["Endurance", "Fortitude", "Eternity"],
+        wisdom: ["Wisdom", "Insight", "Enlightenment"],
+        strength: ["Strength", "Might", "Dominion"],
+        brutality: ["Brutality", "Ruin", "Annihilation"],
+        sorcery: ["Sorcery", "Arcana", "Ascendance"],
+        speed: ["Speed", "Haste", "Velocity"],
+        evasion: ["Evasion", "Elusion", "Untouchability"],
+        guarding: ["Guarding", "Defense", "Bastion"],
+        shielding: ["Shielding", "Aegis", "Citadel"],
+        warding: ["Warding", "Sanctuary", "Consecration"],
+        protection: ["Protection", "Aegis", "Bastion"],
+        leeching: ["Leeching", "Siphoning", "Consumption"],
+        draining: ["Draining", "Devouring", "Exsanguination"],
+        flames: ["Flames", "Inferno", "Cataclysm"],
+        frost: ["Frost", "Blizzard", "Absolute Zero"],
+        storms: ["Storms", "Tempest", "Thunderwrath"],
+        dusk: ["Dusk", "Night", "Abyss"],
+        fortune: ["Fortune", "Prosperity", "Providence"],
+        greed: ["Greed", "Avarice", "Midas"],
+        sockets: ["Sockets", "Runes", "Inscription"]
+      }
+    };
+
+    function getAffixRankLabel(kind, key, fallbackLabel, count = 1) {
+      const cleanFallback = String(fallbackLabel || "").replace(/^of\s+/i, "").trim();
+      const ranks = GENERATED_AFFIX_RANK_NAMES?.[kind]?.[key];
+      if (!Array.isArray(ranks) || !ranks.length) return cleanFallback;
+      return ranks[Math.min(Math.max(1, count), ranks.length) - 1] || cleanFallback;
+    }
+
+    function collapseAffixLabels(affixes, kind) {
+      const grouped = new Map();
+      (affixes || []).filter(a => a.kind === kind).forEach((affix, index) => {
+        const key = String(affix.key || `legacy_${index}_${affix.label || ""}`);
+        if (!grouped.has(key)) grouped.set(key, { affix, count: 0 });
+        grouped.get(key).count += 1;
+      });
+      return Array.from(grouped.values()).map(({ affix, count }) =>
+        getAffixRankLabel(kind, affix.key, affix.label, count)
+      ).filter(Boolean);
+    }
+
     function buildGeneratedEquipmentName(baseName, affixes) {
-      const prefixes = (affixes || []).filter(a => a.kind === "prefix").map(a => String(a.label || "").trim()).filter(Boolean);
-      const suffixes = (affixes || []).filter(a => a.kind === "suffix").map(a => String(a.label || "").replace(/^of\s+/i, "").trim()).filter(Boolean);
+      const prefixes = collapseAffixLabels(affixes, "prefix");
+      const suffixes = collapseAffixLabels(affixes, "suffix");
       const prefixText = prefixes.length ? `${prefixes.join(" ")} ` : "";
       const suffixText = suffixes.length ? ` of ${suffixes.join(" and ")}` : "";
       return `${prefixText}${baseName}${suffixText}`.trim();
@@ -3808,10 +3883,12 @@
 
     function getGeneratedEquipmentNameParts(item) {
       if (!item || !item.generated) return { main: getCleanEquipmentBaseName(item), suffix: "" };
-      const prefixLabels = (item.prefixes || []).map(key => GENERATED_EQUIPMENT_PREFIXES[key]?.label || "").filter(Boolean);
-      const suffixLabels = (item.suffixes || []).map(key => GENERATED_EQUIPMENT_SUFFIXES[key]?.label || "").map(label => String(label).replace(/^of\s+/i, "").trim()).filter(Boolean);
+      const prefixLabels = collapseAffixLabels((item.prefixes || []).map(key => ({ kind: "prefix", key, label: GENERATED_EQUIPMENT_PREFIXES[key]?.label || key })), "prefix");
+      const suffixLabels = collapseAffixLabels((item.suffixes || []).map(key => ({ kind: "suffix", key, label: GENERATED_EQUIPMENT_SUFFIXES[key]?.label || key })), "suffix");
       const baseItem = item.baseItemId ? getEquipItem(item.baseItemId) : null;
-      const baseName = getCleanEquipmentBaseName(baseItem || item);
+      const baseName = item.slot === "ring"
+        ? "Ring"
+        : getCleanEquipmentBaseName(baseItem || item);
       return {
         main: `${prefixLabels.length ? prefixLabels.join(" ") + " " : ""}${baseName}`.trim(),
         suffix: suffixLabels.length ? `of ${suffixLabels.join(" and ")}` : ""
@@ -4795,7 +4872,7 @@
 
     let messageClearTimer = null;
 
-    function setMessage(text, duration = 2600) {
+    function setMessage(text, duration = 5000) {
       const box = document.getElementById("messageBox");
       if (!box) return;
 
@@ -4816,22 +4893,7 @@
     }
 
     function showEncounterNotice(text) {
-      const box = document.getElementById("messageBox");
-      if (!box) return;
-
-      if (encounterNoticeTimer) clearTimeout(encounterNoticeTimer);
-      if (messageClearTimer) clearTimeout(messageClearTimer);
-
-      box.style.visibility = "visible";
-      box.textContent = text;
-      box.classList.add("combatNotice");
-
-      encounterNoticeTimer = setTimeout(() => {
-        box.classList.remove("combatNotice");
-        box.textContent = "";
-        box.style.visibility = "hidden";
-        encounterNoticeTimer = null;
-      }, 1600);
+      // Routine monster encounter notices are intentionally suppressed.
     }
 
 
@@ -5112,6 +5174,12 @@
 
       const state = getChestStateAt(playerX, playerY);
 
+      if (gameMode === "encounter" || currentEnemy) {
+        layer.classList.remove("show");
+        layer.removeAttribute("src");
+        return;
+      }
+
       if (!state.hasChest) {
         layer.classList.remove("show");
         layer.removeAttribute("src");
@@ -5160,63 +5228,63 @@
       updateRoomView();
 
       if (tile === "E") {
-        setMessage("Floor entrance. Use Action for entrance options.");
+        // Routine movement message suppressed.
         return;
       }
 
       if (tile === "R") {
-        setMessage("Moved to room.");
+        // Routine movement message suppressed.
         return;
       }
 
       if (tile === "M") {
         if (clearedMonsters.has(key)) {
-          setMessage("The monster room is clear.");
+          // Routine monster-room message suppressed.
           return;
         }
 
-        setMessage("You enter a monster room.");
+        // Routine monster encounter message suppressed.
         startEncounter(getCurrentMonsterPoolId(), key, "M");
         return;
       }
 
       if (tile === "N") {
-        setMessage(`${getFloorNpcTitle()} found. Use Action to interact.`);
+        // Routine NPC discovery message suppressed.
         return;
       }
 
       if (tile === "C") {
         if (openedChests.has(key)) {
-          setMessage("The chest is empty.");
+          // Empty chest notice suppressed; loot/event messages remain.
           return;
         }
 
-        setMessage("You found a chest.");
+        // Routine chest discovery message suppressed.
         return;
       }
 
       if (tile === "T") {
-        setMessage("Moved to room.");
+        // Routine movement message suppressed.
         return;
       }
 
       if (tile === "B") {
         if (clearedMonsters.has(key)) {
-          setMessage("The boss room is clear.");
+          // Routine boss-room message suppressed.
           return;
         }
 
-        setMessage("A boss blocks the room.");
+        // Routine boss encounter message suppressed.
         startEncounter(getCurrentMonsterPoolId(), key, "B");
         return;
       }
 
       if (tile === "S") {
-        setMessage("You found a shrine.");
+        // Routine shrine discovery message suppressed.
         return;
       }
 
-      setMessage("Moved.");
+      // Routine movement message suppressed.
     }
 
     // =========================
@@ -5255,7 +5323,7 @@
 
       if (!canMoveTo(next.x, next.y)) {
         updateRoomView();
-        setMessage(`No ${moveLabel} path.`);
+        // Invalid movement message suppressed.
         return;
       }
 
@@ -5293,7 +5361,7 @@
 
       if (!previous) {
         updateRoomView();
-        setMessage("No back path.");
+        // Invalid movement message suppressed.
         return;
       }
 
@@ -6204,11 +6272,7 @@
           .filter(Boolean)
           .map(item => ({ itemId: item.itemId }));
 
-        if (!entries.some(entry => entry.itemId === "shrine_stone")) {
-          entries.push({ itemId: "shrine_stone" });
-        }
-
-        return entries;
+        return entries.filter(entry => entry.itemId !== "shrine_stone");
       }
 
       return [
@@ -6222,7 +6286,6 @@
         { itemId: "gold_mana_potion" },
         { itemId: "antidote" },
         { itemId: "smoke_bomb" },
-        { itemId: "shrine_stone" },
         { itemId: "rejuvenation_potion" }
       ];
     }
@@ -6681,6 +6744,44 @@
       else renderShrineBuy();
     }
 
+    const HIDDEN_MERCHANT_SHRINE_STONE_LIMIT = 3;
+
+    function getHiddenMerchantShrineStoneStock() {
+      const key = getFloorNpcKey();
+      currentFloorNpcState[key] = currentFloorNpcState[key] || {};
+      if (!Number.isFinite(Number(currentFloorNpcState[key].shrineStoneStock))) {
+        currentFloorNpcState[key].shrineStoneStock = HIDDEN_MERCHANT_SHRINE_STONE_LIMIT;
+      }
+      return Math.max(0, Math.floor(Number(currentFloorNpcState[key].shrineStoneStock) || 0));
+    }
+
+    function renderHiddenMerchantShrineStoneRow() {
+      const stock = getHiddenMerchantShrineStoneStock();
+      return `
+        <button class="shopRow ${stock <= 0 ? "locked" : ""}" ${stock > 0 ? 'onclick="buyHiddenMerchantShrineStone()"' : ""}>
+          ${shopIconHtml("shrinestone1.webp", "items")}
+          <div class="shopRowText">
+            <div class="shopRowName">Shrine Stone</div>
+            <div class="shopRowSub">Hidden stock · ${stock} remaining this visit</div>
+          </div>
+          <div class="shopRowValue">${stock > 0 ? "150g" : "Sold Out"}</div>
+        </button>`;
+    }
+
+    function buyHiddenMerchantShrineStone() {
+      const key = getFloorNpcKey();
+      const stock = getHiddenMerchantShrineStoneStock();
+      if (stock <= 0) { setMessage("This hidden merchant has no Shrine Stones left."); return; }
+      if (player.gold < 150) { setMessage("Not enough gold."); return; }
+      if (!addConsumableSafe("shrine_stone", 1)) { setMessage("Shrine Stone data is unavailable."); return; }
+      player.gold -= 150;
+      currentFloorNpcState[key].shrineStoneStock = stock - 1;
+      discoverCollection("consumables", "shrine_stone");
+      saveGameState();
+      setMessage(`Bought Shrine Stone for 150 gold. ${stock - 1} remaining.`);
+      renderFloorSkillShop(true);
+    }
+
     function renderFloorSkillShop(secretOnly = false) {
       const title = secretOnly ? "Hidden Skill Seller" : "Skill Trainer";
       setOverlayTitle(title);
@@ -6694,6 +6795,7 @@
         ${floorNpcHeroHtml(title, secretOnly ? "Rare techniques, expensive lessons." : "Common combat techniques and support skills.")}
         <div class="menuHeader"><span>Buy Skills</span><span>Gold: ${player.gold}</span></div>
         <div class="shopPagedList">
+          ${secretOnly ? renderHiddenMerchantShrineStoneRow() : ""}
           ${visible.map(skill => renderShopBuySkillRow(skill, secretOnly)).join("") || `<div class="smallNote">No skills available.</div>`}
         </div>
         ${getShopPageControlsHtml(mode, "Skills", entries.length)}
@@ -8997,7 +9099,12 @@
       resetRareOddityTurns();
       setMode("roaming");
       updateRoomView();
-      setMessage("You ran away.");
+      // Routine combat message suppressed.
+    }
+
+    function closeAllGameOverlaysForDeath() {
+      document.querySelectorAll(".overlay.show, .splashOverlay.show").forEach(el => el.classList.remove("show"));
+      setMenuOpen(false);
     }
 
     function handlePlayerDeath() {
@@ -9008,9 +9115,9 @@
       currentEnemyTileKey = null;
       currentEnemyDefeatedThisTurn = false;
       resetRareOddityTurns();
+      closeAllGameOverlaysForDeath();
 
       ensureFullInventoryShape();
-
       incrementLeaderboardStat("deaths", 1);
 
       const goldBefore = Math.max(0, Math.floor(Number(player.gold) || 0));
@@ -9024,12 +9131,12 @@
       player.mp = player.maxMp;
       lowHpAlertPlayed = false;
 
-      startNewFloor();
+      saveGameState(true);
+      startNewFloor({ suppressMessage: true, countFloorTravel: false });
       updateBars();
       updateHud();
-      saveGameState();
-
-      setMessage(`You were defeated. Lost ${goldPenalty} gold and received 10 Potions.`);
+      updateCombatBeltSlots();
+      saveGameState(true);
     }
 
     function enemyAttack(prefix) {
@@ -9039,7 +9146,7 @@
       if (dodgeChance > 0 && Math.random() * 100 < dodgeChance) {
         playPlayerHit();
         showDamageNumber("Dodge");
-        setMessage("You dodged the attack.");
+        // Routine combat message suppressed.
         return;
       }
 
@@ -9053,7 +9160,7 @@
         playPlayerHit();
         updateBars();
         showDamageNumber(`Absorb +${absorbed}`);
-        setMessage(`${prefix || currentEnemy.monName} struck your armor. You absorbed ${absorbed}.`);
+        // Routine combat message suppressed.
         return;
       }
 
@@ -9061,7 +9168,7 @@
         playPlayerHit();
         updateBars();
         showDamageNumber("Block");
-        setMessage(`${prefix || currentEnemy.monName} could not pierce your defense.`);
+        // Routine combat message suppressed.
         return;
       }
 
