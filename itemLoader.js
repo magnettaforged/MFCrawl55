@@ -127,23 +127,29 @@ function hasConsumable(player, itemId, amount = 1) {
   return getConsumableQuantity(player, itemId) >= amount;
 }
 
-function addKeyItem(player, itemId) {
+function addKeyItem(player, itemId, amount = 1) {
   ensureInventoryShape(player);
   const item = getKeyItem(itemId);
   if (!item) return false;
-  player.inventory.keyitems[itemId] = true;
+  const current = player.inventory.keyitems[itemId] === true ? 1 : Number(player.inventory.keyitems[itemId] || 0);
+  player.inventory.keyitems[itemId] = Math.max(0, current) + Math.max(1, Math.floor(Number(amount) || 1));
   return true;
 }
 
-function hasKeyItem(player, itemId) {
+function hasKeyItem(player, itemId, amount = 1) {
   ensureInventoryShape(player);
-  return !!player.inventory.keyitems[itemId];
+  const current = player.inventory.keyitems[itemId] === true ? 1 : Number(player.inventory.keyitems[itemId] || 0);
+  return current >= Math.max(1, Math.floor(Number(amount) || 1));
 }
 
-function removeKeyItem(player, itemId) {
+function removeKeyItem(player, itemId, amount = 1) {
   ensureInventoryShape(player);
-  if (!player.inventory.keyitems[itemId]) return false;
-  delete player.inventory.keyitems[itemId];
+  const current = player.inventory.keyitems[itemId] === true ? 1 : Number(player.inventory.keyitems[itemId] || 0);
+  const qty = Math.max(1, Math.floor(Number(amount) || 1));
+  if (current < qty) return false;
+  const remaining = current - qty;
+  if (remaining > 0) player.inventory.keyitems[itemId] = remaining;
+  else delete player.inventory.keyitems[itemId];
   return true;
 }
 
@@ -191,6 +197,17 @@ function useConsumable(itemId, player, gameMode = "roaming") {
     return { ok: true, message: `${item.itemName} cured poison.` };
   }
 
+  if (item.useType === "open_gold") {
+    const amount = Math.max(0, Math.floor(Number(item.power || 0)));
+    player.gold = Math.max(0, Number(player.gold || 0)) + amount;
+    removeConsumable(player, itemId, 1);
+    return { ok: true, goldGained: amount, message: `${item.itemName} contained ${amount} gold.` };
+  }
+
+  if (item.useType === "currency") {
+    return { ok: false, message: `${item.itemName} is merchant currency and cannot be used directly.` };
+  }
+
   if (item.useType === "escape") {
     removeConsumable(player, itemId, 1);
     return { ok: true, escape: true, message: `${item.itemName} used. You attempt to escape.` };
@@ -220,9 +237,11 @@ function getConsumableInventoryList(player) {
 function getKeyItemInventoryList(player) {
   ensureInventoryShape(player);
 
-  return Object.keys(player.inventory.keyitems).map(itemId => {
+  return Object.keys(player.inventory.keyitems).filter(itemId => player.inventory.keyitems[itemId]).map(itemId => {
     const item = getKeyItem(itemId);
+    const quantity = player.inventory.keyitems[itemId] === true ? 1 : Math.max(1, Number(player.inventory.keyitems[itemId] || 1));
     return {
+      quantity,
       itemId,
       itemName: item ? item.itemName : itemId,
       image: item ? item.image : "",

@@ -32,10 +32,13 @@ function rollMonsterDrops(monsterOrId) {
       return;
     }
 
+    const minQty = Math.max(1, Math.floor(Number(drop.minQty ?? drop.min ?? 1) || 1));
+    const maxQty = Math.max(minQty, Math.floor(Number(drop.maxQty ?? drop.max ?? minQty) || minQty));
     drops.push({
       type: "item",
       id: drop.id,
-      name: drop.name || drop.id
+      name: drop.name || drop.id,
+      amount: rollBetween(minQty, maxQty)
     });
   });
 

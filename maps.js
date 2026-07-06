@@ -9,7 +9,8 @@
 // E = entrance
 // R = regular room
 // M = monster room
-// C = chest room
+// C = normal chest room
+// L = locked rare chest room
 // B = boss room
 // S = shrine / end room
 // N = NPC / shop / safe room

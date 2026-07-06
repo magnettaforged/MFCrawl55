@@ -26,8 +26,8 @@ const WEAPON_DATA = {
           "dodge": 0
       },
       "assets": {
-          "image": "sword1.png",
-          "icon": "sword1.png"
+          "image": "sword1.webp",
+          "icon": "sword1.webp"
       }
   },
 
@@ -47,8 +47,8 @@ const WEAPON_DATA = {
           "dodge": 0
       },
       "assets": {
-          "image": "sword2.png",
-          "icon": "sword2.png"
+          "image": "sword2.webp",
+          "icon": "sword2.webp"
       }
   },
 
@@ -68,8 +68,8 @@ const WEAPON_DATA = {
           "dodge": 0
       },
       "assets": {
-          "image": "sword3.png",
-          "icon": "sword3.png"
+          "image": "sword3.webp",
+          "icon": "sword3.webp"
       }
   },
 
@@ -89,9 +89,57 @@ const WEAPON_DATA = {
           "dodge": 0
       },
       "assets": {
-          "image": "sword4.png",
-          "icon": "sword4.png"
+          "image": "sword4.webp",
+          "icon": "sword4.webp"
       }
+  },
+
+  iron_sword_shield: {
+      "itemName": "Iron Sword and Shield",
+      "character": "maya",
+      "tier": "iron",
+      "rarity": "common",
+      "reqLevel": 1,
+      "maxSockets": 1,
+      "value": 40,
+      "stats": { "atk": 6, "mag": 0, "pdef": 4, "def": 4, "speed": -1, "crit": 1, "dodge": 0 },
+      "assets": { "image": "swordshield1.webp", "icon": "swordshield1.webp" }
+  },
+
+  steel_sword_shield: {
+      "itemName": "Steel Sword and Shield",
+      "character": "maya",
+      "tier": "steel",
+      "rarity": "common",
+      "reqLevel": 1,
+      "maxSockets": 1,
+      "value": 95,
+      "stats": { "atk": 11, "mag": 0, "pdef": 7, "def": 7, "speed": -1, "crit": 2, "dodge": 0 },
+      "assets": { "image": "swordshield2.webp", "icon": "swordshield2.webp" }
+  },
+
+  obsidian_sword_shield: {
+      "itemName": "Obsidian Sword and Shield",
+      "character": "maya",
+      "tier": "obsidian",
+      "rarity": "rare",
+      "reqLevel": 6,
+      "maxSockets": 2,
+      "value": 220,
+      "stats": { "atk": 20, "mag": 1, "pdef": 10, "def": 10, "speed": -1, "crit": 4, "dodge": 0 },
+      "assets": { "image": "swordshield3.webp", "icon": "swordshield3.webp" }
+  },
+
+  mythic_sword_shield: {
+      "itemName": "Mythic Sword and Shield",
+      "character": "maya",
+      "tier": "mythic",
+      "rarity": "mythic",
+      "reqLevel": 12,
+      "maxSockets": 3,
+      "value": 650,
+      "stats": { "atk": 32, "mag": 3, "pdef": 14, "def": 14, "speed": 0, "crit": 6, "dodge": 1 },
+      "assets": { "image": "swordshield4.webp", "icon": "swordshield4.webp" }
   },
 
   white_mythic_sword: {
@@ -99,7 +147,7 @@ const WEAPON_DATA = {
       "character": "maya",
       "tier": "mythic",
       "rarity": "mythic",
-      "reqLevel": 12,
+      "reqLevel": 45,
       "maxSockets": 8,
       "value": 500,
       "stats": {
@@ -110,8 +158,8 @@ const WEAPON_DATA = {
           "dodge": 0
       },
       "assets": {
-          "image": "wsword4.png",
-          "icon": "wsword4.png"
+          "image": "wsword4.webp",
+          "icon": "wsword4.webp"
       }
   },
 
@@ -135,8 +183,8 @@ const WEAPON_DATA = {
           "dodge": 0
       },
       "assets": {
-          "image": "hammer1.png",
-          "icon": "hammer1.png"
+          "image": "hammer1.webp",
+          "icon": "hammer1.webp"
       }
   },
 
@@ -156,8 +204,8 @@ const WEAPON_DATA = {
           "dodge": 0
       },
       "assets": {
-          "image": "hammer2.png",
-          "icon": "hammer2.png"
+          "image": "hammer2.webp",
+          "icon": "hammer2.webp"
       }
   },
 
@@ -177,8 +225,8 @@ const WEAPON_DATA = {
           "dodge": 0
       },
       "assets": {
-          "image": "hammer3.png",
-          "icon": "hammer3.png"
+          "image": "hammer3.webp",
+          "icon": "hammer3.webp"
       }
   },
 
@@ -198,8 +246,8 @@ const WEAPON_DATA = {
           "dodge": 0
       },
       "assets": {
-          "image": "hammer4.png",
-          "icon": "hammer4.png"
+          "image": "hammer4.webp",
+          "icon": "hammer4.webp"
       }
   },
 
@@ -223,8 +271,8 @@ const WEAPON_DATA = {
           "dodge": 1
       },
       "assets": {
-          "image": "scythe1.png",
-          "icon": "scythe1.png"
+          "image": "scythe1.webp",
+          "icon": "scythe1.webp"
       }
   },
 
@@ -244,8 +292,8 @@ const WEAPON_DATA = {
           "dodge": 1
       },
       "assets": {
-          "image": "scythe2.png",
-          "icon": "scythe2.png"
+          "image": "scythe2.webp",
+          "icon": "scythe2.webp"
       }
   },
 
@@ -265,8 +313,8 @@ const WEAPON_DATA = {
           "dodge": 2
       },
       "assets": {
-          "image": "scythe3.png",
-          "icon": "scythe3.png"
+          "image": "scythe3.webp",
+          "icon": "scythe3.webp"
       }
   },
 
@@ -286,8 +334,8 @@ const WEAPON_DATA = {
           "dodge": 3
       },
       "assets": {
-          "image": "scythe4.png",
-          "icon": "scythe4.png"
+          "image": "scythe4.webp",
+          "icon": "scythe4.webp"
       }
   },
 
@@ -311,8 +359,8 @@ const WEAPON_DATA = {
           "dodge": 0
       },
       "assets": {
-          "image": "staff1.png",
-          "icon": "staff1.png"
+          "image": "staff1.webp",
+          "icon": "staff1.webp"
       }
   },
 
@@ -332,8 +380,8 @@ const WEAPON_DATA = {
           "dodge": 0
       },
       "assets": {
-          "image": "staff2.png",
-          "icon": "staff2.png"
+          "image": "staff2.webp",
+          "icon": "staff2.webp"
       }
   },
 
@@ -353,8 +401,8 @@ const WEAPON_DATA = {
           "dodge": 0
       },
       "assets": {
-          "image": "staff3.png",
-          "icon": "staff3.png"
+          "image": "staff3.webp",
+          "icon": "staff3.webp"
       }
   },
 
@@ -374,8 +422,8 @@ const WEAPON_DATA = {
           "dodge": 1
       },
       "assets": {
-          "image": "staff4.png",
-          "icon": "staff4.png"
+          "image": "staff4.webp",
+          "icon": "staff4.webp"
       }
   },
 

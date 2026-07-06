@@ -8,7 +8,7 @@
 const RUNE_DATA = {
   "fehu": {
     "runeName": "Fehu",
-    "image": "rune1.png",
+    "image": "rune1.webp",
     "symbol": "ᚠ",
     "meaning": "Wealth and reward",
     "effectType": "gold_find_pct",
@@ -19,7 +19,7 @@ const RUNE_DATA = {
   },
   "uruz": {
     "runeName": "Uruz",
-    "image": "rune2.png",
+    "image": "rune2.webp",
     "symbol": "ᚢ",
     "meaning": "Strength and endurance",
     "effectType": "attack_pct",
@@ -30,7 +30,7 @@ const RUNE_DATA = {
   },
   "thurisaz": {
     "runeName": "Thurisaz",
-    "image": "rune3.png",
+    "image": "rune3.webp",
     "symbol": "ᚦ",
     "meaning": "Thorn and disruption",
     "effectType": "pierce_pct",
@@ -41,7 +41,7 @@ const RUNE_DATA = {
   },
   "ansuz": {
     "runeName": "Ansuz",
-    "image": "rune4.png",
+    "image": "rune4.webp",
     "symbol": "ᚨ",
     "meaning": "Wisdom and divine breath",
     "effectType": "magic_pct",
@@ -52,7 +52,7 @@ const RUNE_DATA = {
   },
   "raidho": {
     "runeName": "Raidho",
-    "image": "rune5.png",
+    "image": "rune5.webp",
     "symbol": "ᚱ",
     "meaning": "Journey and movement",
     "effectType": "speed_pct",
@@ -63,7 +63,7 @@ const RUNE_DATA = {
   },
   "kenaz": {
     "runeName": "Kenaz",
-    "image": "rune6.png",
+    "image": "rune6.webp",
     "symbol": "ᚲ",
     "meaning": "Torch and craft",
     "effectType": "fire_weapon_pct",
@@ -74,7 +74,7 @@ const RUNE_DATA = {
   },
   "gebo": {
     "runeName": "Gebo",
-    "image": "rune7.png",
+    "image": "rune7.webp",
     "symbol": "ᚷ",
     "meaning": "Gift and exchange",
     "effectType": "life_steal_pct",
@@ -85,7 +85,7 @@ const RUNE_DATA = {
   },
   "hagalaz": {
     "runeName": "Hagalaz",
-    "image": "rune8.png",
+    "image": "rune8.webp",
     "symbol": "ᚺ",
     "meaning": "Hail and disruption",
     "effectType": "shock_weapon_pct",
@@ -96,7 +96,7 @@ const RUNE_DATA = {
   },
   "isa": {
     "runeName": "Isa",
-    "image": "rune9.png",
+    "image": "rune9.webp",
     "symbol": "ᛁ",
     "meaning": "Ice and stillness",
     "effectType": "slow_chance_pct",
@@ -107,7 +107,7 @@ const RUNE_DATA = {
   },
   "eihwaz": {
     "runeName": "Eihwaz",
-    "image": "rune10.png",
+    "image": "rune10.webp",
     "symbol": "ᛇ",
     "meaning": "Yew death and endurance",
     "effectType": "light_bonus_pct",
@@ -118,7 +118,7 @@ const RUNE_DATA = {
   },
   "algiz": {
     "runeName": "Algiz",
-    "image": "rune11.png",
+    "image": "rune11.webp",
     "symbol": "ᛉ",
     "meaning": "Protection and warding",
     "effectType": "defense_pct",
@@ -129,7 +129,7 @@ const RUNE_DATA = {
   },
   "sowilo": {
     "runeName": "Sowilo",
-    "image": "rune12.png",
+    "image": "rune12.webp",
     "symbol": "ᛋ",
     "meaning": "Sun victory and cleansing",
     "effectType": "undead_bonus_pct",

@@ -1,0 +1,11 @@
+Dungeon Crawler v0.9.0 Monster Rework
+
+- Added monster family action pools with rarity-gated abilities.
+- Added weighted simulated AI with conditional healing, defending, poison, buffs, magic, and charm.
+- All monsters can defend for 50% reduction unless a stronger family guard action is defined.
+- Human/humanoid monsters can use limited healing items; undead never use potions.
+- Life steal no longer heals against undead monsters.
+- Added new monster families from the supplied WebP manifest.
+- Mirrored image pairs remain pooled as visual variants.
+- Added exact biome pools for a/b/c/d/f/g and matching boss columns.
+- Crystal favors magic users; beach favors marine life/pirates; winter favors ice casters; forest favors goblins/orcs/mushrooms; pyramids mix castle/treasure hunters without marine life.

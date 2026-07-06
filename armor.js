@@ -444,7 +444,7 @@ const ARMOR_DATA = {
     "tier": "mt4fullplate",
     "material": "black",
     "rarity": "mythic",
-    "reqLevel": 18,
+    "reqLevel": 45,
     "maxSockets": 8,
     "value": 2500,
     "stats": {
@@ -483,7 +483,7 @@ const ARMOR_DATA = {
     "tier": "mt4fullplate",
     "material": "white",
     "rarity": "mythic",
-    "reqLevel": 18,
+    "reqLevel": 45,
     "maxSockets": 8,
     "value": 2600,
     "stats": {

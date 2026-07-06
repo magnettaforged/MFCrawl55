@@ -137,7 +137,8 @@ const RARE_ODDITY_DEFINITIONS = {
     drops: [
       { type: "gold", min: 900, max: 1800, chance: 100 },
       { type: "item", id: "shrine_stone", name: "Shrine Stone", chance: 10 },
-      { type: "item", id: "gold_potion", name: "Gold Potion", chance: 50 }
+      { type: "item", id: "gold_potion", name: "Gold Potion", chance: 50 },
+      { type: "item", id: "golden_thong", name: "Golden Thong", chance: 100, minQty: 1, maxQty: 1 }
     ],
     flavorText: "You have been blessed."
   },
@@ -552,20 +553,16 @@ function normalizeMonster(baseMonster) {
 
     speed: Number(baseMonster.speed ?? 0),
     critChance: Number(baseMonster.critChance ?? 0),
-    dodgeChance: Number(baseMonster.dodgeChance ?? 0)
+    dodgeChance: Number(baseMonster.dodgeChance ?? 0),
+    poison: baseMonster.poison ? { chance: Number(baseMonster.poison.chance || 0), damagePerTick: Number(baseMonster.poison.damagePerTick || 0) } : null
   };
 }
 
 function normalizeThemeCode(theme) {
   const value = String(theme || "c").trim().toLowerCase();
-
-  if (value === "castle") return "c";
-  if (value === "beach") return "b";
-  if (value === "forest") return "f";
-
-  if (value === "c" || value === "b" || value === "f") return value;
-
-  return "c";
+  const names = { crystal: "a", ancient: "a", beach: "b", castle: "c", winter: "d", winterized: "d", forest: "f", pyramid: "g", pyramids: "g" };
+  if (names[value]) return names[value];
+  return ["a", "b", "c", "d", "f", "g"].includes(value) ? value : "c";
 }
 
 function bossColumnForTheme(theme) {

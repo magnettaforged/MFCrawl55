@@ -2526,12 +2526,12 @@
 
   <script>
     
-    const GAME_VERSION = "v0.8.0";
+    const GAME_VERSION = "v0.9.0";
 // =========================
     // MAP / FLOOR STATE
     // =========================
 
-    const FLOOR_THEMES = ["c", "b", "f"]; // c = castle, b = beach, f = forest
+    const FLOOR_THEMES = ["a", "b", "c", "d", "f", "g"]; // six standard room themes; h is reserved for the secret room
 
     let currentFloor = 1;
     let currentMapId = "";
@@ -2596,8 +2596,8 @@
     }
 
     function getCurrentThemeWalkSoundId() {
-      if (currentFloorTheme === "b") return "walk_beach";
-      if (currentFloorTheme === "f") return "walk_forest";
+      if (currentFloorTheme === "b" || currentFloorTheme === "d") return "walk_beach";
+      if (currentFloorTheme === "f" || currentFloorTheme === "g") return "walk_forest";
       return "walk_castle";
     }
 
@@ -2742,7 +2742,7 @@
       syncSoundToggleButton();
 
       if (!suppressMessage) {
-        const themeName = currentFloorTheme === "c" ? "Castle" : currentFloorTheme === "b" ? "Beach" : "Forest";
+        const themeName = ({ a: "Ancient", b: "Beach", c: "Castle", d: "Depths", f: "Forest", g: "Grotto" })[currentFloorTheme] || "Dungeon";
         setMessage(`${themeName} floor ${currentFloor} loaded.`);
       }
     }
@@ -2777,7 +2777,8 @@
       gold: 0,
 
       statusEffects: {
-        poison: false
+        poison: false,
+        charmed: false
       },
 
       inventory: {
@@ -2797,9 +2798,7 @@
           iron_ring: { owned: true, level: 0, pending: 0 }
         },
 
-        keyitems: {
-          generic_key: true
-        },
+        keyitems: {},
 
         runes: {
           fehu: { 0: 1, 1: 0, 2: 0, 3: 0 },
@@ -2864,6 +2863,7 @@
       if (!item) return "";
       if (item.iconPath) return item.iconPath;
       if (item.imagePath) return item.imagePath;
+      if (item.itemId === "golden_thong") return "assets/monsters/gthong.webp";
       return item.image ? `assets/items/${item.image}` : "";
     }
 
@@ -3404,7 +3404,7 @@
       if (activeCollectionCategory === "runes") {
         const rune = typeof getRuneById === "function" ? getRuneById(id) : null;
         const displayName = typeof getRuneDisplayName === "function" ? getRuneDisplayName(id, 0) : id;
-        const image = rune?.image || "rune1.png";
+        const image = rune?.image || "rune1.webp";
         document.getElementById("inventoryTitle").textContent = displayName;
         content.innerHTML = `
           ${renderDetailCard(`<img class="equipDetailIcon" src="assets/runes/${image}" alt="">`, displayName, renderRuneDetailBody(id, 0, 0))}
@@ -3654,7 +3654,8 @@
       shocking: { label: "Shocking", stats: { shockDamagePct: 10 } },
       shadowed: { label: "Shadowed", stats: { darkDamagePct: 10 } },
       lucky: { label: "Lucky", stats: { goldFind: 25 } },
-      socketed: { label: "Socketed", stats: { bonusSockets: 1 } }
+      socketed: { label: "Socketed", stats: { bonusSockets: 1 } },
+      antivenom: { label: "Antivenom", stats: { poisonResistPct: 25 } }
     };
 
     const GENERATED_EQUIPMENT_SUFFIXES = {
@@ -3678,7 +3679,9 @@
       dusk: { label: "of Dusk", stats: { darkDamagePct: 10 } },
       fortune: { label: "of Fortune", stats: { goldFind: 25 } },
       greed: { label: "of Greed", stats: { goldFind: 50 } },
-      sockets: { label: "of Sockets", stats: { bonusSockets: 1 } }
+      sockets: { label: "of Sockets", stats: { bonusSockets: 1 } },
+      toxins: { label: "of Toxin Guard", stats: { poisonDamageReductionPct: 25 } },
+      purity: { label: "of Purity", stats: { poisonImmune: 1 }, minRarity: "legendary" }
     };
 
     // Backwards-compatible names for older saves/debug references.
@@ -3722,14 +3725,17 @@
       return { key, ...obj[key] };
     }
 
-    function rollGeneratedAffixes(maxAffixes = 1) {
+    function rollGeneratedAffixes(maxAffixes = 1, rarity = "magical") {
       const count = Math.max(1, Math.floor(Number(maxAffixes) || 1));
+      const rarityRank = { magical: 1, rare: 2, epic: 3, legendary: 4 };
+      const allowedPrefixes = Object.fromEntries(Object.entries(GENERATED_EQUIPMENT_PREFIXES).filter(([, data]) => !data.minRarity || (rarityRank[rarity] || 1) >= (rarityRank[data.minRarity] || 1)));
+      const allowedSuffixes = Object.fromEntries(Object.entries(GENERATED_EQUIPMENT_SUFFIXES).filter(([, data]) => !data.minRarity || (rarityRank[rarity] || 1) >= (rarityRank[data.minRarity] || 1)));
       const prefixKeys = [];
       const suffixKeys = [];
       const affixes = [];
 
       const addPrefix = () => {
-        const picked = pickObjectEntry(GENERATED_EQUIPMENT_PREFIXES, prefixKeys);
+        const picked = pickObjectEntry(allowedPrefixes, prefixKeys);
         if (picked) {
           picked.kind = "prefix";
           prefixKeys.push(picked.key);
@@ -3738,7 +3744,7 @@
       };
 
       const addSuffix = () => {
-        const picked = pickObjectEntry(GENERATED_EQUIPMENT_SUFFIXES, suffixKeys);
+        const picked = pickObjectEntry(allowedSuffixes, suffixKeys);
         if (picked) {
           picked.kind = "suffix";
           suffixKeys.push(picked.key);
@@ -3763,8 +3769,8 @@
 
       while (affixes.length < count) {
         Math.random() < 0.5 ? addPrefix() : addSuffix();
-        if (prefixKeys.length >= Object.keys(GENERATED_EQUIPMENT_PREFIXES).length &&
-            suffixKeys.length >= Object.keys(GENERATED_EQUIPMENT_SUFFIXES).length) break;
+        if (prefixKeys.length >= Object.keys(allowedPrefixes).length &&
+            suffixKeys.length >= Object.keys(allowedSuffixes).length) break;
       }
 
       return affixes.slice(0, count);
@@ -3827,7 +3833,8 @@
         shocking: ["Shocking", "Tempestuous", "Thunderous"],
         shadowed: ["Shadowed", "Umbral", "Abyssal"],
         lucky: ["Lucky", "Fortunate", "Providential"],
-        socketed: ["Socketed", "Runed", "Inscribed"]
+        socketed: ["Socketed", "Runed", "Inscribed"],
+        antivenom: ["Antivenom", "Venomproof", "Toxinless"]
       },
       suffix: {
         vitality: ["Vitality", "Life", "Immortality"],
@@ -3850,7 +3857,9 @@
         dusk: ["Dusk", "Night", "Abyss"],
         fortune: ["Fortune", "Prosperity", "Providence"],
         greed: ["Greed", "Avarice", "Midas"],
-        sockets: ["Sockets", "Runes", "Inscription"]
+        sockets: ["Sockets", "Runes", "Inscription"],
+        toxins: ["Toxin Guard", "Venom Ward", "Toxin Bastion"],
+        purity: ["Purity", "Cleansing", "Immunity"]
       }
     };
 
@@ -3931,7 +3940,7 @@
 
       const rarity = rollGeneratedEquipmentRarity();
       const rarityData = GENERATED_EQUIPMENT_RARITIES[rarity] || GENERATED_EQUIPMENT_RARITIES.magical;
-      const affixes = rollGeneratedAffixes(rarityData.affixes || 1);
+      const affixes = rollGeneratedAffixes(rarityData.affixes || 1, rarity);
       const stats = getBaseEquipmentStatsForGeneratedItem(baseItem);
       const statMult = Number(rarityData.statMult || 1);
 
@@ -4005,7 +4014,7 @@
       ensureGeneratedEquipmentCounter();
       const rarity = rollGeneratedRingRarity();
       const rarityData = GENERATED_EQUIPMENT_RARITIES[rarity] || GENERATED_EQUIPMENT_RARITIES.magical;
-      const affixes = rollGeneratedAffixes(rarityData.affixes || 1);
+      const affixes = rollGeneratedAffixes(rarityData.affixes || 1, rarity);
       const stats = {};
       const statMult = Number(rarityData.statMult || 1);
 
@@ -4766,27 +4775,27 @@
       };
     }
 
-    function addLootItem(itemId) {
+    function addLootItem(itemId, amount = 1) {
       if (getEquipItem(itemId)) {
         return addEquipmentToInventory(itemId);
       }
 
       if (itemId === "shrine_stone" || (typeof getConsumable === "function" && getConsumable(itemId))) {
-        addConsumableSafe(itemId, 1);
+        addConsumableSafe(itemId, Math.max(1, Math.floor(Number(amount) || 1)));
         discoverCollection("consumables", itemId);
         return {
           ok: true,
-          message: `Found ${getSafeItemName(itemId)}.`
+          message: `Found ${Math.max(1, Math.floor(Number(amount) || 1)) > 1 ? Math.max(1, Math.floor(Number(amount) || 1)) + " " : ""}${getSafeItemName(itemId)}.`
         };
       }
 
       if (typeof getKeyItem === "function" && getKeyItem(itemId)) {
-        addKeyItem(player, itemId);
+        addKeyItem(player, itemId, Math.max(1, Math.floor(Number(amount) || 1)));
         discoverCollection("keyitems", itemId);
         const keyItem = getKeyItem(itemId);
         return {
           ok: true,
-          message: `Found ${keyItem?.itemName || getItemDisplayName(itemId)}.`
+          message: `Found ${Math.max(1, Math.floor(Number(amount) || 1)) > 1 ? Math.max(1, Math.floor(Number(amount) || 1)) + " " : ""}${keyItem?.itemName || getItemDisplayName(itemId)}.`
         };
       }
 
@@ -5081,7 +5090,7 @@
       const currentTile = getTile(playerX, playerY);
 
       // Special rooms only display their special image when standing in that room.
-      if (currentTile === "C") return getRoomImageNameForType("chestroom");
+      if (currentTile === "C" || currentTile === "L") return getRoomImageNameForType("chestroom");
       if (currentTile === "B") return getRoomImageNameForType("door");
       if (currentTile === "S") return getRoomImageNameForType("shrine");
 
@@ -5124,7 +5133,7 @@
       const tile = getTile(x, y);
       const key = tileKey(x, y);
 
-      if (tile !== "C") {
+      if (tile !== "C" && tile !== "L") {
         return {
           hasChest: false,
           opened: false,
@@ -5139,7 +5148,8 @@
         hasChest: true,
         opened: isOpened,
         mimic: false,
-        image: isOpened ? "chestopen1.webp" : "chestclosed1.webp"
+        image: isOpened ? "chestopen1.webp" : (tile === "L" ? "chestclosed1.webp" : "chestclosed1.webp"),
+        locked: tile === "L"
       };
     }
 
@@ -5253,7 +5263,7 @@
         return;
       }
 
-      if (tile === "C") {
+      if (tile === "C" || tile === "L") {
         if (openedChests.has(key)) {
           // Empty chest notice suppressed; loot/event messages remain.
           return;
@@ -5621,6 +5631,21 @@
         return { handled: true, used: useShrineStone() };
       }
 
+      if (itemId === "antidote" && gameMode === "encounter") {
+        if (!player.statusEffects?.poison) {
+          setMessage("You are not poisoned.");
+          return { handled: true, used: false };
+        }
+      }
+
+      if (itemId === "rejuvenation_potion" && gameMode === "encounter") {
+        if (!removeConsumableSafe(itemId, 1)) return { handled: true, used: false };
+        if (!player.statusEffects || typeof player.statusEffects !== "object") player.statusEffects = {};
+        player.statusEffects.rejuvenation = { ticks: 6, hpPerTick: 10, mpPerTick: 10 };
+        setMessage("Rejuvenation will restore HP and MP over time.");
+        return { handled: true, used: true };
+      }
+
       if (itemId === "smoke_bomb" && !confirmAction("Use a Smoke Bomb?")) {
         setMessage("Smoke Bomb use cancelled.");
         return { handled: true, used: false };
@@ -5840,7 +5865,7 @@
         ${floorNpcHeroHtml("Traveling Blacksmith", "Sockets and upgrades, for the right price.")}
         <div class="shopMenuList">
           <button class="shopRow" onclick="renderSocketUnlock()">
-            ${shopIconHtml("rune6.png", "runes")}
+            ${shopIconHtml("rune6.webp", "runes")}
             <div class="shopRowText">
               <div class="shopRowName">Add Sockets</div>
               <div class="shopRowSub">Open locked weapon and armor rune slots.</div>
@@ -6203,7 +6228,7 @@
 
         <div class="shopMenuList">
           <button class="shopRow" onclick="renderShrineBuy()">
-            ${shopIconHtml("hpot1.png", "items")}
+            ${shopIconHtml("hpot1.webp", "items")}
             <div class="shopRowText">
               <div class="shopRowName">Buy</div>
               <div class="shopRowSub">Consumables, skills, weapons, armor, and keys.</div>
@@ -6221,7 +6246,7 @@
           </button>
 
           <button class="shopRow" onclick="renderRuneCombine()">
-            ${shopIconHtml("rune1.png", "runes")}
+            ${shopIconHtml("rune1.webp", "runes")}
             <div class="shopRowText">
               <div class="shopRowName">Combine Runes</div>
               <div class="shopRowSub">Two matching runes become one higher rune.</div>
@@ -6230,7 +6255,7 @@
           </button>
 
           <button class="shopRow" onclick="renderSocketUnlock()">
-            ${shopIconHtml("rune6.png", "runes")}
+            ${shopIconHtml("rune6.webp", "runes")}
             <div class="shopRowText">
               <div class="shopRowName">Add Sockets</div>
               <div class="shopRowSub">Open locked weapon and armor rune slots.</div>
@@ -6260,8 +6285,7 @@
     }
 
     const SHOP_KEY_ITEMS = [
-      { itemId: "generic_key", label: "Generic Key" },
-      { itemId: "boss_key", label: "Boss Key" }
+      { itemId: "chest_key", label: "Chest Key" }
     ];
 
     function getAllShopConsumables() {
@@ -6635,7 +6659,7 @@
 
     function renderShopBuyRuneRow(entry) {
       const rune = typeof getRuneById === "function" ? getRuneById(entry.runeId) : null;
-      const image = rune && rune.image ? rune.image : "rune1.png";
+      const image = rune && rune.image ? rune.image : "rune1.webp";
       const name = typeof getRuneDisplayName === "function" ? getRuneDisplayName(entry.runeId, entry.level || 0) : entry.runeId;
       const price = getRuneBuyPrice(entry);
 
@@ -7503,7 +7527,7 @@
       } else {
         html += rows.map(row => `
           <button class="shopRow" ${row.canUnlock ? `onclick="unlockSocket('${row.slot}', ${row.cost})"` : ""}>
-            ${shopIconHtml("rune6.png", "runes")}
+            ${shopIconHtml("rune6.webp", "runes")}
             <div class="shopRowText">
               <div class="shopRowName">${rarityNameHtml(row.itemId)}</div>
               <div class="shopRowSub">${row.unlocked}/${row.max} sockets unlocked</div>
@@ -7598,14 +7622,6 @@
         messages.push(getSafeItemName(consumableId));
       }
 
-      if (Math.random() < 0.20) {
-        const keyId = Math.random() < 0.82 ? "generic_key" : "boss_key";
-        if (typeof addKeyItem === "function" && getKeyItem(keyId)) {
-          addKeyItem(player, keyId);
-          messages.push(getItemDisplayName(keyId));
-        }
-      }
-
       if (Math.random() < 0.30) {
         const item = randomFromList(getChestEquipmentPool());
         if (item) {
@@ -7656,6 +7672,32 @@
       if (currentTile === "E") {
         if (typeof playSound === "function") playSound("ui_click");
         openLimitedShrineMenu();
+        return;
+      }
+
+      if (currentTile === "L") {
+        if (openedChests.has(key)) {
+          setMessage("The rare chest is already empty.");
+          return;
+        }
+        if (typeof hasKeyItem !== "function" || !hasKeyItem(player, "chest_key", 1)) {
+          setMessage("This rare chest requires a Chest Key.");
+          return;
+        }
+        if (typeof removeKeyItem !== "function" || !removeKeyItem(player, "chest_key", 1)) {
+          setMessage("You could not use the Chest Key.");
+          return;
+        }
+        openedChests.add(key);
+        const lootMessages = openCurrentChestLoot();
+        const bonusGold = applyGoldFind(Math.max(25, currentFloor * 8));
+        player.gold += bonusGold;
+        addLeaderboardGold(bonusGold);
+        lootMessages.unshift(`${bonusGold} rare chest gold`);
+        updateRoomView();
+        if (typeof playSound === "function") playSound("chest_open");
+        playChestOpened();
+        setMessage(`You unlocked the rare chest. Found ${lootMessages.join(", ")}.`);
         return;
       }
 
@@ -7909,14 +7951,25 @@
       const total = physical + fire + shock + ice + holy + dark + typeBonus;
       const runeLifeStealPct = Number(getFinalPlayerStats().lifeStealPct || 0);
       const skillStealPct = ultimate ? Number(data.ultimateLifeStealPct ?? data.lifeStealPct ?? 0) : Number(data.lifeStealPct ?? 0);
-      const stealPct = runeLifeStealPct + skillStealPct;
+      const stealPct = getMonsterType(monster) === "undead" ? 0 : (runeLifeStealPct + skillStealPct);
       return { physical, fire, shock, ice, holy, dark, typeBonus, total, lifeSteal: Math.floor(Math.max(0, total) * stealPct / 100) };
     }
 
     function applyPlayerDamageToEnemy(damage, chargeGain = 0, options = {}) {
       if (!currentEnemy || !damage) return;
 
-      const total = Math.floor(Number(damage.total || 0));
+      let total = Math.floor(Number(damage.total || 0));
+
+      const monsterDodge = Math.max(0, Number(currentEnemy.dodgeChance || 0) + Number(currentEnemy._dodgeBonus || 0));
+      if (total > 0 && monsterDodge > 0 && Math.random() * 100 < monsterDodge) {
+        playCombatEffect("physical", "Dodge", options);
+        return;
+      }
+      if (total > 0 && currentEnemy._defending) {
+        total = Math.max(0, Math.floor(total * (1 - Number(currentEnemy._defendReductionPct || 50) / 100)));
+        currentEnemy._defending = false;
+        currentEnemy._defendReductionPct = 0;
+      }
 
       if (typeof playPlayerAttackSound === "function") playPlayerAttackSound(player);
       if (damage.fire > 0 && typeof playSound === "function") playSound("fire_attack");
@@ -7991,6 +8044,7 @@
 
     function useBaseSkill(slot) {
       if (!currentEnemy) return;
+      if (consumePlayerCharm()) return;
       if (playerAttackMeter < 100) { updateCombatMetersUI(); return; }
       ensurePlayerSkills();
       const skillId = getEquippedSkillId(slot);
@@ -8009,6 +8063,7 @@
 
     function useUltimateSkill() {
       if (!currentEnemy) return;
+      if (consumePlayerCharm()) return;
       ensurePlayerSkills();
       const skillId = getEquippedSkillId("ultimate");
       const skill = getSkillData(skillId);
@@ -8105,6 +8160,9 @@
         iceDamagePct: Number(bonuses.iceDamagePct || 0),
         shockDamagePct: Number(bonuses.shockDamagePct || 0),
         darkDamagePct: Number(bonuses.darkDamagePct || 0),
+        poisonResistPct: Number(bonuses.poisonResistPct || 0),
+        poisonDamageReductionPct: Number(bonuses.poisonDamageReductionPct || 0),
+        poisonImmune: Number(bonuses.poisonImmune || 0) > 0,
         hpPct: maxHpPct,
         mpPct: maxMpPct,
         atkPct: attackPct,
@@ -8233,10 +8291,79 @@
       updateCombatMetersUI();
     }
 
+
+    const COMBAT_STATUS_TICK_MS = 4600;
+    let combatStatusElapsedMs = 0;
+
+    function clearCombatStatusEffects() {
+      if (!player.statusEffects || typeof player.statusEffects !== "object") player.statusEffects = {};
+      player.statusEffects.poison = false;
+      player.statusEffects.rejuvenation = false;
+      player.statusEffects.charmed = false;
+      combatStatusElapsedMs = 0;
+    }
+
+    function applyMonsterPoison(monster) {
+      const poison = monster?.poison;
+      if (!poison || Number(poison.damagePerTick || 0) <= 0) return false;
+      const stats = getFinalPlayerStats();
+      if (stats.poisonImmune) return false;
+      const resist = clampNumber(Number(stats.poisonResistPct || 0), 0, 100);
+      const chance = Math.max(0, Number(poison.chance || 0)) * (1 - resist / 100);
+      if (Math.random() * 100 >= chance) return false;
+      const incoming = Math.max(1, Math.floor(Number(poison.damagePerTick || 1)));
+      const current = player.statusEffects?.poison;
+      if (!player.statusEffects || typeof player.statusEffects !== "object") player.statusEffects = {};
+      if (!current || current === true || incoming > Number(current.damagePerTick || 0)) {
+        player.statusEffects.poison = { damagePerTick: incoming, source: monster.monName || monster.name || "Poison" };
+      }
+      showDamageNumber("Poisoned");
+      return true;
+    }
+
+    function processCombatStatusTick() {
+      if (gameMode !== "encounter" || !currentEnemy) return;
+      if (!player.statusEffects || typeof player.statusEffects !== "object") player.statusEffects = {};
+
+      const poison = player.statusEffects.poison;
+      if (poison && poison !== true) {
+        const stats = getFinalPlayerStats();
+        if (!stats.poisonImmune) {
+          const reduction = clampNumber(Number(stats.poisonDamageReductionPct || 0), 0, 100);
+          const raw = Math.max(1, Math.floor(Number(poison.damagePerTick || 1)));
+          const damage = Math.max(0, Math.floor(raw * (1 - reduction / 100)));
+          if (damage > 0) {
+            player.hp -= damage;
+            incrementLeaderboardStat("totalPlayerDamageTaken", damage);
+            updateBars();
+            showDamageNumber(`-${damage} Poison`);
+            if (player.hp <= 0) {
+              handlePlayerDeath();
+              return;
+            }
+          }
+        }
+      }
+
+      const rejuvenation = player.statusEffects.rejuvenation;
+      if (rejuvenation && Number(rejuvenation.ticks || 0) > 0) {
+        const hpBefore = player.hp;
+        const mpBefore = player.mp;
+        player.hp = Math.min(player.maxHp, player.hp + Number(rejuvenation.hpPerTick || 0));
+        player.mp = Math.min(player.maxMp, player.mp + Number(rejuvenation.mpPerTick || 0));
+        rejuvenation.ticks -= 1;
+        if (rejuvenation.ticks <= 0) player.statusEffects.rejuvenation = false;
+        updateBars();
+        const gained = (player.hp - hpBefore) + (player.mp - mpBefore);
+        if (gained > 0) showDamageNumber("Rejuvenate");
+      }
+    }
+
     function startCombatTimer() {
       stopCombatTimer();
       playerAttackMeter = 100;
       enemyAttackMeter = 0;
+      combatStatusElapsedMs = 0;
       updateCombatMetersUI();
 
       combatTimer = window.setInterval(() => {
@@ -8254,6 +8381,12 @@
         }
 
         tickPlayerSkillEffects();
+        combatStatusElapsedMs += COMBAT_TICK_MS;
+        if (combatStatusElapsedMs >= COMBAT_STATUS_TICK_MS) {
+          combatStatusElapsedMs -= COMBAT_STATUS_TICK_MS;
+          processCombatStatusTick();
+          if (gameMode !== "encounter" || !currentEnemy) return;
+        }
         updateCombatMetersUI();
       }, COMBAT_TICK_MS);
     }
@@ -8292,6 +8425,7 @@
       currentEnemy = null;
       currentEnemyTileKey = null;
       resetRareOddityTurns();
+      clearCombatStatusEffects();
       setMode("roaming");
       updateRoomView();
       updateBars();
@@ -8962,7 +9096,8 @@
       const typeBonusBase = (monsterType === "undead" ? runeBonuses.undeadBonusPct : 0) + (monsterType === "light" ? runeBonuses.lightBonusPct : 0);
       const typeBonus = Math.floor(weaponAttack * typeBonusBase / 100);
       const total = physical + fire + shock + ice + holy + dark + typeBonus;
-      return { physical, fire, shock, ice, holy, dark, typeBonus, total, lifeSteal: Math.floor(Math.max(0, total) * Number(finalStats.lifeStealPct || 0) / 100) };
+      const lifeStealPct = getMonsterType(monster) === "undead" ? 0 : Number(finalStats.lifeStealPct || 0);
+      return { physical, fire, shock, ice, holy, dark, typeBonus, total, lifeSteal: Math.floor(Math.max(0, total) * lifeStealPct / 100) };
     }
 
 
@@ -8978,10 +9113,10 @@
     };
 
     const COMBAT_EFFECTS = {
-      physical: ["slashwhite1.png", "slashwhite2.png"],
-      fire: ["impactfire1.png", "impactfire2.png"],
-      holy: ["impactgold1.png", "impactgold2.png"],
-      ice: ["slashice1.png", "slashice2.png"]
+      physical: ["slashwhite1.webp", "slashwhite2.webp"],
+      fire: ["impactfire1.webp", "impactfire2.webp"],
+      holy: ["impactgold1.webp", "impactgold2.webp"],
+      ice: ["slashice1.webp", "slashice2.webp"]
     };
 
     function pickRandom(list) {
@@ -9068,8 +9203,18 @@
       }, 240);
     }
 
+    function consumePlayerCharm() {
+      if (!player.statusEffects || !player.statusEffects.charmed) return false;
+      player.statusEffects.charmed = false;
+      playerAttackMeter = 0;
+      showDamageNumber("Charmed");
+      updateCombatMetersUI();
+      return true;
+    }
+
     function playerAttack() {
       if (!currentEnemy) return;
+      if (consumePlayerCharm()) return;
 
       if (playerAttackMeter < 100) {
         updateCombatMetersUI();
@@ -9115,6 +9260,7 @@
       currentEnemyTileKey = null;
       currentEnemyDefeatedThisTurn = false;
       resetRareOddityTurns();
+      clearCombatStatusEffects();
       closeAllGameOverlaysForDeath();
 
       ensureFullInventoryShape();
@@ -9139,62 +9285,159 @@
       saveGameState(true);
     }
 
-    function enemyAttack(prefix) {
-      if (!currentEnemy) return;
+    const MONSTER_ACTION_RANK = { normal: 0, magical: 1, rare: 2, epic: 3, legendary: 4 };
 
+    function getMonsterActionRank(monster) {
+      if (monster?.hiddenLegendary) return 4;
+      return MONSTER_ACTION_RANK[String(monster?.rarity || "normal").toLowerCase()] ?? 0;
+    }
+
+    function getMonsterActionPool(monster) {
+      const rank = getMonsterActionRank(monster);
+      const actions = Array.isArray(monster?.actions) && monster.actions.length
+        ? monster.actions
+        : [{ id: "attack", name: "Attack", type: "physical", power: 1, weight: 100, rarity: "normal" }];
+      return actions.filter(action => {
+        const required = MONSTER_ACTION_RANK[String(action.rarity || "normal").toLowerCase()] ?? 0;
+        if (required > rank) return false;
+        if (action.type === "heal") {
+          if (getMonsterType(monster) === "undead") return false;
+          const used = Number(monster._actionUses?.[action.id] || 0);
+          if (used >= Number(action.maxUses || 1)) return false;
+          const hpPct = getMonsterMaxHpValue(monster) > 0 ? getMonsterCurrentHpValue(monster) / getMonsterMaxHpValue(monster) * 100 : 100;
+          if (hpPct > Number(action.hpBelowPct || 40)) return false;
+        }
+        if (action.type === "buff" && action.buff === "quickness" && Number(monster._quicknessTurns || 0) > 0) return false;
+        if (action.type === "buff" && action.buff === "attack" && Number(monster._attackBuffTurns || 0) > 0) return false;
+        return true;
+      });
+    }
+
+    function chooseMonsterAction(monster) {
+      const pool = getMonsterActionPool(monster);
+      if (!pool.length) return { id: "attack", name: "Attack", type: "physical", power: 1, weight: 100 };
+      const weighted = pool.map(action => {
+        let weight = Math.max(1, Number(action.weight || 10));
+        if (action.type === "defend" && getMonsterCurrentHpValue(monster) < getMonsterMaxHpValue(monster) * 0.35) weight *= 1.7;
+        if ((action.poisonChance || action.poisonDamagePerTick) && player.statusEffects?.poison) weight *= 0.45;
+        if (action.type === "charm" && player.statusEffects?.charmed) weight *= 0.25;
+        return { action, weight };
+      });
+      const total = weighted.reduce((sum, row) => sum + row.weight, 0);
+      let roll = Math.random() * total;
+      for (const row of weighted) { roll -= row.weight; if (roll <= 0) return row.action; }
+      return weighted[weighted.length - 1].action;
+    }
+
+    function tickMonsterActionEffects(monster) {
+      if (!monster) return;
+      if (Number(monster._quicknessTurns || 0) > 0) {
+        monster._quicknessTurns -= 1;
+        if (monster._quicknessTurns <= 0) monster._dodgeBonus = 0;
+      }
+      if (Number(monster._attackBuffTurns || 0) > 0) {
+        monster._attackBuffTurns -= 1;
+        if (monster._attackBuffTurns <= 0) monster._attackBonusPct = 0;
+      }
+    }
+
+    function applyMonsterActionPoison(action, monster) {
+      if (!action || !Number(action.poisonDamagePerTick || 0)) return false;
+      const original = monster.poison;
+      monster.poison = { chance: Number(action.poisonChance || 100), damagePerTick: Number(action.poisonDamagePerTick || 1) };
+      const result = applyMonsterPoison(monster);
+      monster.poison = original;
+      return result;
+    }
+
+    function monsterActionDamage(action, monster) {
+      const power = Math.max(0, Number(action.power ?? 1));
+      const attackBuff = 1 + Math.max(0, Number(monster._attackBonusPct || 0)) / 100;
+      const raw = Math.max(1, Math.floor(Number(monster.attack || 1) * power * attackBuff));
+      if (action.type === "magic") {
+        const stats = getFinalPlayerStats();
+        const element = String(action.element || "dark").toLowerCase();
+        const resistance = Number(stats[`${element}Res`] || 0);
+        return Math.floor(raw * (1 - resistance / 100));
+      }
+      return applyMitigation(raw, getPlayerPdefValue());
+    }
+
+    function resolveMonsterHit(action, monster, hitIndex = 0) {
       const dodgeChance = getPlayerDodgeValue();
       if (dodgeChance > 0 && Math.random() * 100 < dodgeChance) {
         playPlayerHit();
-        showDamageNumber("Dodge");
-        // Routine combat message suppressed.
+        showDamageNumber("Dodge", { comboIndex: hitIndex });
         return;
       }
-
-      playMonsterAttack();
-
-      const damage = applyMitigation(currentEnemy.attack, getPlayerPdefValue());
-
+      let damage = monsterActionDamage(action, monster);
+      const critChance = Math.max(0, Number(monster.critChance || 0) + Number(action.critBonus || 0));
+      const crit = critChance > 0 && Math.random() * 100 < critChance;
+      if (crit && damage > 0) damage = Math.max(1, Math.floor(damage * 1.5));
       if (damage < 0) {
         const absorbed = Math.abs(damage);
         player.hp = Math.min(player.maxHp, player.hp + absorbed);
-        playPlayerHit();
-        updateBars();
-        showDamageNumber(`Absorb +${absorbed}`);
-        // Routine combat message suppressed.
+        showDamageNumber(`Absorb +${absorbed}`, { comboIndex: hitIndex });
         return;
       }
-
-      if (damage === 0) {
-        playPlayerHit();
-        updateBars();
-        showDamageNumber("Block");
-        // Routine combat message suppressed.
-        return;
-      }
-
-      player.hp -= damage;
-      gainUltimateCharge(Math.max(4, Math.min(14, Math.floor(damage / 3))));
-
+      player.hp -= Math.max(0, damage);
+      gainUltimateCharge(Math.max(4, Math.min(14, Math.floor(Math.max(0, damage) / 3))));
+      if (damage > 0) incrementLeaderboardStat("totalPlayerDamageTaken", damage);
       if (typeof playFemalePlayerHurtSound === "function") playFemalePlayerHurtSound(player);
-
-      const hpPct = player.maxHp > 0 ? player.hp / player.maxHp : 1;
-      if (hpPct <= 0.25 && !lowHpAlertPlayed) {
-        lowHpAlertPlayed = true;
-        if (typeof playSound === "function") playSound("low_hp");
-      } else if (hpPct > 0.35) {
-        lowHpAlertPlayed = false;
-      }
-
       playPlayerHit();
       updateBars();
-      if (damage > 0) incrementLeaderboardStat("totalPlayerDamageTaken", damage);
+      showDamageNumber(damage > 0 ? `-${damage}${crit ? " Crit" : ""}` : "Block", { comboIndex: hitIndex });
+      applyMonsterActionPoison(action, monster);
+      if (player.hp <= 0) handlePlayerDeath();
+    }
 
-      if (player.hp <= 0) {
-        handlePlayerDeath();
+    function enemyAttack(prefix) {
+      if (!currentEnemy) return;
+      tickMonsterActionEffects(currentEnemy);
+      const action = chooseMonsterAction(currentEnemy);
+      currentEnemy._actionUses = currentEnemy._actionUses || {};
+      playMonsterAttack();
+
+      if (action.type === "defend") {
+        currentEnemy._defending = true;
+        currentEnemy._defendReductionPct = Number(action.damageReductionPct || 50);
+        showDamageNumber(action.name || "Defend");
+        return;
+      }
+      if (action.type === "heal") {
+        currentEnemy._actionUses[action.id] = Number(currentEnemy._actionUses[action.id] || 0) + 1;
+        const amount = Math.max(1, Math.floor(getMonsterMaxHpValue(currentEnemy) * Number(action.healPct || 20) / 100));
+        currentEnemy.currentHp = Math.min(getMonsterMaxHpValue(currentEnemy), getMonsterCurrentHpValue(currentEnemy) + amount);
+        updateMonsterHud();
+        showDamageNumber(`${action.name || "Heal"} +${amount}`);
+        return;
+      }
+      if (action.type === "buff") {
+        if (action.buff === "quickness") {
+          currentEnemy._dodgeBonus = Number(action.dodgeBonus || 15);
+          currentEnemy._quicknessTurns = Number(action.turns || 3);
+        } else if (action.buff === "attack") {
+          currentEnemy._attackBonusPct = Number(action.attackBonusPct || 20);
+          currentEnemy._attackBuffTurns = Number(action.turns || 3);
+        }
+        showDamageNumber(action.name || "Buff");
+        return;
+      }
+      if (action.type === "charm") {
+        const chance = Math.max(0, Number(action.charmChance || 30));
+        if (Math.random() * 100 < chance) {
+          player.statusEffects.charmed = true;
+          showDamageNumber("Charmed");
+        } else showDamageNumber("Resist");
         return;
       }
 
-      showDamageNumber(`-${damage}`);
+      const hits = Math.max(1, Math.floor(Number(action.hits || 1)));
+      for (let i = 0; i < hits; i += 1) {
+        window.setTimeout(() => {
+          if (gameMode === "encounter" && currentEnemy) resolveMonsterHit(action, currentEnemy, i);
+        }, i * 180);
+      }
     }
 
     function defeatEnemy() {
@@ -9213,7 +9456,7 @@
 
       let drops = [];
       if (typeof rollMonsterDrops === "function") {
-        drops = rollMonsterDrops(defeatedId);
+        drops = rollMonsterDrops(currentEnemy);
       }
 
       const foundMessages = [];
@@ -9226,7 +9469,7 @@
           addLeaderboardGold(goldAmount);
           foundMessages.push(`${goldAmount} gold`);
         } else {
-          const result = addLootItem(drop.id);
+          const result = addLootItem(drop.id, drop.amount || 1);
           foundMessages.push(result && result.message ? result.message : drop.name);
         }
       });
@@ -9250,6 +9493,7 @@
       currentEnemy = null;
       currentEnemyTileKey = null;
       resetRareOddityTurns();
+      clearCombatStatusEffects();
       setMode("roaming");
       updateRoomView();
       updateBars();
@@ -9453,7 +9697,7 @@
 
     function setEquipmentPage(slot, direction) {
       equipmentPage[slot] = (equipmentPage[slot] || 0) + direction;
-      renderEquipSlot(slot);
+      renderChangeEquipSlot(slot);
     }
 
     function renderEquipmentPager(slot, totalItems) {
@@ -10006,7 +10250,7 @@
       const displayName = typeof getRuneDisplayName === "function" ? getRuneDisplayName(runeId, level) : runeId;
       const entry = getVisibleRuneInventoryList().find(r => r.runeId === runeId && Number(r.level || 0) === Number(level || 0));
       const qty = entry ? entry.quantity : 0;
-      const image = entry && entry.image ? entry.image : "rune1.png";
+      const image = entry && entry.image ? entry.image : "rune1.webp";
 
       document.getElementById("inventoryTitle").textContent = displayName;
       document.getElementById("inventoryTabs").style.display = "none";
@@ -10378,7 +10622,7 @@
         } else {
           html += visible.map(item => `
             <button class="compactRow" onclick="renderBasicInventoryDetail('Key Item', '${item.itemId}')" title="${item.description || ""}">
-              ${keyItemIconHtml(item, "compactIcon")}
+              ${item.quantity > 1 ? `<span class="compactIconWrap">${keyItemIconHtml(item, "compactIcon")}<span class="compactQtyBadge">${item.quantity}</span></span>` : keyItemIconHtml(item, "compactIcon")}
               <div>
                 <div class="compactName">${item.itemName}</div>
               </div>
@@ -10409,6 +10653,8 @@
       }
 
       const result = useConsumable(itemId, player, gameMode);
+
+      if (result.goldGained) addLeaderboardGold(result.goldGained);
 
       if (result.escape && gameMode === "encounter") {
         runAway();
@@ -11250,6 +11496,8 @@
       const result = useConsumable(itemId, player, gameMode);
 
       if (String(itemId || "").includes("potion")) incrementLeaderboardStat("potionsUsed", 1);
+
+      if (result.goldGained) addLeaderboardGold(result.goldGained);
 
       if (result.escape && gameMode === "encounter") {
         runAway();
