@@ -5,10 +5,10 @@
 
 const CONSUMABLE_DATA = `
 ItemName,ItemID,Image,UseType,Power,Target,UsableInCombat,UsableOutsideCombat,Value,Description
-Potion,potion,hpot1.webp,heal_hp,20,self,y,y,10,Restores 20 HP.
-Copper Potion,copper_potion,hpot2.webp,heal_hp,40,self,y,y,20,Restores 40 HP.
-Silver Potion,silver_potion,hpot3.webp,heal_hp,60,self,y,y,30,Restores 60 HP.
-Gold Potion,gold_potion,hpot4.webp,heal_hp,100,self,y,y,50,Restores 100 HP.
+Potion,potion,hpot1.webp,heal_hp,30,self,y,y,15,Restores 30 HP.
+Copper Potion,copper_potion,hpot2.webp,heal_hp,60,self,y,y,30,Restores 60 HP.
+Silver Potion,silver_potion,hpot3.webp,heal_hp,120,self,y,y,60,Restores 120 HP.
+Gold Potion,gold_potion,hpot4.webp,heal_hp,200,self,y,y,100,Restores 200 HP.
 Mana Potion,mana_potion,mpot1.webp,heal_mp,20,self,y,y,15,Restores 20 MP.
 Copper Mana Potion,copper_mana_potion,mpot2.webp,heal_mp,40,self,y,y,35,Restores 40 MP.
 Silver Mana Potion,silver_mana_potion,mpot3.webp,heal_mp,60,self,y,y,70,Restores 60 MP.

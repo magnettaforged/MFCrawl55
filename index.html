@@ -2526,7 +2526,7 @@
 
   <script>
     
-    const GAME_VERSION = "v0.9.0";
+    const GAME_VERSION = "v0.9.0c";
 // =========================
     // MAP / FLOOR STATE
     // =========================
@@ -5138,18 +5138,29 @@
           hasChest: false,
           opened: false,
           mimic: false,
+          locked: false,
+          chestType: "",
           image: ""
         };
       }
 
       const isOpened = openedChests.has(key);
+      const isLegendary = tile === "L";
 
       return {
         hasChest: true,
         opened: isOpened,
         mimic: false,
-        image: isOpened ? "chestopen1.webp" : (tile === "L" ? "chestclosed1.webp" : "chestclosed1.webp"),
-        locked: tile === "L"
+        locked: isLegendary,
+        chestType: isLegendary ? "legendary" : "normal",
+
+        image: isLegendary
+          ? (isOpened
+              ? "legendarychestopen.webp"
+              : "legendarychestclosed.webp")
+          : (isOpened
+              ? "chestopen1.webp"
+              : "chestclosed1.webp")
       };
     }
 
@@ -5178,30 +5189,75 @@
       layer.classList.add("show");
     }
 
+    function hideChestLayer() {
+      const layer = document.getElementById("chestLayer");
+      if (!layer) return;
+      layer.classList.remove("show");
+      layer.removeAttribute("src");
+      layer.onerror = null;
+      layer.onload = null;
+    }
+
+    function getChestImageCandidates(state) {
+      if (!state || !state.hasChest) return [];
+
+      if (state.chestType === "legendary") {
+        return state.opened
+          ? [
+              "legendarychestopen.webp",
+              "legendarychestopen1.webp"
+            ]
+          : [
+              "legendarychestclosed.webp",
+              "legendarychestclosed1.webp"
+            ];
+      }
+
+      return state.opened
+        ? ["chestopen1.webp", "chestopen.webp"]
+        : ["chestclosed1.webp", "chestclosed.webp"];
+    }
+
     function updateChestLayer() {
       const layer = document.getElementById("chestLayer");
       if (!layer) return;
 
       const state = getChestStateAt(playerX, playerY);
 
-      if (gameMode === "encounter" || currentEnemy) {
-        layer.classList.remove("show");
-        layer.removeAttribute("src");
+      if (gameMode === "encounter" || currentEnemy || !state.hasChest) {
+        hideChestLayer();
         return;
       }
 
-      if (!state.hasChest) {
-        layer.classList.remove("show");
-        layer.removeAttribute("src");
+      const candidates = getChestImageCandidates(state);
+      if (!candidates.length) {
+        hideChestLayer();
         return;
       }
 
-      setImageWithPngFallback(
-        layer,
-        `assets/chest/${forceWebpFileName(state.image)}`,
-        `assets/chest/${String(state.image || "").replace(/\.webp$/i, ".png")}`
-      );
-      layer.classList.add("show");
+      let candidateIndex = 0;
+
+      const loadNextCandidate = () => {
+        if (candidateIndex >= candidates.length) {
+          layer.onerror = null;
+          layer.onload = null;
+          layer.classList.remove("show");
+          layer.removeAttribute("src");
+          console.warn("Chest image not found. Tried:", candidates);
+          return;
+        }
+
+        const fileName = candidates[candidateIndex++];
+        layer.src = `assets/chest/${fileName}`;
+      };
+
+      layer.onerror = loadNextCandidate;
+      layer.onload = () => {
+        layer.onerror = null;
+        layer.classList.add("show");
+      };
+
+      loadNextCandidate();
     }
 
     function playChestOpened() {
@@ -6288,31 +6344,39 @@
       { itemId: "chest_key", label: "Chest Key" }
     ];
 
-    function getAllShopConsumables() {
-      ensureShrineStoneData();
+  function getAllShopConsumables() {
+    ensureShrineStoneData();
 
-      if (typeof GAME_CONSUMABLES !== "undefined") {
-        const entries = Object.values(GAME_CONSUMABLES)
-          .filter(Boolean)
-          .map(item => ({ itemId: item.itemId }));
+    const excludedIds = new Set([
+      "coinpurse",
+      "rawmeat",
+      "exoticmeat",
+      "rottenmeat",
+      "seafood",
+      "shrine_stone"
+    ]);
 
-        return entries.filter(entry => entry.itemId !== "shrine_stone");
-      }
-
-      return [
-        { itemId: "potion" },
-        { itemId: "copper_potion" },
-        { itemId: "silver_potion" },
-        { itemId: "gold_potion" },
-        { itemId: "mana_potion" },
-        { itemId: "copper_mana_potion" },
-        { itemId: "silver_mana_potion" },
-        { itemId: "gold_mana_potion" },
-        { itemId: "antidote" },
-        { itemId: "smoke_bomb" },
-        { itemId: "rejuvenation_potion" }
-      ];
+    if (typeof GAME_CONSUMABLES !== "undefined") {
+      return Object.values(GAME_CONSUMABLES)
+        .filter(Boolean)
+        .map(item => ({ itemId: item.itemId }))
+        .filter(entry => !excludedIds.has(entry.itemId));
     }
+
+    return [
+      { itemId: "potion" },
+      { itemId: "copper_potion" },
+      { itemId: "silver_potion" },
+      { itemId: "gold_potion" },
+      { itemId: "mana_potion" },
+      { itemId: "copper_mana_potion" },
+      { itemId: "silver_mana_potion" },
+      { itemId: "gold_mana_potion" },
+      { itemId: "antidote" },
+      { itemId: "smoke_bomb" },
+      { itemId: "rejuvenation_potion" }
+    ];
+  }
 
     let currentShopGearStock = { Weapons: [], Armor: [] };
     let currentShopGearIndex = 0;
@@ -6323,7 +6387,7 @@
     let activeShopContext = "shrine";
 
     const SHOP_BUY_CATEGORIES = ["Consumables", "Skills", "Weapons", "Armor", "Keys"];
-    const SHOP_SELL_CATEGORIES = ["Consumables", "Equipment", "Keys"];
+    const SHOP_SELL_CATEGORIES = ["Consumables", "Weapons", "Armor", "Runes", "Keys"];
     const SHOP_PAGE_SIZE = 3;
     const SHOP_RUNE_IDS = ["fehu", "uruz", "thurisaz", "ansuz", "raidho", "kenaz", "gebo", "hagalaz", "isa", "eihwaz", "algiz", "sowilo"];
 
@@ -7662,6 +7726,14 @@
       return messages;
     }
 
+    function openLegendaryChestLoot() {
+      // Separate rare-chest reward entry point.
+      const messages = openCurrentChestLoot();
+      const bonusMessages = openCurrentChestLoot();
+      bonusMessages.forEach(message => messages.push(message));
+      return messages;
+    }
+
     function doAction() {
       if (menuIsOpen()) return;
       if (gameMode === "encounter") return;
@@ -7689,7 +7761,7 @@
           return;
         }
         openedChests.add(key);
-        const lootMessages = openCurrentChestLoot();
+        const lootMessages = openLegendaryChestLoot();
         const bonusGold = applyGoldFind(Math.max(25, currentFloor * 8));
         player.gold += bonusGold;
         addLeaderboardGold(bonusGold);
@@ -7708,11 +7780,19 @@
         }
 
         if (tryStartChestOddityEncounter(key)) {
+          openedChests.add(key);
+
+          hideChestLayer();
+
           setMessage("A mysterious chest oddity appears.");
           return;
         }
 
         if (tryStartChestMimicEncounter(key)) {
+          openedChests.add(key);
+
+          hideChestLayer();
+
           setMessage("The chest was a mimic!");
           return;
         }
@@ -7722,11 +7802,17 @@
         const lootMessages = openCurrentChestLoot();
 
         updateRoomView();
-        if (typeof playSound === "function") playSound("chest_open");
+
+        if (typeof playSound === "function") {
+          playSound("chest_open");
+        }
+
         playChestOpened();
+
         setMessage(`You opened the chest. Found ${lootMessages.join(", ")}.`);
         return;
       }
+
       if (currentTile === "S") {
         if (typeof playSound === "function") playSound("ui_click");
         openShrineMenu();

@@ -7,11 +7,11 @@ const KEYITEM_DATA = `
 ItemName,ItemID,Image,Scope,UseType,Value,Description
 Chest Key,chest_key,key1.webp,floor,chest_key,0,Opens one locked rare chest.
 Old Relic,old_relic,key1.webp,location,relic,0,A worn relic from an older part of the dungeon.
-Shrine Token,shrine_token,key1.webp,permanent,shrine,0,A token recognized by ancient shrines.
-Kyra Panty,kpanty,kpanty.webp,permanent,pantydom,0,A Pantydom key item recovered from a mysterious oddity.
-Maya Panty,mpanty,mpanty.webp,permanent,pantydom,0,A Pantydom key item recovered from a mysterious oddity.
-Nadia Panty,npanty,npanty.webp,permanent,pantydom,0,A Pantydom key item recovered from a mysterious oddity.
-Reign Panty,rpanty,rpanty.webp,permanent,pantydom,0,A Pantydom key item recovered from a mysterious oddity.
+Shrine Token,shrine_token,shrinestone1.webp,permanent,shrine,0,A token recognized by ancient shrines.
+Kyra Panty,kpanty,kass.webp,permanent,pantydom,0,A Pantydom key item recovered from a mysterious oddity.
+Maya Panty,mpanty,mass.webp,permanent,pantydom,0,A Pantydom key item recovered from a mysterious oddity.
+Nadia Panty,npanty,nass.webp,permanent,pantydom,0,A Pantydom key item recovered from a mysterious oddity.
+Reign Panty,rpanty,rass.webp,permanent,pantydom,0,A Pantydom key item recovered from a mysterious oddity.
 Kyra Top,ktop,ktop.webp,permanent,pantydom,0,A Pantydom key item recovered from a mysterious chest oddity.
 Maya Top,mtop,mtop.webp,permanent,pantydom,0,A Pantydom key item recovered from a mysterious chest oddity.
 Nadia Top,ntop,ntop.webp,permanent,pantydom,0,A Pantydom key item recovered from a mysterious chest oddity.
