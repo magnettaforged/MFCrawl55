@@ -2526,7 +2526,7 @@
 
   <script>
     
-    const GAME_VERSION = "v0.9.0c";
+    const GAME_VERSION = "v0.9.0dd";
 // =========================
     // MAP / FLOOR STATE
     // =========================
@@ -5315,7 +5315,11 @@
       }
 
       if (tile === "N") {
-        // Routine NPC discovery message suppressed.
+        const npcType = typeof getFloorNpcType === "function" ? getFloorNpcType() : "";
+        const hiddenTypes = new Set(["secret_skills", "secret_skill", "hidden_equipment", "hidden_consumables", "hidden_merchant"]);
+        if (hiddenTypes.has(npcType)) {
+          setMessage("You discovered a hidden merchant.");
+        }
         return;
       }
 
@@ -7029,10 +7033,16 @@
       return Object.values(player.equipment || {}).includes(itemId);
     }
 
-    function getSellableEquipmentEntries() {
+    function getSellableEquipmentEntries(slotFilter = "") {
       ensureFullInventoryShape();
+      const wantedSlot = String(slotFilter || "").toLowerCase();
       return Object.entries(player.inventory.equipment || {})
-        .filter(([itemId, record]) => record && record.owned && !isEquipmentCurrentlyEquipped(itemId))
+        .filter(([itemId, record]) => {
+          if (!record || !record.owned || isEquipmentCurrentlyEquipped(itemId)) return false;
+          if (!wantedSlot) return true;
+          const item = getEquipItem(itemId);
+          return item && String(item.slot || "").toLowerCase() === wantedSlot;
+        })
         .map(([itemId, record]) => ({ itemId, record, type: "equipment" }));
     }
 
@@ -7101,6 +7111,42 @@
       `;
     }
 
+    function getSellableRuneEntries() {
+      if (typeof getRuneInventoryList !== "function") return [];
+      return getRuneInventoryList(player)
+        .map(normalizeVisibleRuneEntry)
+        .filter(entry => Number(entry.quantity || entry.available || 0) > 0)
+        .map(entry => ({ ...entry, type: "rune" }));
+    }
+
+    function getRuneSellPrice(runeId, level = 0) {
+      const rune = typeof getRuneById === "function" ? getRuneById(runeId) : null;
+      const base = Number(rune?.value || 20);
+      const multiplier = Math.pow(2, Math.max(0, Number(level) || 0));
+      return Math.max(1, Math.floor(base * multiplier * 0.5));
+    }
+
+    function renderSellRuneRow(entry) {
+      const level = Math.max(0, Number(entry.level || 0));
+      const qty = Math.max(0, Number(entry.quantity || entry.available || 0));
+      const price = getRuneSellPrice(entry.runeId, level);
+      const displayName = typeof getRuneDisplayName === "function"
+        ? getRuneDisplayName(entry.runeId, level)
+        : (entry.displayName || entry.runeId);
+
+      return `
+        <button class="shopRow" onclick="openSellRuneConfirm('${entry.runeId}', ${level})">
+          ${shopIconHtml(entry.image || "", "runes")}
+          <div class="shopRowText">
+            <div class="shopRowName">${displayName}</div>
+            <div class="shopRowSub">Owned x${qty}</div>
+          </div>
+          <div class="shopRowValue">${price}g</div>
+        </button>
+      `;
+    }
+
+
     function renderShrineSell() {
       setOverlayTitle("Sell");
       hideInventoryTabs();
@@ -7108,28 +7154,37 @@
       const content = document.getElementById("inventoryContent");
       content.style.overflowY = "hidden";
 
-      const consumables = getSellableConsumableEntries();
-      const equipment = getSellableEquipmentEntries();
-      const keys = getSellableKeyEntries();
       const category = getShopCategoryKey(shopSellCategoryIndex, "sell");
 
       let entries = [];
       let categoryHtml = "";
 
       if (category === "Consumables") {
-        entries = consumables;
+        entries = getSellableConsumableEntries();
         const visible = getShopPageItems("sell", category, entries);
         categoryHtml = visible.length
           ? visible.map(renderSellConsumableRow).join("")
           : `<div class="smallNote">No consumables to sell.</div>`;
-      } else if (category === "Equipment") {
-        entries = equipment;
+      } else if (category === "Weapons") {
+        entries = getSellableEquipmentEntries("weapon");
         const visible = getShopPageItems("sell", category, entries);
         categoryHtml = visible.length
           ? visible.map(renderSellEquipmentRow).join("")
-          : `<div class="smallNote">No unequipped equipment to sell.</div>`;
+          : `<div class="smallNote">No unequipped weapons to sell.</div>`;
+      } else if (category === "Armor") {
+        entries = getSellableEquipmentEntries("armor");
+        const visible = getShopPageItems("sell", category, entries);
+        categoryHtml = visible.length
+          ? visible.map(renderSellEquipmentRow).join("")
+          : `<div class="smallNote">No unequipped armor to sell.</div>`;
+      } else if (category === "Runes") {
+        entries = getSellableRuneEntries();
+        const visible = getShopPageItems("sell", category, entries);
+        categoryHtml = visible.length
+          ? visible.map(renderSellRuneRow).join("")
+          : `<div class="smallNote">No runes to sell.</div>`;
       } else if (category === "Keys") {
-        entries = keys;
+        entries = getSellableKeyEntries();
         const visible = getShopPageItems("sell", category, entries);
         categoryHtml = visible.length
           ? visible.map(renderSellKeyRow).join("")
@@ -7217,6 +7272,31 @@
       renderSellConfirmOverlay();
     }
 
+    function openSellRuneConfirm(runeId, level = 0) {
+      ensureFullInventoryShape();
+      const qtyOwned = typeof getRuneQuantity === "function"
+        ? getRuneQuantity(player, runeId, level)
+        : Number(player.inventory?.runes?.[runeId]?.[level] || 0);
+
+      if (qtyOwned <= 0) {
+        setMessage("You do not own that rune.");
+        renderShrineSell();
+        return;
+      }
+
+      pendingSellConfirm = {
+        type: "rune",
+        itemId: runeId,
+        runeId,
+        level: Math.max(0, Number(level) || 0),
+        qty: 1,
+        maxQty: qtyOwned,
+        unitPrice: getRuneSellPrice(runeId, level)
+      };
+      renderSellConfirmOverlay();
+    }
+
+
     function setSellConfirmQty(qty) {
       if (!pendingSellConfirm) return;
       const maxQty = Math.max(1, Number(pendingSellConfirm.maxQty || 1));
@@ -7260,6 +7340,14 @@
         name = item?.itemName || data.itemId;
         iconHtml = shopIconHtml(item?.image || "", "items");
         note = item?.description || "Key item.";
+      } else if (data.type === "rune") {
+        const level = Math.max(0, Number(data.level || 0));
+        const rune = typeof getRuneById === "function" ? getRuneById(data.runeId || data.itemId) : null;
+        name = typeof getRuneDisplayName === "function"
+          ? getRuneDisplayName(data.runeId || data.itemId, level)
+          : (rune?.runeName || data.runeId || data.itemId);
+        iconHtml = shopIconHtml(rune?.image || "", "runes");
+        note = `Owned x${data.maxQty}`;
       }
 
       const qtyControls = data.maxQty > 1 ? `
@@ -7351,6 +7439,26 @@
           addLeaderboardGold(total);
           setMessage(`Sold ${getSafeItemName(data.itemId)} for ${total} gold.`);
         }
+      } else if (data.type === "rune") {
+        const runeId = data.runeId || data.itemId;
+        const level = Math.max(0, Number(data.level || 0));
+        const current = typeof getRuneQuantity === "function"
+          ? getRuneQuantity(player, runeId, level)
+          : Number(player.inventory?.runes?.[runeId]?.[level] || 0);
+        const sold = Math.max(1, Math.min(current, qty));
+
+        if (typeof removeRune === "function") {
+          removeRune(player, runeId, level, sold);
+        } else if (player.inventory?.runes?.[runeId]) {
+          player.inventory.runes[runeId][level] = Math.max(0, current - sold);
+          if (player.inventory.runes[runeId][level] <= 0) delete player.inventory.runes[runeId][level];
+        }
+
+        const saleGold = Number(data.unitPrice || 0) * sold;
+        player.gold += saleGold;
+        addLeaderboardGold(saleGold);
+        const runeName = typeof getRuneDisplayName === "function" ? getRuneDisplayName(runeId, level) : runeId;
+        setMessage(`Sold ${sold} ${runeName} for ${saleGold} gold.`);
       }
 
       pendingSellConfirm = null;
@@ -7664,9 +7772,10 @@
 
     function getChestEquipmentPool() {
       const allEquipment = typeof getAllEquipment === "function" ? getAllEquipment() : [];
-      const allowedCharacters = ["all", player.character].filter(Boolean);
+      const allowedCharacters = ["all", player.character].filter(Boolean).map(value => String(value).toLowerCase());
       return allEquipment.filter(item => {
         if (!item || (item.slot !== "weapon" && item.slot !== "armor")) return false;
+        if (isSpecialRestrictedGear(item)) return false;
         if (item.character && !allowedCharacters.includes(String(item.character).toLowerCase())) return false;
         return Number(item.reqLevel || 1) <= currentFloor + 2;
       });
@@ -8692,23 +8801,100 @@
       return true;
     }
 
-    function startEncounter(poolId, encounterKey, tileType = "M") {
-      let rolledMonster = null;
+    
+    function isBossLikeMonster(monster) {
+      if (!monster) return false;
+      if (typeof isBossMonster === "function" && isBossMonster(monster)) return true;
+      const text = `${monster.monId || ""} ${monster.id || ""} ${monster.monName || ""} ${monster.name || ""} ${monster.monsterType || ""} ${monster.type || ""} ${monster.behavior || ""}`.toLowerCase();
+      return text.includes("boss") || text.includes("dragon") || monster.isBoss === true;
+    }
 
-      // Preferred current loader: select by theme + floor directly.
-      // This prevents errors like "No monster found for c15" when older pool ids are interpreted literally.
+    function getForcedBossForCurrentTheme(tileType = "B") {
+      if (String(tileType || "").toUpperCase() !== "B") return null;
+
+      if (typeof MONSTERS === "undefined") return null;
+
+      const theme = typeof normalizeThemeCode === "function"
+        ? normalizeThemeCode(currentFloorTheme)
+        : String(currentFloorTheme || "c").toLowerCase();
+      const bossColumn = typeof bossColumnForTheme === "function" ? bossColumnForTheme(theme) : `b${theme}`;
+      const floorLevel = Math.max(1, Math.floor(Number(currentFloor) || 1));
+
+      let ids = Object.keys(MONSTERS).filter(monId => {
+        const base = typeof getMonster === "function" ? getMonster(monId) : MONSTERS[monId];
+        if (!base || !isBossLikeMonster(base)) return false;
+
+        if (typeof MONSTER_LOCATIONS !== "undefined") {
+          const row = MONSTER_LOCATIONS[monId];
+          if (row && row[bossColumn] !== true) return false;
+        }
+
+        const start = typeof getMonsterStartFloor === "function"
+          ? getMonsterStartFloor(base)
+          : Number(base.startFloor ?? base.unlockFloor ?? base.level ?? 1);
+        return floorLevel >= Math.max(1, Number(start) || 1);
+      });
+
+      // If the map reaches a boss before an unlocked boss exists, use the earliest
+      // boss for that theme and scale it to the current floor.
+      if (!ids.length && typeof MONSTER_LOCATIONS !== "undefined") {
+        const themeBossIds = Object.keys(MONSTERS).filter(monId => {
+          const base = typeof getMonster === "function" ? getMonster(monId) : MONSTERS[monId];
+          const row = MONSTER_LOCATIONS[monId];
+          return base && row && row[bossColumn] === true && isBossLikeMonster(base);
+        });
+        if (themeBossIds.length) {
+          const lowest = Math.min(...themeBossIds.map(monId => {
+            const base = typeof getMonster === "function" ? getMonster(monId) : MONSTERS[monId];
+            return typeof getMonsterStartFloor === "function" ? getMonsterStartFloor(base) : Number(base.startFloor ?? base.unlockFloor ?? base.level ?? 1);
+          }));
+          ids = themeBossIds.filter(monId => {
+            const base = typeof getMonster === "function" ? getMonster(monId) : MONSTERS[monId];
+            const start = typeof getMonsterStartFloor === "function" ? getMonsterStartFloor(base) : Number(base.startFloor ?? base.unlockFloor ?? base.level ?? 1);
+            return Number(start) === Number(lowest);
+          });
+        }
+      }
+
+      if (!ids.length) return null;
+      const monId = ids[Math.floor(Math.random() * ids.length)];
+      const base = typeof getMonster === "function" ? getMonster(monId) : MONSTERS[monId];
+      if (!base) return null;
+
+      if (typeof normalizeMonster === "function" && typeof scaleMonster === "function") {
+        return scaleMonster(normalizeMonster(base), floorLevel);
+      }
+      return { ...base, level: floorLevel };
+    }
+
+function startEncounter(poolId, encounterKey, tileType = "M") {
+      let rolledMonster = null;
+      const isBossTile = String(tileType || "M").toUpperCase() === "B";
+
+      // Boss rooms must resolve to boss monsters only. The loader is still used
+      // first, but this guard prevents malformed boss-location rows from spawning
+      // normal monsters in boss rooms.
       if (typeof getRandomMonsterForTheme === "function") {
         rolledMonster = getRandomMonsterForTheme(currentFloorTheme, tileType, currentFloor);
       } else if (typeof getRandomMonsterFromPool === "function") {
-        // Backward-compatible fallback for older monsterLoader.js.
         rolledMonster = getRandomMonsterFromPool(poolId, tileType);
       } else {
         setMessage("Monster loader not found. Check script load order.");
         return;
       }
 
+      if (isBossTile && !isBossLikeMonster(rolledMonster)) {
+        const forcedBoss = getForcedBossForCurrentTheme(tileType);
+        if (forcedBoss) rolledMonster = forcedBoss;
+      }
+
       if (!rolledMonster) {
         setMessage(`No monster found for ${currentFloorTheme} floor ${currentFloor}.`);
+        return;
+      }
+
+      if (isBossTile && !isBossLikeMonster(rolledMonster)) {
+        setMessage(`No boss monster found for ${currentFloorTheme} floor ${currentFloor}.`);
         return;
       }
 
