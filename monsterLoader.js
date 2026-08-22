@@ -594,8 +594,11 @@ function getMonsterIdsForTheme(theme = "c", tileType = "M", floor = 1) {
 
   let ids = allThemeIds.filter(monId => isMonsterUnlockedForFloor(monId, floorLevel));
 
-  // Accessibility: spider phobia mode removes spider encounters when another valid enemy exists.
-  if (typeof window !== "undefined" && typeof window.isSpiderPhobiaMode === "function" && window.isSpiderPhobiaMode()) {
+  // Accessibility: creature/phobia filters remove selected families when another valid enemy exists.
+  if (typeof window !== "undefined" && typeof window.isMonsterFilteredByPhobia === "function") {
+    const filtered = ids.filter(monId => !window.isMonsterFilteredByPhobia(monId));
+    if (filtered.length) ids = filtered;
+  } else if (typeof window !== "undefined" && typeof window.isSpiderPhobiaMode === "function" && window.isSpiderPhobiaMode()) {
     const filtered = ids.filter(monId => {
       const mon = getMonster(monId) || {};
       const haystack = `${monId} ${mon.monId || ""} ${mon.monName || ""} ${mon.monsterType || ""}`.toLowerCase();

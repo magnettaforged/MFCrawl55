@@ -1028,13 +1028,17 @@
 
     body.encounterMode .messageBox.combatNotice {
       display: block;
-      bottom: 152px;
-      left: 42px;
-      right: 42px;
-      min-height: 30px;
+      top: 31%;
+      bottom: auto;
+      left: 10px;
+      right: auto;
+      width: min(46%, 210px);
+      min-height: 28px;
       padding: 6px 8px;
       font-size: 12px;
-      opacity: 0.92;
+      line-height: 1.25;
+      text-align: left;
+      opacity: 0.90;
     }
   
     .helpButton {
@@ -2373,6 +2377,33 @@
       cursor: pointer;
     }
 
+  
+
+    /* =========================
+       BIG UPDATE UI
+       ========================= */
+    .systemHubGrid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      margin: 8px 0;
+    }
+    .systemHubGrid .uiButton,
+    .systemHubGrid .toggleRow { min-height: 48px; margin: 0; }
+    .submenuTitle { font-weight: 800; font-size: 15px; margin: 4px 0 8px; }
+    .statGrid { display:grid; grid-template-columns:1fr 1fr; gap:7px; }
+    .statCard { border:1px solid rgba(255,255,255,.15); border-radius:8px; padding:8px; background:rgba(0,0,0,.24); }
+    .statCard b { display:block; font-size:16px; margin-top:2px; }
+    .phobiaCount { text-align:center; opacity:.8; font-size:12px; margin:6px 0; }
+    .codeEntryRow { display:grid; grid-template-columns:1fr auto; gap:8px; margin:8px 0; }
+    .codeEntryRow input { min-width:0; padding:10px; border-radius:7px; border:1px solid rgba(255,255,255,.18); background:rgba(0,0,0,.32); color:white; text-transform:uppercase; }
+    .questCard { border:1px solid rgba(255,255,255,.15); border-radius:9px; padding:9px; margin:7px 0; background:rgba(0,0,0,.22); }
+    .questCard .questName { font-weight:800; }
+    .questCard .questMeta { font-size:12px; opacity:.78; margin-top:3px; }
+    .shopModeToggle { display:grid; grid-template-columns:1fr 1fr; gap:7px; margin:8px 0; }
+    .shopModeToggle .uiButton.active { box-shadow: inset 0 0 0 2px rgba(255,255,255,.42); }
+    .merchantDialogue { padding:8px; margin:6px 0 10px; border-radius:8px; background:rgba(0,0,0,.25); font-size:13px; }
+
   </style>
 </head>
 
@@ -3531,6 +3562,7 @@
         }
         write();
         queueCrawlerStatsSubmit("save", 250);
+        queueCrawlerCloudSave("local-save", 2500, false);
         return;
       }
 
@@ -3539,6 +3571,7 @@
         saveTimer = null;
         write();
         queueCrawlerStatsSubmit("save", 900);
+        queueCrawlerCloudSave("local-save", 3000, false);
       }, 250);
     }
 
@@ -3922,12 +3955,18 @@
     function addGeneratedEquipmentRecord(item) {
       ensureGeneratedEquipmentCounter();
       player.generatedEquipment[item.itemId] = item;
+      const socketCap = (item.slot === "weapon" || item.slot === "armor") ? Math.max(0, Number(item.maxSockets || 0)) : 0;
+      const rolledSockets = socketCap > 0 ? Math.floor(Math.random() * (socketCap + 1)) : 0;
+      if (item.generated && (item.slot === "weapon" || item.slot === "armor")) {
+        item.socketRollCap = socketCap;
+        item.maxSockets = rolledSockets;
+      }
       player.inventory.equipment[item.itemId] = {
         owned: true,
         level: 0,
         pending: 0,
-        socketsUnlocked: item.maxSockets > 0 ? 1 : 0,
-        sockets: []
+        socketsUnlocked: rolledSockets,
+        sockets: Array.from({ length: rolledSockets }, () => null)
       };
       normalizeEquipmentSockets(item.itemId);
       discoverCollection(item.slot === "weapon" ? "weapons" : item.slot === "armor" ? "armor" : "jewelry", item.itemId);
@@ -4025,7 +4064,7 @@
       player.generatedRingCounter = Math.floor(Number(player.generatedRingCounter || 0)) + 1;
       player.generatedEquipmentCounter = Math.floor(Number(player.generatedEquipmentCounter || 0)) + 1;
       const itemId = `genring${Date.now().toString(36)}${player.generatedRingCounter}`;
-      const maxSockets = Math.max(0, Number(stats.bonusSockets || 0));
+      const maxSockets = 0;
       const ring = {
         itemId,
         itemName,
@@ -4121,6 +4160,13 @@
 
       if (!Array.isArray(record.sockets)) {
         record.sockets = [];
+      }
+
+      if (item.slot === "ring") {
+        item.maxSockets = 0;
+        record.socketsUnlocked = 0;
+        record.sockets = [];
+        return;
       }
 
       const maxSockets = item.maxSockets || 0;
@@ -6081,6 +6127,10 @@
       } else {
         setMessage(`Moved from Floor ${oldFloor} to Floor ${currentFloor}.`);
       }
+
+      if (currentFloor !== oldFloor) {
+        queueCrawlerCloudSave("floor-change", 750, true);
+      }
     }
 
 
@@ -6184,6 +6234,7 @@
       gameMode = "roaming";
       startNewFloor();
       setMessage(`You retreated to Floor ${currentFloor} and lost ${cost} gold.`);
+      queueCrawlerCloudSave("floor-retreat", 750, true);
     }
 
     function renderShrineHome() {
@@ -8158,6 +8209,7 @@
       const monsterDodge = Math.max(0, Number(currentEnemy.dodgeChance || 0) + Number(currentEnemy._dodgeBonus || 0));
       if (total > 0 && monsterDodge > 0 && Math.random() * 100 < monsterDodge) {
         playCombatEffect("physical", "Dodge", options);
+        showCombatCaption(`${currentEnemy?.encounterName || currentEnemy?.monName || "Monster"} dodges.`);
         return;
       }
       if (total > 0 && currentEnemy._defending) {
@@ -8249,6 +8301,7 @@
       if (player.mp < cost) { setMessage(`Not enough MP for ${getSkillNameForSlot(slot)}.`); updateCombatMetersUI(); return; }
       player.mp -= cost;
       playerAttackMeter = 0;
+      showCombatCaption(`${player.name || "You"} uses ${skill.name}.`);
       if (skill.type === "self") { applySelfSkill(skillId, false); gainUltimateCharge(7); }
       else { performMultiHitSkill(slot, false, 9); }
       if (countRareOddityPlayerTurn()) return;
@@ -8265,6 +8318,7 @@
       if (player.skills.ultimateCharge < 100) { updateCombatMetersUI(); return; }
       if (!ownsSkill(skillId) || !canUseSkillLevel(skillId)) { setMessage(`${skill.name} is not available yet.`); updateCombatMetersUI(); return; }
       player.skills.ultimateCharge = 0;
+      showCombatCaption(`${player.name || "You"} unleashes ${skill.name}!`);
       if (skill.type === "self") applySelfSkill(skillId, true);
       else performMultiHitSkill("ultimate", true, 0);
       if (countRareOddityPlayerTurn()) return;
@@ -8407,7 +8461,7 @@
     function attackIntervalFromSpeed(speed) {
       // Slower base pacing, Speed still reduces delay, and there is no hard min/max cap. Base wait is about 4600ms.
       // Extreme Speed builds are allowed to break the curve by design.
-      return 4600 / (1 + Math.max(0, Number(speed) || 0) * 0.04);
+      return 5400 / (1 + Math.max(0, Number(speed) || 0) * 0.04);
     }
 
     function meterGainForSpeed(speed) {
@@ -8487,7 +8541,7 @@
     }
 
 
-    const COMBAT_STATUS_TICK_MS = 4600;
+    const COMBAT_STATUS_TICK_MS = 5400;
     let combatStatusElapsedMs = 0;
 
     function clearCombatStatusEffects() {
@@ -9052,22 +9106,264 @@ function startEncounter(poolId, encounterKey, tileType = "M") {
       stats[key] = Math.max(0, Math.floor(Number(stats[key] || 0) + Number(amount || 0)));
     }
 
-    const CRAWLER_STATS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxscw81NK0kW9U7RP0BxJo6JPjfjbJpKNCu_4K__Ghz2lY08sjwuzjieHxMXu2aPeNL/exec"; // Paste your deployed Apps Script /exec URL here.
+    const CRAWLER_STATS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxscw81NK0kW9U7RP0BxJo6JPjfjbJpKNCu_4K__Ghz2lY08sjwuzjieHxMXu2aPeNL/exec"; // Existing leaderboard endpoint.
+    const CRAWLER_CLOUD_SAVE_URL = "https://script.google.com/macros/s/AKfycbwyaMGliDze6sv1CQoELFUe2XQQ3RMdCoMOhfRDo60dkNh8PPwVe9mbcsWRKxEeNgM8Vg/exec";
     const CRAWLER_PROFILE_KEY = "dungeonCrawlerStatsProfile_v1";
     let crawlerStatsSubmitTimer = null;
+    let crawlerProfilePromptAttempted = false;
+    let crawlerCloudAccountReady = false;
+    let crawlerCloudSaveTimer = null;
+    let crawlerCloudSaveInFlight = false;
+    let crawlerCloudSaveQueued = false;
+    let crawlerLastCloudSaveAt = 0;
+    const CRAWLER_CLOUD_MIN_INTERVAL_MS = 60000;
 
     function getOrCreateCrawlerProfile() {
       let profile = {};
       try { profile = JSON.parse(window.localStorage.getItem(CRAWLER_PROFILE_KEY) || "{}"); }
       catch (err) { profile = {}; }
 
-      if (!profile.playerId) profile.playerId = `crawler-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,9)}`;
-      if (!profile.username) {
-        const entered = window.prompt("Choose a crawler username:", "Player");
-        profile.username = String(entered || "Player").trim() || "Player";
+      if (!profile.playerId) {
+        profile.playerId = `crawler-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,9)}`;
       }
+
+      // Username + PIN are the local account credentials used by the future cloud-save system.
+      // If either is missing, ask once per page load. Skipping leaves the profile incomplete,
+      // so the account prompt will appear again the next time the game is loaded.
+      if ((!profile.username || !profile.pin) && !crawlerProfilePromptAttempted) {
+        crawlerProfilePromptAttempted = true;
+
+        const enteredUsername = window.prompt(
+          "Choose your crawler username:",
+          String(profile.username || "")
+        );
+
+        if (enteredUsername !== null) {
+          const cleanUsername = String(enteredUsername).trim();
+          if (cleanUsername) profile.username = cleanUsername;
+        }
+
+        const enteredPin = window.prompt(
+          "Enter a 4-6 digit PIN for this crawler save:",
+          ""
+        );
+
+        if (enteredPin !== null) {
+          const cleanPin = String(enteredPin).trim();
+          if (/^\d{4,6}$/.test(cleanPin)) {
+            profile.pin = cleanPin;
+          } else if (cleanPin) {
+            window.alert("PIN must be 4-6 digits. You will be asked again next time the game loads.");
+          }
+        }
+      }
+
       window.localStorage.setItem(CRAWLER_PROFILE_KEY, JSON.stringify(profile));
       return profile;
+    }
+
+    async function syncCrawlerCloudSave(reason = "autosave", force = false) {
+      if (!crawlerCloudAccountReady) return null;
+
+      const profile = getOrCreateCrawlerProfile();
+      if (!profile.username || !profile.pin) return null;
+
+      const now = Date.now();
+      const elapsed = now - crawlerLastCloudSaveAt;
+
+      if (!force && crawlerLastCloudSaveAt && elapsed < CRAWLER_CLOUD_MIN_INTERVAL_MS) {
+        queueCrawlerCloudSave(reason, CRAWLER_CLOUD_MIN_INTERVAL_MS - elapsed + 250, false);
+        return null;
+      }
+
+      if (crawlerCloudSaveInFlight) {
+        crawlerCloudSaveQueued = true;
+        return null;
+      }
+
+      crawlerCloudSaveInFlight = true;
+
+      try {
+        const payload = {
+          action: "save",
+          username: String(profile.username),
+          pin: String(profile.pin),
+          gameVersion: String(GAME_VERSION),
+          saveData: getLocalSavePayload()
+        };
+
+        const response = await fetch(CRAWLER_CLOUD_SAVE_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify(payload),
+          cache: "no-store"
+        });
+
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const result = await response.json();
+
+        if (result.success) {
+          crawlerLastCloudSaveAt = Date.now();
+          console.log(`MFCrawl cloud autosave complete (${reason})`, result);
+        } else {
+          console.warn(`MFCrawl cloud autosave returned ${result.error || "UNKNOWN_ERROR"}`, result);
+        }
+
+        return result;
+      } catch (error) {
+        console.warn(`MFCrawl cloud autosave failed (${reason}); local save remains safe.`, error);
+        return null;
+      } finally {
+        crawlerCloudSaveInFlight = false;
+        if (crawlerCloudSaveQueued) {
+          crawlerCloudSaveQueued = false;
+          queueCrawlerCloudSave("queued-save", 1500, false);
+        }
+      }
+    }
+
+    function queueCrawlerCloudSave(reason = "autosave", delay = 3000, force = false) {
+      if (!crawlerCloudAccountReady) return;
+      if (crawlerCloudSaveTimer) clearTimeout(crawlerCloudSaveTimer);
+      crawlerCloudSaveTimer = window.setTimeout(() => {
+        crawlerCloudSaveTimer = null;
+        syncCrawlerCloudSave(reason, force);
+      }, Math.max(0, Number(delay) || 0));
+    }
+
+    async function uploadInitialCrawlerCloudSave() {
+      const profile = getOrCreateCrawlerProfile();
+      if (!profile.username || !profile.pin) return null;
+
+      const shouldUpload = window.confirm(
+        "This account does not have a cloud save yet. Upload your current local save now?"
+      );
+      if (!shouldUpload) return null;
+
+      try {
+        const payload = {
+          action: "save",
+          username: String(profile.username),
+          pin: String(profile.pin),
+          gameVersion: String(GAME_VERSION),
+          saveData: getLocalSavePayload()
+        };
+
+        const response = await fetch(CRAWLER_CLOUD_SAVE_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify(payload),
+          cache: "no-store"
+        });
+
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const result = await response.json();
+
+        if (result.success) {
+          crawlerCloudAccountReady = true;
+          crawlerLastCloudSaveAt = Date.now();
+          console.log("MFCrawl initial cloud save uploaded", result);
+          window.alert("Cloud save created successfully in Google Drive.");
+          return result;
+        }
+
+        console.log("MFCrawl initial cloud save returned an error", result);
+        window.alert(`Cloud save upload returned: ${result.error || "UNKNOWN_ERROR"}`);
+        return result;
+      } catch (error) {
+        console.error("MFCrawl cloud save upload failed", error);
+        window.alert("Could not upload the cloud save. Your local save is unchanged.");
+        return null;
+      }
+    }
+
+    async function verifyCrawlerCloudLogin() {
+      const profile = getOrCreateCrawlerProfile();
+      if (!profile.username || !profile.pin) return;
+
+      try {
+        const params = new URLSearchParams({
+          action: "login",
+          username: String(profile.username),
+          pin: String(profile.pin)
+        });
+
+        const response = await fetch(`${CRAWLER_CLOUD_SAVE_URL}?${params.toString()}`, {
+          method: "GET",
+          cache: "no-store"
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        if (result.success) {
+          crawlerCloudAccountReady = true;
+          crawlerLastCloudSaveAt = Date.now();
+          console.log("MFCrawl cloud login verified", result);
+          window.alert("Cloud connection successful. Username and PIN verified.");
+          if (!result.saveFileId) {
+            await uploadInitialCrawlerCloudSave();
+          }
+          return result;
+        }
+
+        if (result.error === "USER_NOT_FOUND") {
+          console.log("MFCrawl cloud service reached; account not found. Creating account.", result);
+
+          const createParams = new URLSearchParams({
+            action: "create",
+            username: String(profile.username),
+            pin: String(profile.pin),
+            playerId: String(profile.playerId),
+            gameVersion: String(GAME_VERSION)
+          });
+
+          const createResponse = await fetch(`${CRAWLER_CLOUD_SAVE_URL}?${createParams.toString()}`, {
+            method: "GET",
+            cache: "no-store"
+          });
+
+          if (!createResponse.ok) {
+            throw new Error(`HTTP ${createResponse.status}`);
+          }
+
+          const createResult = await createResponse.json();
+
+          if (createResult.success) {
+            crawlerCloudAccountReady = true;
+            console.log("MFCrawl cloud account created", createResult);
+            window.alert("Cloud account created successfully. Your username and PIN are now registered.");
+            await uploadInitialCrawlerCloudSave();
+            return createResult;
+          }
+
+          if (createResult.error === "USERNAME_EXISTS") {
+            window.alert("That username was created before this request finished. Reload the game and try logging in again.");
+            return createResult;
+          }
+
+          console.log("MFCrawl cloud account creation returned an error", createResult);
+          window.alert(`Cloud connection successful, but account creation returned: ${createResult.error || "UNKNOWN_ERROR"}`);
+          return createResult;
+        }
+
+        if (result.error === "INVALID_PIN") {
+          console.log("MFCrawl cloud service reached; PIN rejected.", result);
+          window.alert("Cloud connection successful, but the PIN does not match that username.");
+          return result;
+        }
+
+        console.log("MFCrawl cloud login returned an error", result);
+        window.alert(`Cloud connection successful, but login returned: ${result.error || "UNKNOWN_ERROR"}`);
+        return result;
+      } catch (error) {
+        console.error("MFCrawl cloud login connection failed", error);
+        window.alert("Could not reach the MFCrawl cloud service. Local saving will continue normally.");
+        return null;
+      }
     }
 
     function getCharacterLevelForStats(characterId) {
@@ -9494,6 +9790,7 @@ function startEncounter(poolId, encounterKey, tileType = "M") {
       }
 
       playerAttackMeter = 0;
+      showCombatCaption(`${player.name || "You"} attacks.`);
 
       const damage = calculateAttackDamage(currentEnemy);
       applyPlayerDamageToEnemy(damage, 7);
@@ -9555,6 +9852,7 @@ function startEncounter(poolId, encounterKey, tileType = "M") {
       updateHud();
       updateCombatBeltSlots();
       saveGameState(true);
+      queueCrawlerCloudSave("death", 750, true);
     }
 
     const MONSTER_ACTION_RANK = { normal: 0, magical: 1, rare: 2, epic: 3, legendary: 4 };
@@ -9668,15 +9966,18 @@ function startEncounter(poolId, encounterKey, tileType = "M") {
       tickMonsterActionEffects(currentEnemy);
       const action = chooseMonsterAction(currentEnemy);
       currentEnemy._actionUses = currentEnemy._actionUses || {};
+      const enemyName = currentEnemy.encounterName || currentEnemy.monName || currentEnemy.name || "Monster";
       playMonsterAttack();
 
       if (action.type === "defend") {
+        showCombatCaption(`${enemyName} uses ${action.name || "Defend"}.`);
         currentEnemy._defending = true;
         currentEnemy._defendReductionPct = Number(action.damageReductionPct || 50);
         showDamageNumber(action.name || "Defend");
         return;
       }
       if (action.type === "heal") {
+        showCombatCaption(`${enemyName} uses ${action.name || "Heal"}.`);
         currentEnemy._actionUses[action.id] = Number(currentEnemy._actionUses[action.id] || 0) + 1;
         const amount = Math.max(1, Math.floor(getMonsterMaxHpValue(currentEnemy) * Number(action.healPct || 20) / 100));
         currentEnemy.currentHp = Math.min(getMonsterMaxHpValue(currentEnemy), getMonsterCurrentHpValue(currentEnemy) + amount);
@@ -9685,6 +9986,7 @@ function startEncounter(poolId, encounterKey, tileType = "M") {
         return;
       }
       if (action.type === "buff") {
+        showCombatCaption(`${enemyName} uses ${action.name || "Buff"}.`);
         if (action.buff === "quickness") {
           currentEnemy._dodgeBonus = Number(action.dodgeBonus || 15);
           currentEnemy._quicknessTurns = Number(action.turns || 3);
@@ -9696,6 +9998,7 @@ function startEncounter(poolId, encounterKey, tileType = "M") {
         return;
       }
       if (action.type === "charm") {
+        showCombatCaption(`${enemyName} uses ${action.name || "Charm"}.`);
         const chance = Math.max(0, Number(action.charmChance || 30));
         if (Math.random() * 100 < chance) {
           player.statusEffects.charmed = true;
@@ -9705,10 +10008,21 @@ function startEncounter(poolId, encounterKey, tileType = "M") {
       }
 
       const hits = Math.max(1, Math.floor(Number(action.hits || 1)));
-      for (let i = 0; i < hits; i += 1) {
-        window.setTimeout(() => {
-          if (gameMode === "encounter" && currentEnemy) resolveMonsterHit(action, currentEnemy, i);
-        }, i * 180);
+      const performHits = () => {
+        if (!currentEnemy || gameMode !== "encounter") return;
+        showCombatCaption(`${enemyName} uses ${action.name || "Attack"}.`);
+        for (let i = 0; i < hits; i += 1) {
+          window.setTimeout(() => {
+            if (gameMode === "encounter" && currentEnemy) resolveMonsterHit(action, currentEnemy, i);
+          }, i * 220);
+        }
+      };
+      const strongAttack = Number(action.power || 1) >= 1.35 || hits >= 2;
+      if (strongAttack) {
+        showCombatCaption(`${enemyName} prepares ${action.name || "an attack"}...`, 700);
+        window.setTimeout(performHits, 700);
+      } else {
+        performHits();
       }
     }
 
@@ -11817,6 +12131,352 @@ function startEncounter(poolId, encounterKey, tileType = "M") {
     }
 
 
+
+    // =========================
+    // BIG UPDATE: SETTINGS / QUESTS / CODES / MERCHANTS
+    // =========================
+
+    const PHOBIA_OPTIONS = [
+      { id: "spiders", label: "Spiders / Arachnids", words: ["spider", "arachnid"] },
+      { id: "rodents", label: "Rats / Rodents", words: ["rat", "rodent"] },
+      { id: "snakes", label: "Snakes", words: ["snake", "serpent", "viper", "cobra"] },
+      { id: "insects", label: "Insects", words: ["insect", "beetle", "roach", "wasp", "bee", "fly", "mosquito", "mantis"] },
+      { id: "worms", label: "Worms / Parasites", words: ["worm", "parasite", "leech", "maggot", "larva"] }
+    ];
+    const MAX_PHOBIA_FILTERS = 3;
+
+    const QUEST_NPCS = {
+      pocket: { name: "Pocket", image: "npcpocket1", target: "rat", need: 5, rewardGold: 175, text: "Pocket insists the rats have been stealing things that clearly belonged to him first." },
+      ziggy: { name: "Ziggy", image: "npcziggy1", target: "skeleton", need: 5, rewardGold: 200, text: "Ziggy wants a proper test of strength against the dungeon's skeletons." },
+      winky: { name: "Winky", image: "npcwinky1", target: "mzombie", need: 4, rewardGold: 225, text: "Winky has noticed the dead wandering where they should not be." },
+      eddie: { name: "Eddie", image: "npceddie1", target: "bpirate", need: 4, rewardGold: 250, text: "Eddie has unfinished business with a particularly loud group of pirates." }
+    };
+
+    const WANDERING_MERCHANTS = {
+      louie: { name: "Louie", image: "wmlouie1", role: "Exotic Provisions", categories: ["Key Items"], quote: "Rare things cost rare meat." },
+      henry: { name: "Henry", image: "wmhenry1", role: "Jewelry", categories: ["Jewelry"], quote: "Presentation is everything." },
+      poppy: { name: "Poppy", image: "wmpoppy1", role: "Consumables", categories: ["Consumables"], quote: "Potions! Snacks! Probably potions!" },
+      harry: { name: "Harry", image: "wmharry1", role: "Runes", categories: ["Runes"], quote: "Good runes. Loud prices." },
+      ash: { name: "Ash", image: "wmash1", role: "Questionable Goods", categories: ["Skills", "Key Items"], quote: "You did not get this from me." }
+    };
+
+    const MF_CHEAT_CODES = {
+      "GOLD1000": { oneTime: true, label: "1,000 Gold", apply() { player.gold += 1000; addLeaderboardGold(1000); } },
+      "POTIONS10": { oneTime: true, label: "10 Potions", apply() { addConsumableSafe("potion", 10); discoverCollection("consumables", "potion"); } },
+      "MANA10": { oneTime: true, label: "10 Mana Potions", apply() { addConsumableSafe("mana_potion", 10); discoverCollection("consumables", "mana_potion"); } },
+      "RUNEPACK": { oneTime: true, label: "Starter Rune Pack", apply() { ["fehu","uruz","kenaz","algiz","sowilo"].forEach(id => { if (typeof addRune === "function") addRune(player,id,0,1); discoverCollection("runes", id); }); } },
+      "XP500": { oneTime: true, label: "500 XP", apply() { gainExp(500); } }
+    };
+
+    function ensureBigUpdateState() {
+      const settings = ensureSystemState();
+      if (typeof settings.combatText !== "boolean") settings.combatText = true;
+      if (!settings.phobiaFilters || typeof settings.phobiaFilters !== "object") settings.phobiaFilters = {};
+      // Migrate the old spider toggle into the new menu.
+      if (settings.noSpiders === true) settings.phobiaFilters.spiders = true;
+      if (!player.quests || typeof player.quests !== "object") player.quests = {};
+      if (!player.quests.active || typeof player.quests.active !== "object") player.quests.active = {};
+      if (!player.quests.completed || typeof player.quests.completed !== "object") player.quests.completed = {};
+      if (!player.redeemedCodes || typeof player.redeemedCodes !== "object") player.redeemedCodes = {};
+      return settings;
+    }
+
+    function showCombatCaption(text, duration = 1500) {
+      const settings = ensureBigUpdateState();
+      if (!settings.combatText || !text || gameMode !== "encounter") return;
+      const box = document.getElementById("messageBox");
+      if (!box) return;
+      if (messageClearTimer) clearTimeout(messageClearTimer);
+      box.classList.add("combatNotice");
+      box.textContent = text;
+      box.style.visibility = "visible";
+      messageClearTimer = setTimeout(() => {
+        box.textContent = "";
+        box.style.visibility = "hidden";
+        box.classList.remove("combatNotice");
+        messageClearTimer = null;
+      }, duration);
+    }
+
+    window.isMonsterFilteredByPhobia = function(monsterOrId) {
+      const settings = ensureBigUpdateState();
+      const mon = typeof monsterOrId === "string" && typeof getMonster === "function" ? (getMonster(monsterOrId) || {}) : (monsterOrId || {});
+      const haystack = `${typeof monsterOrId === "string" ? monsterOrId : ""} ${mon.monId || ""} ${mon.monName || ""} ${mon.monsterType || ""}`.toLowerCase();
+      return PHOBIA_OPTIONS.some(option => settings.phobiaFilters[option.id] && option.words.some(word => haystack.includes(word)));
+    };
+    window.isSpiderPhobiaMode = function() { return !!ensureBigUpdateState().phobiaFilters.spiders; };
+
+    function renderSystemMenu() {
+      const settings = ensureBigUpdateState();
+      setOverlayTitle("Settings");
+      hideInventoryTabs();
+      const muted = typeof isGameSoundMuted === "function" ? isGameSoundMuted() : !!settings.soundMuted;
+      const content = document.getElementById("inventoryContent");
+      content.style.overflowY = "auto";
+      content.innerHTML = `
+        <div class="systemHubGrid">
+          <button class="toggleRow" onclick="toggleGameSound(); renderSystemMenu();"><span>Sound</span><b>${muted ? "Off" : "On"}</b></button>
+          <button class="toggleRow" onclick="toggleCombatTextSetting()"><span>Combat Text</span><b>${settings.combatText ? "On" : "Off"}</b></button>
+          <button class="uiButton" onclick="renderBestiaryPage()">Bestiary</button>
+          <button class="uiButton" onclick="renderCollectionPage()">Collection Log</button>
+          <button class="uiButton" onclick="renderStatsMenu()">Stats</button>
+          <button class="uiButton" onclick="renderPhobiaMenu()">Phobias</button>
+          <button class="uiButton" onclick="renderQuestMenu()">Quests</button>
+          <button class="uiButton" onclick="renderCodesMenu()">Cheats / Codes</button>
+          <button class="uiButton" onclick="openHelpFromSystem()">Help</button>
+        </div>`;
+    }
+
+    function toggleCombatTextSetting() {
+      const settings = ensureBigUpdateState();
+      settings.combatText = !settings.combatText;
+      saveGameState();
+      renderSystemMenu();
+    }
+
+    function renderStatsMenu() {
+      const stats = ensureLeaderboardStats();
+      setOverlayTitle("Stats"); hideInventoryTabs();
+      const rows = [
+        ["Floors Traveled", stats.totalFloors], ["Rooms Explored", stats.totalRooms],
+        ["Gold Earned", stats.totalGold], ["XP Earned", stats.totalXp],
+        ["Monsters Killed", stats.kills], ["Bosses Killed", stats.bossesKilled],
+        ["Damage Dealt", stats.totalMonsterDamageDealt], ["Damage Taken", stats.totalPlayerDamageTaken],
+        ["Rare Oddities", stats.rareOdditiesEncountered], ["Quiz Answers", stats.totalQuizAnswerSolved],
+        ["Potions Used", stats.potionsUsed], ["Deaths", stats.deaths],
+        ["Shrine Retreats", stats.shrineRetreats], ["Shrine Stones", stats.shrineStonesUsed]
+      ];
+      document.getElementById("inventoryContent").innerHTML = `<div class="statGrid">${rows.map(([a,b])=>`<div class="statCard"><span>${a}</span><b>${Number(b||0).toLocaleString()}</b></div>`).join("")}</div><button class="uiButton" onclick="backToSystemMenu()">Back</button>`;
+    }
+
+    function renderPhobiaMenu() {
+      const settings = ensureBigUpdateState();
+      setOverlayTitle("Phobias"); hideInventoryTabs();
+      const enabled = PHOBIA_OPTIONS.filter(o => settings.phobiaFilters[o.id]).length;
+      document.getElementById("inventoryContent").innerHTML = `
+        <div class="phobiaCount">Choose up to ${MAX_PHOBIA_FILTERS}. Enabled: ${enabled}/${MAX_PHOBIA_FILTERS}</div>
+        <div class="systemMenuList">${PHOBIA_OPTIONS.map(o=>`<button class="toggleRow" onclick="togglePhobiaFilter('${o.id}')"><span>${o.label}</span><b>${settings.phobiaFilters[o.id] ? "Hidden" : "Shown"}</b></button>`).join("")}</div>
+        <div class="smallNote">Filters affect future encounter rolls and quest availability. Existing Bestiary and lifetime statistics are preserved.</div>
+        <button class="uiButton" onclick="backToSystemMenu()">Back</button>`;
+    }
+
+    function togglePhobiaFilter(id) {
+      const settings = ensureBigUpdateState();
+      const option = PHOBIA_OPTIONS.find(o=>o.id===id); if (!option) return;
+      const on = !!settings.phobiaFilters[id];
+      const count = PHOBIA_OPTIONS.filter(o=>settings.phobiaFilters[o.id]).length;
+      if (!on && count >= MAX_PHOBIA_FILTERS) { setMessage(`You can hide up to ${MAX_PHOBIA_FILTERS} creature groups.`); return; }
+      settings.phobiaFilters[id] = !on;
+      settings.noSpiders = !!settings.phobiaFilters.spiders;
+      saveGameState(); renderPhobiaMenu();
+    }
+
+    function getQuestKills(monId) { ensureSystemState(); return Math.max(0, Number(player.discovery.bestiary?.[monId]?.kills || 0)); }
+    function isQuestTargetFiltered(monId) { return window.isMonsterFilteredByPhobia ? window.isMonsterFilteredByPhobia(monId) : false; }
+    function acceptNpcQuest(npcId) {
+      ensureBigUpdateState(); const q = QUEST_NPCS[npcId]; if (!q || player.quests.completed[npcId]) return;
+      if (isQuestTargetFiltered(q.target)) { setMessage("That quest is unavailable with your current Phobia settings."); return; }
+      if (!player.quests.active[npcId]) player.quests.active[npcId] = { startKills:getQuestKills(q.target), targetKills:getQuestKills(q.target)+q.need };
+      saveGameState(); renderQuestMenu();
+    }
+    function claimNpcQuest(npcId) {
+      ensureBigUpdateState(); const q=QUEST_NPCS[npcId], active=player.quests.active[npcId]; if(!q||!active) return;
+      if(getQuestKills(q.target)<active.targetKills){ setMessage("That quest is not complete yet."); return; }
+      player.gold += q.rewardGold; addLeaderboardGold(q.rewardGold); delete player.quests.active[npcId]; player.quests.completed[npcId]=true;
+      saveGameState(); queueCrawlerCloudSave("quest-complete",750,true); setMessage(`${q.name}'s quest complete. Received ${q.rewardGold} gold.`); renderQuestMenu();
+    }
+    function renderQuestMenu() {
+      ensureBigUpdateState(); setOverlayTitle("Quests"); hideInventoryTabs();
+      const cards = Object.entries(QUEST_NPCS).map(([id,q])=>{
+        const done=!!player.quests.completed[id], active=player.quests.active[id], filtered=isQuestTargetFiltered(q.target), kills=getQuestKills(q.target);
+        const mon = typeof getMonster === "function" ? getMonster(q.target) : null; const targetName=mon?.monName || q.target;
+        let button=""; let meta="";
+        if(done){meta="Completed"; button=`<button class="uiButton" disabled>Completed</button>`;}
+        else if(filtered){meta=`Unavailable while ${targetName} is filtered`; button=`<button class="uiButton" disabled>Filtered</button>`;}
+        else if(active){const progress=Math.max(0,Math.min(q.need,kills-active.startKills)); meta=`${targetName}: ${progress}/${q.need}`; button=progress>=q.need?`<button class="uiButton" onclick="claimNpcQuest('${id}')">Claim ${q.rewardGold}g</button>`:`<button class="uiButton" disabled>In Progress</button>`;}
+        else {meta=`Defeat ${q.need} ${targetName}`; button=`<button class="uiButton" onclick="acceptNpcQuest('${id}')">Accept</button>`;}
+        return `<div class="questCard"><div class="questName">${q.name}</div><div class="questMeta">${q.text}</div><div class="questMeta">${meta}</div>${button}</div>`;
+      }).join("");
+      document.getElementById("inventoryContent").innerHTML=`${cards}<button class="uiButton" onclick="backToSystemMenu()">Back</button>`;
+    }
+
+    function renderCodesMenu() {
+      ensureBigUpdateState(); setOverlayTitle("Cheats / Codes"); hideInventoryTabs();
+      const redeemed=Object.keys(player.redeemedCodes||{}).length;
+      document.getElementById("inventoryContent").innerHTML=`
+        <div class="smallNote">Enter a promotional, event, or test code. One-time codes are stored in your save.</div>
+        <div class="codeEntryRow"><input id="mfCodeInput" maxlength="24" placeholder="ENTER CODE"><button class="uiButton" onclick="redeemMfCode()">Redeem</button></div>
+        <div class="smallNote">Redeemed one-time codes: ${redeemed}</div>
+        <button class="uiButton" onclick="backToSystemMenu()">Back</button>`;
+    }
+    function redeemMfCode() {
+      ensureBigUpdateState(); const input=document.getElementById("mfCodeInput"); const code=String(input?.value||"").trim().toUpperCase(); const entry=MF_CHEAT_CODES[code];
+      if(!entry){setMessage("Invalid code."); return;} if(entry.oneTime&&player.redeemedCodes[code]){setMessage("That code has already been redeemed."); return;}
+      entry.apply(); if(entry.oneTime) player.redeemedCodes[code]=Date.now(); recalcDerivedStats(); updateBars(); saveGameState(); queueCrawlerCloudSave("code-redeem",750,true); setMessage(`Code redeemed: ${entry.label}.`); renderCodesMenu();
+    }
+
+    function getAreaNpcId() {
+      const ids=["pocket","ziggy","winky","eddie"]; const theme=String(currentFloorTheme||"c"); return ids[hashStringToNumber(theme)%ids.length];
+    }
+    function renderEntranceNpcButton() {
+      const id=getAreaNpcId(), q=QUEST_NPCS[id]; if(!q) return "";
+      return `<button class="shopRow" onclick="renderNpcDialogue('${id}')"><span class="shopIcon empty"></span><div class="shopRowText"><div class="shopRowName">Talk to ${q.name}</div><div class="shopRowSub">Area quest and dialogue</div></div><div class="shopRowValue">Talk</div></button>`;
+    }
+    function renderNpcDialogue(id) {
+      const q=QUEST_NPCS[id]; if(!q){renderLimitedShrineHome();return;} setOverlayTitle(q.name); hideInventoryTabs();
+      document.getElementById("inventoryContent").innerHTML=`<div class="shopHero"><img class="shopHeroImage" src="assets/npc/${q.image}.webp" alt="" onerror="this.style.display='none';"><div class="shopHeroText"><div class="shopName">${q.name}</div><div class="shopQuote">${q.text}</div></div></div><div class="shopMenuList"><button class="shopRow" onclick="renderQuestMenu()"><span class="shopIcon empty"></span><div class="shopRowText"><div class="shopRowName">Quest</div><div class="shopRowSub">Open the quest log</div></div><div class="shopRowValue">Open</div></button><button class="shopRow shopBackRow" onclick="renderLimitedShrineHome()"><span class="shopIcon empty"></span><div class="shopRowText"><div class="shopRowName">Back</div></div><div class="shopRowValue">Entrance</div></button></div>`;
+    }
+
+    // Keep the entrance menu but add the area's recurring NPC.
+    const _renderLimitedShrineHomeBigUpdate = renderLimitedShrineHome;
+    renderLimitedShrineHome = function() {
+      _renderLimitedShrineHomeBigUpdate();
+      const list=document.querySelector('#inventoryContent .shopMenuList');
+      if(list) list.insertAdjacentHTML('afterbegin', renderEntranceNpcButton());
+    };
+
+    // Merchant encounter identities are deterministic per room and pre-coded for future art.
+    getFloorNpcType = function() {
+      const key=getFloorNpcKey();
+      const types=["poppy","harry","louie","henry","ash","blacksmith","campfire"];
+      return types[hashStringToNumber(key)%types.length];
+    };
+    getFloorNpcTitle = function(type=getFloorNpcType()) {
+      if(WANDERING_MERCHANTS[type]) return WANDERING_MERCHANTS[type].name;
+      if(type==="blacksmith") return "Traveling Blacksmith";
+      if(type==="campfire") return "Safe Campfire";
+      return "Traveler";
+    };
+
+    function wanderingMerchantHero(id) {
+      const m=WANDERING_MERCHANTS[id]; if(!m) return "";
+      return `<div class="shopHero"><img class="shopHeroImage" src="assets/npc/${m.image}.webp" alt="" onerror="this.style.display='none';"><div class="shopHeroText"><div class="shopName">${m.name} · ${m.role}</div><div class="shopQuote">“${m.quote}”</div></div></div>`;
+    }
+    function renderMerchantTalk(id) {
+      const m=WANDERING_MERCHANTS[id]; if(!m)return; setOverlayTitle(`${m.name} · Talk`); hideInventoryTabs();
+      document.getElementById("inventoryContent").innerHTML=`${wanderingMerchantHero(id)}<div class="merchantDialogue">${m.name} has their own stock, prices, and rules. More dialogue can be added without changing the encounter system.</div><button class="uiButton" onclick="renderWanderingMerchant('${id}')">Back</button>`;
+    }
+    function renderMerchantQuest(id) {
+      setOverlayTitle("Merchant Quest"); hideInventoryTabs(); const m=WANDERING_MERCHANTS[id];
+      document.getElementById("inventoryContent").innerHTML=`${wanderingMerchantHero(id)}<div class="smallNote">${m?.name || "This merchant"}'s personal quest line is reserved and ready for quest data.</div><button class="uiButton" onclick="renderWanderingMerchant('${id}')">Back</button>`;
+    }
+    function renderWanderingMerchant(id) {
+      const m=WANDERING_MERCHANTS[id]; if(!m)return; activeShopContext=`wm_${id}`; setOverlayTitle(m.name); hideInventoryTabs();
+      document.getElementById("inventoryContent").innerHTML=`${wanderingMerchantHero(id)}<div class="shopMenuList"><button class="shopRow" onclick="renderMerchantTrade('${id}')"><span class="shopIcon empty"></span><div class="shopRowText"><div class="shopRowName">Shop</div><div class="shopRowSub">${m.categories.join(" · ")}</div></div><div class="shopRowValue">Open</div></button><button class="shopRow" onclick="renderMerchantTalk('${id}')"><span class="shopIcon empty"></span><div class="shopRowText"><div class="shopRowName">Talk</div></div><div class="shopRowValue">Talk</div></button><button class="shopRow" onclick="renderMerchantQuest('${id}')"><span class="shopIcon empty"></span><div class="shopRowText"><div class="shopRowName">Quest</div></div><div class="shopRowValue">Quest</div></button>${renderFloorNpcBackRow()}</div>`;
+    }
+    function renderMerchantTrade(id) {
+      const m=WANDERING_MERCHANTS[id]; if(!m)return;
+      // Each merchant deliberately routes to a separate stock implementation.
+      if(id==="poppy") return renderFloorConsumableShop();
+      if(id==="harry") return renderFloorRuneShop();
+      if(id==="ash") return renderFloorSkillShop(true);
+      if(id==="henry") return renderWmHenryJewelry();
+      if(id==="louie") return renderWmLouieExchange();
+    }
+    function renderWmHenryJewelry() {
+      setOverlayTitle("Henry · Jewelry"); hideInventoryTabs();
+      const all=(typeof getAllEquipment==="function"?getAllEquipment():[]).filter(i=>["ring","necklace","cloak"].includes(i.slot)&&!isSpecialRestrictedGear(i)).sort(()=>Math.random()-.5).slice(0,6);
+      document.getElementById("inventoryContent").innerHTML=`${wanderingMerchantHero("henry")}<div class="shopMenuList">${all.map(i=>renderShopBuyEquipmentRow(i,1.05)).join("")||'<div class="smallNote">No jewelry available.</div>'}<button class="uiButton" onclick="renderWanderingMerchant('henry')">Back</button></div>`;
+    }
+    function renderWmLouieExchange() {
+      setOverlayTitle("Louie · Exotic Provisions"); hideInventoryTabs(); ensureFullInventoryShape(); const meat=Number(player.inventory.consumables?.exoticmeat||0);
+      document.getElementById("inventoryContent").innerHTML=`${wanderingMerchantHero("louie")}<div class="menuHeader"><span>Exotic Meat</span><span>Owned x${meat}</span></div><div class="shopMenuList"><button class="shopRow ${meat<2?'locked':''}" ${meat<2?'':`onclick="buyLouieRareCache()"`}><span class="shopIcon empty"></span><div class="shopRowText"><div class="shopRowName">Rare Equipment Cache</div><div class="shopRowSub">A randomized generated equipment piece.</div></div><div class="shopRowValue">2 Meat</div></button><button class="uiButton" onclick="renderWanderingMerchant('louie')">Back</button></div>`;
+    }
+    function buyLouieRareCache() {
+      ensureFullInventoryShape(); const meat=Number(player.inventory.consumables?.exoticmeat||0); if(meat<2){setMessage("You need 2 Exotic Meat.");return;}
+      const pool=getChestEquipmentPool(); const base=randomFromList(pool); const item=base&&typeof createGeneratedEquipmentFromBase==="function"?createGeneratedEquipmentFromBase(base):null; if(!item){setMessage("Louie has nothing suitable right now.");return;}
+      player.inventory.consumables.exoticmeat=meat-2; saveGameState(); setMessage(`Louie traded you ${item.itemName}.`); renderWmLouieExchange();
+    }
+
+    openFloorNpcMenu = function() {
+      const type=getFloorNpcType(); setMenuOpen(true); gameMode="shrine";
+      if(type==="campfire") renderFloorCampfire(); else if(type==="blacksmith") renderFloorBlacksmith(); else renderWanderingMerchant(type);
+    };
+
+    // Overlay filenames are fixed now; adding the image later requires no logic change.
+    updateMerchantLayer = function() {
+      const layer=document.getElementById("merchantLayer"); if(!layer)return; const tile=getTile(playerX,playerY);
+      let file="";
+      if(tile==="N"){ const type=getFloorNpcType(); if(WANDERING_MERCHANTS[type]) file=WANDERING_MERCHANTS[type].image; }
+      else if(tile==="E"){ const q=QUEST_NPCS[getAreaNpcId()]; if(q) file=q.image; }
+      if(!file){layer.classList.remove("show");layer.removeAttribute("src");return;}
+      setImageWithPngFallback(layer,`assets/npc/${file}.webp`,`assets/npc/${file}.png`); layer.classList.add("show");
+    };
+
+    // Blacksmith now upgrades only; Add Sockets is retired.
+    renderFloorBlacksmith = function() {
+      activeShopContext="floor_blacksmith"; setOverlayTitle("Blacksmith"); hideInventoryTabs();
+      document.getElementById("inventoryContent").innerHTML=`${floorNpcHeroHtml("Traveling Blacksmith","Upgrades and repairs, for the right price.")}<div class="shopMenuList"><button class="shopRow" onclick="renderEquipmentUpgrade()"><span class="shopIcon empty"></span><div class="shopRowText"><div class="shopRowName">Upgrade Equipment</div></div><div class="shopRowValue">Gold</div></button>${renderFloorNpcBackRow()}</div>`;
+    };
+
+    // Ollie's redesigned home: compact functions, unified Shop, Talk and Quest.
+    function renderOllieTalk() { setOverlayTitle("Ollie · Talk"); hideInventoryTabs(); document.getElementById("inventoryContent").innerHTML=`${shrineHeroHtml("merchant")}<div class="merchantDialogue">“One hop in. One shop done.” Ollie keeps dependable basics for anyone brave enough to keep descending.</div><button class="uiButton" onclick="renderOllieShop()">Back</button>`; }
+    function renderOllieQuest() { setOverlayTitle("Ollie · Quest"); hideInventoryTabs(); document.getElementById("inventoryContent").innerHTML=`${shrineHeroHtml("merchant")}<div class="smallNote">Ollie's merchant quest slot is ready for a future quest line.</div><button class="uiButton" onclick="renderOllieShop()">Back</button>`; }
+    renderOllieShop = function() {
+      activeShopContext="shrine"; setOverlayTitle("Ollie's One-Hop Shop"); hideInventoryTabs();
+      document.getElementById("inventoryContent").innerHTML=`${shrineHeroHtml("merchant")}<div class="systemHubGrid"><button class="uiButton" onclick="renderOllieTrade('buy')">Shop</button><button class="uiButton" onclick="renderRuneCombine()">Combine Runes</button><button class="uiButton" onclick="renderEquipmentUpgrade()">Upgrade Equipment</button><button class="uiButton" onclick="renderOllieTalk()">Talk</button><button class="uiButton" onclick="renderOllieQuest()">Quest</button><button class="uiButton" onclick="renderShrineHome()">Back</button></div>`;
+    };
+
+    const OLLIE_CATEGORIES=["Weapons","Armor","Jewelry","Runes","Consumables","Skills","Key Items"];
+    let ollieTradeMode="buy", ollieCategoryIndex=0, olliePages={};
+    function getOwnedCountForShop(category,id) {
+      ensureFullInventoryShape();
+      if(category==="Consumables") return Number(player.inventory.consumables?.[id]||0);
+      if(category==="Runes") return Object.values(player.inventory.runes?.[id]||{}).reduce((a,b)=>a+Number(b||0),0);
+      if(["Weapons","Armor","Jewelry"].includes(category)) return player.inventory.equipment?.[id]?.owned?1:0;
+      if(category==="Skills") return player.inventory.skills?.[id]?1:0;
+      if(category==="Key Items") return Number(player.inventory.keyitems?.[id]||0);
+      return 0;
+    }
+    function ollieCategoryNav() {
+      const total=OLLIE_CATEGORIES.length, cur=OLLIE_CATEGORIES[ollieCategoryIndex], prev=OLLIE_CATEGORIES[(ollieCategoryIndex-1+total)%total], next=OLLIE_CATEGORIES[(ollieCategoryIndex+1)%total];
+      return `<div class="itemCategoryCycle"><button class="statusCycleButton" onclick="cycleOllieCategory(-1)">‹ ${prev}</button><div class="itemCategoryLabel">${cur}</div><button class="statusCycleButton" onclick="cycleOllieCategory(1)">${next} ›</button></div>`;
+    }
+    function cycleOllieCategory(d){ollieCategoryIndex=(ollieCategoryIndex+d+OLLIE_CATEGORIES.length)%OLLIE_CATEGORIES.length;renderOllieTrade(ollieTradeMode);}
+    function setOlliePage(d){const key=`${ollieTradeMode}:${OLLIE_CATEGORIES[ollieCategoryIndex]}`;olliePages[key]=Math.max(0,Number(olliePages[key]||0)+d);renderOllieTrade(ollieTradeMode);}
+    function olliePageHtml(count){const key=`${ollieTradeMode}:${OLLIE_CATEGORIES[ollieCategoryIndex]}`,max=Math.max(0,Math.ceil(count/SHOP_PAGE_SIZE)-1),cur=Math.min(max,Math.max(0,Number(olliePages[key]||0)));olliePages[key]=cur;return `<div class="shopPageControls"><button class="uiButton" onclick="setOlliePage(-1)" ${cur<=0?'disabled':''}>${cur>0?'‹ '+cur:'‹'}</button><div class="shopPageText">${cur+1} / ${max+1}</div><button class="uiButton" onclick="setOlliePage(1)" ${cur>=max?'disabled':''}>${cur<max?(cur+2)+' ›':'›'}</button></div>`;}
+    function ollieSlice(list){const key=`${ollieTradeMode}:${OLLIE_CATEGORIES[ollieCategoryIndex]}`,max=Math.max(0,Math.ceil(list.length/SHOP_PAGE_SIZE)-1),cur=Math.min(max,Math.max(0,Number(olliePages[key]||0)));olliePages[key]=cur;return list.slice(cur*SHOP_PAGE_SIZE,cur*SHOP_PAGE_SIZE+SHOP_PAGE_SIZE);}
+    function getOllieBuyList(category){
+      if(category==="Weapons"||category==="Armor") return ensureShopGearStock(category).map(x=>({type:"equipment",item:x}));
+      if(category==="Jewelry") return (typeof getAllEquipment==="function"?getAllEquipment():[]).filter(i=>["ring","necklace","cloak"].includes(i.slot)&&!isSpecialRestrictedGear(i)).map(x=>({type:"equipment",item:x}));
+      if(category==="Runes") return ensureShopRuneStock().map(x=>({type:"rune",item:x}));
+      if(category==="Consumables") return getAllShopConsumables().map(x=>({type:"consumable",item:x}));
+      if(category==="Skills") return getSkillShopEntries(false).map(x=>({type:"skill",item:x}));
+      if(category==="Key Items") return SHOP_KEY_ITEMS.map(x=>({type:"key",item:x})); return [];
+    }
+    function renderOllieBuyEntry(category,e){
+      if(e.type==="equipment"){const i=e.item,price=getBuyPrice(i.itemId),owned=getOwnedCountForShop(category,i.itemId);return `<button class="shopRow" onclick="buyShopEquipment('${i.itemId}',${price})">${getEquipmentShopIconHtml(i)}<div class="shopRowText"><div class="shopRowName">${rarityNameHtml(i.itemId,false)}</div><div class="shopRowSub">Owned x${owned}</div></div><div class="shopRowValue">${price}g</div></button>`;}
+      if(e.type==="consumable"){const i=getConsumableSafe(e.item.itemId),price=getBuyPrice(e.item.itemId),owned=getOwnedCountForShop(category,e.item.itemId);return `<button class="shopRow" onclick="buyShopItem('${e.item.itemId}',${price})">${shopIconHtml(i?.image||"","items")}<div class="shopRowText"><div class="shopRowName">${i?.itemName||e.item.itemId}</div><div class="shopRowSub">Owned x${owned}</div></div><div class="shopRowValue">${price}g</div></button>`;}
+      if(e.type==="rune"){const r=e.item,rune=typeof getRuneById==="function"?getRuneById(r.runeId):null,price=getRuneBuyPrice(r),owned=getOwnedCountForShop(category,r.runeId);return `<button class="shopRow" onclick="buyShopRune('${r.runeId}',${Number(r.level||0)},${price})">${shopIconHtml(rune?.image||"rune1.webp","runes")}<div class="shopRowText"><div class="shopRowName">${typeof getRuneDisplayName==="function"?getRuneDisplayName(r.runeId,r.level||0):r.runeId}</div><div class="shopRowSub">Owned x${owned}</div></div><div class="shopRowValue">${price}g</div></button>`;}
+      if(e.type==="skill"){const sk=e.item,price=getSkillBuyPrice(sk,false),owned=getOwnedCountForShop(category,sk.skillId);return `<button class="shopRow" onclick="buyShopSkill('${sk.skillId}',${price},false)"><span class="shopIcon empty"></span><div class="shopRowText"><div class="shopRowName">${sk.name}</div><div class="shopRowSub">Owned x${owned} · Req Lv ${sk.levelReq}</div></div><div class="shopRowValue">${price}g</div></button>`;}
+      if(e.type==="key"){const k=typeof getKeyItem==="function"?getKeyItem(e.item.itemId):null,price=Math.max(1,Number(k?.value||25)||25),owned=getOwnedCountForShop(category,e.item.itemId);return `<button class="shopRow" onclick="buyShopKeyItem('${e.item.itemId}',${price})">${shopIconHtml(k?.image||"","items")}<div class="shopRowText"><div class="shopRowName">${e.item.label||k?.itemName||e.item.itemId}</div><div class="shopRowSub">Owned x${owned}</div></div><div class="shopRowValue">${price}g</div></button>`;} return "";
+    }
+    function getOllieSellList(category){
+      if(category==="Consumables") return getSellableConsumableEntries();
+      if(category==="Weapons") return getSellableEquipmentEntries("weapon");
+      if(category==="Armor") return getSellableEquipmentEntries("armor");
+      if(category==="Jewelry") return getSellableEquipmentEntries("").filter(e=>["ring","necklace","cloak"].includes(getEquipItem(e.itemId)?.slot));
+      if(category==="Runes") return getSellableRuneEntries();
+      if(category==="Key Items") return getSellableKeyEntries();
+      return [];
+    }
+    function renderOllieSellEntry(category,e){if(category==="Consumables")return renderSellConsumableRow(e);if(["Weapons","Armor","Jewelry"].includes(category))return renderSellEquipmentRow(e);if(category==="Runes")return renderSellRuneRow(e);if(category==="Key Items")return renderSellKeyRow(e);return "";}
+    function renderOllieTrade(mode="buy") {
+      ollieTradeMode=mode==="sell"?"sell":"buy"; setOverlayTitle("Shop"); hideInventoryTabs(); const category=OLLIE_CATEGORIES[ollieCategoryIndex];
+      const list=ollieTradeMode==="buy"?getOllieBuyList(category):getOllieSellList(category), visible=ollieSlice(list);
+      document.getElementById("inventoryContent").innerHTML=`${shrineHeroHtml("merchant")}<div class="shopModeToggle"><button class="uiButton ${ollieTradeMode==='buy'?'active':''}" onclick="renderOllieTrade('buy')">Buy</button><button class="uiButton ${ollieTradeMode==='sell'?'active':''}" onclick="renderOllieTrade('sell')">Sell</button></div>${ollieCategoryNav()}<div class="menuHeader"><span>${category}</span><span>Gold: ${player.gold}</span></div><div class="shopPagedList">${visible.length?visible.map(e=>ollieTradeMode==='buy'?renderOllieBuyEntry(category,e):renderOllieSellEntry(category,e)).join(''):`<div class="smallNote">No ${ollieTradeMode==='buy'?'stock':'sellable items'} in this category.</div>`}</div>${olliePageHtml(list.length)}<button class="uiButton" onclick="renderOllieShop()">Back</button>`;
+    }
+
+    // Redirect existing shop refreshes into the unified Ollie screen when appropriate.
+    const _buyShopItemBigUpdate=buyShopItem; buyShopItem=function(itemId,price){_buyShopItemBigUpdate(itemId,price);if(activeShopContext==="shrine")renderOllieTrade("buy");};
+    const _buyShopEquipmentBigUpdate=buyShopEquipment; buyShopEquipment=function(itemId,price){_buyShopEquipmentBigUpdate(itemId,price);if(activeShopContext==="shrine")renderOllieTrade("buy");};
+    const _buyShopKeyItemBigUpdate=buyShopKeyItem; buyShopKeyItem=function(itemId,price){_buyShopKeyItemBigUpdate(itemId,price);if(activeShopContext==="shrine")renderOllieTrade("buy");};
+
+    // Legacy shop entry points now resolve to the unified Buy/Sell screen.
+    renderShrineBuy = function() { renderOllieTrade("buy"); };
+    renderShrineSell = function() { renderOllieTrade("sell"); };
+
+
     // =========================
     // INIT
     // =========================
@@ -11840,10 +12500,20 @@ function startEncounter(poolId, encounterKey, tileType = "M") {
       normalizeEquipmentSockets(itemId);
     });
 
+    ensureBigUpdateState();
     recalcDerivedStats();
     updateCombatBeltSlots();
     // Mini map renders after the floor/map has been initialized.
     saveReady = true;
+
+    // Establish the local username + PIN profile during startup.
+    // If either value is skipped, the prompt returns on the next page load.
+    getOrCreateCrawlerProfile();
+
+    // Step 3 cloud test: verify the locally stored username + PIN.
+    // If the account does not exist yet, create it in the cloud account sheet.
+    // If the account has no cloud save yet, offer a one-time upload of the current local save.
+    verifyCrawlerCloudLogin();
 
     if (loadedLocalSave) {
       startNewFloor();

@@ -1,0 +1,30 @@
+MFCrawl Big Update Test Build
+
+Implemented in this test pass:
+- Settings rebuilt as a hub.
+- Sound and Combat Text toggles.
+- Bestiary, Collection Log, Stats, Phobias, Quests, Cheats/Codes menu access.
+- Lifetime Stats page.
+- Phobia menu with up to 3 filtered creature groups; encounter pool integration.
+- Quest framework/menu for Pocket, Ziggy, Winky, Eddie, plus entrance NPC hooks:
+  npcpocket1, npcziggy1, npcwinky1, npceddie1.
+- Wandering merchant identity/image hooks:
+  wmlouie1, wmhenry1, wmpoppy1, wmharry1, wmash1.
+- Merchant roles pre-coded; campfire and blacksmith remain service encounters.
+- Ollie shop redesigned around unified Buy/Sell categories.
+- Category navigation labels and page destination numbers.
+- Owned counts on Ollie purchase rows.
+- Talk / Quest hooks for Ollie and wandering merchants.
+- Add Sockets removed from merchant/blacksmith menus.
+- Generated rings have no sockets.
+- Generated weapons/armor roll 0..socket cap and all rolled sockets are open.
+- Slower combat pacing.
+- Optional combat action text with named monster actions and strong-attack telegraphs.
+- Data-driven Cheats/Codes menu with one-time redemption tracking.
+
+Explicitly deferred to next update:
+- Floor 100 / Reborn
+- Oddity completion pass
+- Secret rooms
+
+Art files are intentionally not bundled. Future NPC/merchant assets can be added using the pre-coded filenames above.
